@@ -1,0 +1,49 @@
+import unittest
+
+from simprovise.test import simtime_test
+from simprovise.test import simclock_test
+from simprovise.test import simevent_test
+from simprovise.test import simdatacollector_test
+from simprovise.test import simcounter_test
+from simprovise.test import simpropertyinitializer_test
+# from simprovise.test import simanimatableobject_test
+from simprovise.test import simlocation_test
+from simprovise.test import simresource_test
+from simprovise.test import simentity_test
+#from simprovise.test import simelement_test
+# from simprovise.test import objectfactory_test
+# from simprovise.test import simstaticobjectdefinition_test
+# from simprovise.test import system_test1
+
+from simprovise.core import SimLogging
+import logging
+
+def run_tests():
+    SimLogging.setLevel(logging.CRITICAL)
+
+    suite = unittest.TestSuite()
+
+    suite.addTest(simtime_test.makeTestSuite())
+    suite.addTest(simclock_test.makeTestSuite())
+    suite.addTest(simevent_test.makeTestSuite())
+    suite.addTest(simdatacollector_test.makeTestSuite())
+    suite.addTest(simpropertyinitializer_test.makeTestSuite())
+    suite.addTest(simcounter_test.makeTestSuite() )
+    #suite.addTest(simanimatableobject_test.makeTestSuite())
+    suite.addTest(simlocation_test.makeTestSuite())
+    #suite.addTest(unittest.makeSuite(SimTime_test.SimTimeIntervalTests))
+    suite.addTest(simresource_test.makeTestSuite())
+    suite.addTest(simentity_test.makeTestSuite())
+    #suite.addTest(objectfactory_test.makeTestSuite())
+    #suite.addTest(simstaticobjectdefinition_test.makeTestSuite())
+    #suite.addTest(simelement_test.makeTestSuite())
+    #suite.addTest(system_test1.makeTestSuite())
+
+    unittest.TextTestRunner(verbosity=1).run(suite)
+
+if __name__ == "__main__":
+    # guard execution in if __name__ block to avoid multiprocessing errors
+    # from replicator tests
+    run_tests()
+
+

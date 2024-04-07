@@ -1,0 +1,27 @@
+# skip compile .py files and local wing IDE configuration
+*.pyc
+*.wpu
+*.wpr
+
+# ignore compile pycache directories
+__pycache__/
+
+# ignore sphinx build directory
+/docs/build/
+/docs/build/
+
+# ignore zombie code directories
+/simprovise/configuration_old/
+OldorDead/
+
+# ignore code coverage
+htmlcov/
+.coverage
+
+# ignore old simdefs and pngs model directory for now
+/simprovise/models/*simdef*
+/simprovise/models/*.png
+
+# ignore simulation output databases
+*.simoutput
+
