@@ -48,20 +48,20 @@ class SimEntitySource(SimLocation):
     __slots__ = ('__generatorDefs', '__generatorDefsAreEditable',
                  '__generatorPairs')
 
-    def __init__(self, name, locationObj=None, animationObj=None, **properties):
-        super().__init__(name, locationObj, animationObj, **properties)
+    def __init__(self, name, parentlocation=None):
+        super().__init__(name, parentlocation)
         self.__generatorDefs = []
         self.__generatorDefsAreEditable = True
         self.__generatorPairs = []
 
-    @classmethod
-    @apidocskip
-    def allowsChildren(cls):
-        """
-        Override to indicate that instances of this class do not support the
-        assignment of child static objects (even though this is a SimLocation).
-        """
-        return False
+    #@classmethod
+    #@apidocskip
+    #def allowsChildren(cls):
+        #"""
+        #Override to indicate that instances of this class do not support the
+        #assignment of child static objects (even though this is a SimLocation).
+        #"""
+        #return False
 
     @property
     @apidocskip
@@ -72,47 +72,20 @@ class SimEntitySource(SimLocation):
         """
         return self.__generatorDefs
 
-    @generatorDefinitions.setter
-    def generatorDefinitions(self, newVal):
-        #self.raiseIfNotInDesignMode("Entity Generator definitions can only be modified at design time")
-        self.__generatorDefs = newVal
-
-    @property
-    @apidocskip
-    def generatorDefinitionsAreEditable(self):
-        """
-        Flag indicating whether the user should be able to add/delete/modify the entity
-        generator definitions.  When False, the UI object property viewer will NOT display
-        generation definitions.
-        """
-        return self.__generatorDefsAreEditable
-
-    @generatorDefinitionsAreEditable.setter
-    def generatorDefinitionsAreEditable(self, newVal):
-        """
-        Flag indicating whether the user should be able to add/delete/modify the entity
-        generator definitions.  When False, the UI object property viewer will NOT display
-        generation definitions.
-        """
-        self.__generatorDefsAreEditable = newVal
-
     @apidocskip
     def staticInitialize(self):
         """
-        At static initialization, translate generator definitions into
-        entity/interarrival generator pairs; then convert all such pairs into
-        entity generation events (which actually put the generator
-        definitions into action). Note that generator pairs may have also
-        been created directly via addEntityGenerator() and/or
-        addGeneratorPair() calls.
+        At static initialization, translate entity/interarrival generator
+        pairs (created via addEntityGenerator() and/or addGeneratorPair())
+        into entity generation events (which are then registered).
 
-        The assumption is that this occurs after the random number generators
-        for the current run are initialized.
+        The assumption is that this occurs after the random number streams
+        and the simulation event processor for the current run are
+        initialized.
         """
-        self._processGeneratorDefinitions()
-        self._createEntityGenerationEvents()
+        self._create_entity_generation_events()
 
-    def _createEntityGenerationEvents(self):
+    def _create_entity_generation_events(self):
         """
         For each entity/interarrival generator pair, create and register an
         event that will create the first entity and fire its process, and
@@ -123,19 +96,7 @@ class SimEntitySource(SimLocation):
                                              interarrivalGenerator)
             event.register()
 
-    def _processGeneratorDefinitions(self):
-        """
-        Creates a entity generator (via addEntityGenerator()) for each
-        generatorDefinition (type SourceGeneratorDef)
-        """
-        for gdef in self.generatorDefinitions:
-            wiClass = gdef.entityClass
-            processClass = gdef.processClass
-            interarrivalFunc = gdef.interarrivalDistribution
-            kwargs = gdef.interarrivalDistributionParameters
-            self.addEntityGenerator(wiClass, processClass, interarrivalFunc, **kwargs)
-
-    def addEntityGenerator(self, entityClass, processClass,
+    def add_entity_generator(self, entityClass, processClass,
                            interarrivalFunc, *iaArgs, **iaKwargs):
         """
         Initializes a stream of entities to be generated via the following
@@ -193,7 +154,7 @@ class SimEntitySource(SimLocation):
         # should not yet be initialized.
         self.__generatorPairs.append((entityGenerator(), interarrivalGenerator))
 
-    def addGeneratorPair(self, entityGenerator, interarrivalGenerator):
+    def add_generator_pair(self, entityGenerator, interarrivalGenerator):
         """
         ``addGeneratorPair()`` is an alternative to :meth:`addEntityGenerator`,
         typically used when either:
@@ -216,14 +177,10 @@ class SimEntitySource(SimLocation):
             interarrivalGenerator: A generator that yields interarrival times
                                    (class :class:`.SimTime`)
         """
-        self.__generatorPairs.append((entityGenerator, interarrivalGenerator))
-
         # As with addEntityGenerator(), we cannot actually create the
         # SimEntityGenerationEvent here, since this method may be called before
         # the simulation's random number streams have been initialized.
-
-        #event = SimEntityGenerationEvent(self, entityGenerator, interarrivalGenerator)
-        #event.register()
+        self.__generatorPairs.append((entityGenerator, interarrivalGenerator))
 
 
 class SimEntityGenerationEvent(SimEvent):
@@ -253,7 +210,6 @@ class SimEntityGenerationEvent(SimEvent):
             the event's interarrival generator)
         """
         entity = next(self.__entityGenerator)
-        #entity.initializePropertyValues()
         entity.process.start()
         self._time += next(self.__interarrivalGenerator)
         self.register()

@@ -49,7 +49,7 @@ class mm1Process(SimProcess):
         self.release(resourceAssignment)
         entity.move_to(sink)
 
-source.addEntityGenerator(SimEntity, mm1Process, SimDistribution.exponential,
+source.add_entity_generator(SimEntity, mm1Process, SimDistribution.exponential,
                           meanInterarrivalTime, 1)
 
 
