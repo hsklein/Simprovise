@@ -91,7 +91,7 @@ class MockProcessAgent(SimAgent):
         """
         msgType = SimMsgType.RSRC_REQUEST
         msgData = (self, numrequested, resource)
-        msg, responses = self.send_message(resource.assignmentAgent,
+        msg, responses = self.send_message(resource.assignment_agent,
                                           msgType, msgData)
         if responses:
             self.handleResourceAssignment(responses[0])
@@ -128,7 +128,7 @@ class MockProcessAgent(SimAgent):
         Mimic a SimTransaction.release()
         """
         assert self.assignment, "Cannot release prior to assignment"
-        assignmentAgent = self.assignment.assignmentAgent
+        assignmentAgent = self.assignment.assignment_agent
         msgType = SimMsgType.RSRC_RELEASE
         msgData = (self.assignment, releaseSpec)
         self.send_message(assignmentAgent, msgType, msgData)
@@ -197,7 +197,7 @@ class ResourceAssignmentTests(unittest.TestCase):
         "Test:  ResourceAssignment assignment agent property returns resource supplied to constructor"
         rsrc = SimSimpleResource("TestResource", self.location, capacity=2)
         ra = SimResourceAssignment(self.process, rsrc, (rsrc, rsrc))
-        self.assertEqual(ra.assignmentAgent, rsrc)
+        self.assertEqual(ra.assignment_agent, rsrc)
         
     def testResourcesProperty(self):
         "Test:  ResourceAssignment resources property returns resource sequence supplied to constructor as a tuple"
@@ -239,17 +239,17 @@ class ResourceAssignmentSubtractTests(unittest.TestCase):
         
     def testSubtractAll1(self):
         "Test:  after ResourceAssignment.subtractAll, count property is zero"
-        self.ra.subtractAll()
+        self.ra.subtract_all()
         self.assertEqual(self.ra.count, 0)
         
     def testSubtractAll2(self):
         "Test:  after ResourceAssignment.subtractAll, resources property returns an empty tuple"
-        self.ra.subtractAll()
+        self.ra.subtract_all()
         self.assertEqual(self.ra.resources, ())
         
     def testSubtractAll3(self):
         "Test:  after ResourceAssignment.subtractAll, resource property raises an Error"
-        self.ra.subtractAll()
+        self.ra.subtract_all()
         self.assertRaises(SimError, lambda: self.ra.resource)
         
     def testSubtract1(self):
@@ -419,7 +419,7 @@ class SimpleResourcePropertyTests(unittest.TestCase):
         "Test: two acquisitions of a resource, both assignments returned by currentAssignments"
         assignment1 = self.process.acquire(self.rsrc2, 1)
         assignment2 = self.process.acquire(self.rsrc2, 1)
-        assignments = set(self.rsrc2.currentAssignments)
+        assignments = set(self.rsrc2.current_assignments)
         self.assertEqual(assignments, set((assignment1, assignment2)))
    
         
@@ -723,17 +723,17 @@ class BasicResourcePoolTests(unittest.TestCase):
         "Test: add a resource to the pool, confirm new pool size"
         initialsize = self.pool.poolsize()
         resource = SimSimpleResource("TestResource5", self.location, capacity=2)
-        self.pool.addResource(resource)
+        self.pool.add_resource(resource)
         self.assertEqual(self.pool.poolsize(), initialsize + 2)
         
     def testadd2(self):
         "Test: re-adding a resource to the pool raises an error"
-        self.assertRaises(SimError, lambda: self.pool.addResource(self.rsrc2))
+        self.assertRaises(SimError, lambda: self.pool.add_resource(self.rsrc2))
           
     def testadd3(self):
         "Test: putting a resource in two pools raises an error"
         pool2 = SimResourcePool()
-        self.assertRaises(SimError, lambda: pool2.addResource(self.rsrc2))
+        self.assertRaises(SimError, lambda: pool2.add_resource(self.rsrc2))
              
     def testpoolsize1(self):
         "Test: Total pool size is 7"
@@ -777,28 +777,28 @@ class BasicResourcePoolTests(unittest.TestCase):
     def testavailableresources1(self):
         "Test: Total (initial) available resources in pool"
         expected = [self.rsrc1, self.rsrc2, self.rsrc3, self.rsrc4]
-        self.assertEqual(self.pool.availableResources(), expected)
+        self.assertEqual(self.pool.available_resources(), expected)
              
     def testavailableresources2(self):
         "Test: (initial) TestResource available resources in pool"
         expected = [self.rsrc3,]
-        self.assertEqual(self.pool.availableResources(TestResource), expected)
+        self.assertEqual(self.pool.available_resources(TestResource), expected)
              
     def testcurrentAssignments1(self):
         "Test: Total (initial) current assignments in pool is empty"
-        self.assertEqual(list(self.pool.currentAssignments()), [])
+        self.assertEqual(list(self.pool.current_assignments()), [])
              
     def testcurrentAssignments2(self):
         "Test: (initial) current assignments involving TestResource in pool is empty"
-        self.assertEqual(list(self.pool.currentAssignments(TestResource)), [])
+        self.assertEqual(list(self.pool.current_assignments(TestResource)), [])
              
     def testcurrenttransactions1(self):
         "Test: Total (initial) current assignments in pool is empty"
-        self.assertEqual(self.pool.currentTransactions(), [])
+        self.assertEqual(self.pool.current_transactions(), [])
              
     def testcurrenttransactions2(self):
         "Test: TestResource (initial) current assignments in pool is empty"
-        self.assertEqual(self.pool.currentTransactions(TestResource), [])
+        self.assertEqual(self.pool.current_transactions(TestResource), [])
              
     def testacquire1(self):
         "Test: Acquire one of any resource from the pool - should be the first"
@@ -839,20 +839,20 @@ class BasicResourcePoolTests(unittest.TestCase):
         "Test: Acquire three of any resource from the pool, followed by 2 - availableResources "
         self.process1.acquireFrom(self.pool, SimResource, 3)
         self.process2.acquireFrom(self.pool, SimResource, 2)
-        self.assertEqual(self.pool.availableResources(), [self.rsrc4])
+        self.assertEqual(self.pool.available_resources(), [self.rsrc4])
              
     def testcurrentAssignments32(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - currentAssignments "
         ra1 = self.process1.acquireFrom(self.pool, SimResource, 3)
         ra2 = self.process2.acquireFrom(self.pool, SimResource, 2)
-        self.assertEqual(set(self.pool.currentAssignments()), set([ra1, ra2]))
+        self.assertEqual(set(self.pool.current_assignments()), set([ra1, ra2]))
              
     def testcurrentTransactions32(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - currentTransactions "
         ra1 = self.process1.acquireFrom(self.pool, SimResource, 3)
         ra2 = self.process2.acquireFrom(self.pool, SimResource, 2)
         expected = (self.process1, self.process2)
-        self.assertEqual(set(self.pool.currentTransactions()), set(expected))
+        self.assertEqual(set(self.pool.current_transactions()), set(expected))
              
     def testacquiremorethanpoolsize1(self):
         "Test: Acquire 8 of any resource (bigger than the pool) raises "
@@ -919,37 +919,37 @@ class BasicResourcePoolReleaseTests(unittest.TestCase):
         "Test: Total (initial) available resources in pool after partial release of assignment 2"
         self.process1.release(self.ra1, self.rsrc2)
         expected = [self.rsrc2, self.rsrc3, self.rsrc4]
-        self.assertEqual(self.pool.availableResources(), expected)
+        self.assertEqual(self.pool.available_resources(), expected)
              
     def testavailableresources2(self):
         "Test: Total (initial) available resources in pool after partial release of assignment 2"
         self.process1.release(self.ra1, self.rsrc1)
         expected = [self.rsrc1, self.rsrc2, self.rsrc3, self.rsrc4]
-        self.assertEqual(self.pool.availableResources(), expected)
+        self.assertEqual(self.pool.available_resources(), expected)
              
     def testcurrentAssignments1(self):
         "Test: Total current assignments after release of assignment 1"
         self.process1.release(self.ra1)
         expected = (self.ra2,)
-        self.assertEqual(set(self.pool.currentAssignments()), set(expected))
+        self.assertEqual(set(self.pool.current_assignments()), set(expected))
              
     def testcurrentAssignments2(self):
         "Test: Total current assignments after partial release of assignment 1"
         self.process1.release(self.ra1, self.rsrc2)
         expected = (self.ra1, self.ra2)
-        self.assertEqual(set(self.pool.currentAssignments()), set(expected))
+        self.assertEqual(set(self.pool.current_assignments()), set(expected))
              
     def testcurrentTransactions1(self):
         "Test: Total current transactions after release of assignment 1"
         self.process1.release(self.ra1)
         expected = (self.process2,)
-        self.assertEqual(set(self.pool.currentTransactions()), set(expected))
+        self.assertEqual(set(self.pool.current_transactions()), set(expected))
              
     def testcurrentTransactions2(self):
         "Test: Total current transactions after partial release of assignment 1"
         self.process1.release(self.ra1, self.rsrc2)
         expected = (self.process1, self.process2)
-        self.assertEqual(set(self.pool.currentTransactions()), set(expected))
+        self.assertEqual(set(self.pool.current_transactions()), set(expected))
 
 
 class ResourcePoolQueueingTests(unittest.TestCase):

@@ -304,8 +304,7 @@ class SimulationResult(object):
     """
     SimulationResult wraps the output (database) of a simulation , and
     implements various operations (reports, database save, csv file
-    generation) on that output. The wrapped output database is temporary
-    by default.
+    generation) on that output. 
     
     :meth:`Simulation.execute`, :meth:`Simulation.executeScript` and
     :meth:`Simulation.replicate` all return SimulationResult objects.
@@ -315,6 +314,16 @@ class SimulationResult(object):
     SimulationResult instances are context managers that close the database
     on exit. If the database is temporary, the database is therefore deleted
     on exit unless explicitly saved.
+    
+        :param dbpath:      The path of the output database to read
+        :type dbpath:       str
+    
+        :param isTemporary: Flag indicating whether the database is temporary.
+                            If temporary and not explicitly saved via
+                            :meth:`save_database_as`, the database is deleted
+                            on exit. Defaults to False.
+        :type isTemporary:  bool
+        
     """
     
     def __init__(self, dbpath, isTemporary=False):
@@ -327,8 +336,8 @@ class SimulationResult(object):
         TODO look at gathering data (SimDatasetStatistic objects) in initializer,
         to be available to reporting/output methods.
         """
-        logger.info("Simulation result created for output db {0} {1}", dbpath, isTemporary)
-        print("==========", dbpath, isTemporary)
+        logger.info("Simulation result created for output DB {0} {1}", dbpath, isTemporary)
+        #print("==========", dbpath, isTemporary)
         self.dbMgr = SimDatabaseManager()
         self.dbMgr.openArchivedDatabase(dbpath, isTemporary)
         self.datasetStatistics = None

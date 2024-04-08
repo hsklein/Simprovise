@@ -22,8 +22,7 @@ from simprovise.core.apidoc import apidoc, apidocskip
 
 logger = SimLogging.getLogger(__name__)
 
-# a constant
-#ALL = None
+_RESOURCE_ERROR = "Resource Error"
 _REQUEST_ERROR = "Resource Request Error"
 _RELEASE_ERROR = "Resource Release Error"
 _POOL_ERROR = "Resource Pool Error"
@@ -38,13 +37,18 @@ class SimResourceAssignment(object):
     """
     Encapsulates a set of zero or more resources assigned to a process
     via :meth:`.SimTransaction.acquire`.
+    
+        :param transaction:     :class:`SimProcess` to which resource(s)
+                                are being assigned
+        :type transaction:      :class:`SimProcess` object
+    
+        :param assignmentagent: Agent (which might be the resource itself) 
+                                which made this assignment
+        :type assignmentagent:  :class:`SimAgent` object
+    
+        :param resources:      The resource(s) (at least one) in the assignment.
+        :type resources:       Sequence of class :class:`SimResource` objects
 
-    Args:
-        transaction (SimProcess):   Process (transaction) to which resource(s)
-                                    are being assigned
-        assignmentAgent (SimAgent): Agent managing the assigned resource(s)
-        resources (sequence):       Sequence of SimResource(s) to be included
-                                    in assignment
     """
     __slots__ = ('_txn', '_assignmentAgent', '_resources', '_assignTime')
 
@@ -58,16 +62,18 @@ class SimResourceAssignment(object):
 
     def __str__(self):
         return "Resource Assignment: Transaction: " + str(self.transaction) + \
-               ", Agent:" + str(self.assignmentAgent) + ", Resources: " + \
+               ", Agent:" + str(self.assignment_agent) + ", Resources: " + \
                str(self.resources)
 
     @property
     def transaction(self):
-        "The transaction (SimProcess) to which these resources are assigned"
+        """
+       The transaction (SimProcess) to which these resources are assigned
+        """
         return self._txn
 
     @property
-    def assignmentAgent(self):
+    def assignment_agent(self):
         """
         The SimAgent (possibly the resource itself, possibly not) that manages
         acquisition and release of this assignment.
@@ -76,12 +82,16 @@ class SimResourceAssignment(object):
 
     @property
     def count(self):
-        "The number of resources assigned"
+        """
+        The number of resources assigned
+        """
         return len(self._resources)
 
     @property
     def resources(self):
-        "A tuple of the resources assigned"
+        """
+        A tuple of the resources assigned
+        """
         return self._resources
 
     @property
@@ -99,13 +109,17 @@ class SimResourceAssignment(object):
                          assignment
         """
         if 1 < len(set(self._resources)):
-            raise SimError("Attempt to access (singular) resource property on ResourceAssignment with multiple resources: " + str(self))
+            msg = "Attempt to access (singular) resource property on ResourceAssignment with multiple resources: {0}"
+            raise SimError(_RESOURCE_ERROR, msg, self)
+        
         if self.count == 0:
-            raise SimError("Attempt to access resource property on a null (no resources) assignment: " + str(self))
+            msg = "Attempt to access resource property on a null (no resources) assignment: {0}"
+            raise SimError(_RESOURCE_ERROR, msg, self)
+    
         return self._resources[0]
 
     @property
-    def assignTime(self):
+    def assign_time(self):
         """
         The SimTime that this assignment was created/made.
         """
@@ -131,11 +145,12 @@ class SimResourceAssignment(object):
             for r in resourcesToSubtract:
                 rlist.remove(r)
         except ValueError:
-            raise SimError("Resource List ({0}) not contained in assignment {1}".format(resourcesToSubtract, self))
-
+            msg = "Resource List ({0}) not contained in assignment {1}"
+            raise SimError(_RESOURCE_ERROR, msg, resourcesToSubtract, self)
+  
         self._resources = tuple(rlist)
 
-    def subtractAll(self):
+    def subtract_all(self):
         "Remove all of the assignment's resources"
         self._resources = tuple()
 
@@ -149,16 +164,16 @@ class ResourceAssignmentAgentMixin(object):
 
     By default, this mix-in fulfills requests on a first-in/first-out basis.
     That behavior may be overridden by registering a request priority function
-    via :meth:`requestPriorityFunc` and/or overriding :meth:`assignFromRequest`
+    via :meth:`requestPriorityFunc` and/or overriding :meth:`assign_from_request`
     in a subclass.
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
-        self.register_handler(SimMsgType.RSRC_REQUEST, self.handleResourceRequest)
-        self.register_handler(SimMsgType.RSRC_RELEASE, self.handleResourceRelease)
+        self.register_handler(SimMsgType.RSRC_REQUEST, self._handle_resource_request)
+        self.register_handler(SimMsgType.RSRC_RELEASE, self._handle_resource_release)
 
     @property
-    def requestPriorityFunc(self):
+    def request_priority_func(self):
         """
         Returns/sets the priority function for Resource Request messages.
         The priority function must take a request message as it's sole argument
@@ -167,42 +182,51 @@ class ResourceAssignmentAgentMixin(object):
         """
         return self.priority_func(SimMsgType.RSRC_REQUEST)
 
-    @requestPriorityFunc.setter
-    def requestPriorityFunc(self, f):
+    @request_priority_func.setter
+    def request_priority_func(self, f):
         self.register_priority_func(SimMsgType.RSRC_REQUEST, f)
 
-    def createResourceAssignment(self, txn, resource, numToAssign=1):
+    def _create_resource_assignment(self, txn, resource, numToAssign=1):
         """
         Create and return a SimResourceAssignment involving a single resource
         object, though if this resource has capacity > 1, we may assign more
-        than one of that capacity.
-
-        Args:
-            txn (SimProcess):       Process to which resource(s) are to be
-                                    assigned
-            resource (SimResource): Resource object to be assigned
-            numToAssign (int > 0):  Amount of resource to assign; must be <= the
-                                    capacity of resource
-        Returns:
-            SimResourceAssignment: Resource assignment as specified by above
-                                   parameters
-        """
-        assert numToAssign > 0, "Number of resources to assign must be greater than zero"
-        assert resource.capacity >= numToAssign, "Resource does not have capacity for assignment"
+        than one of that resource (up to its capacity).
+       
+        :param txn:        The transaction to which resources are to be assigned
+        :type txn:         :class:`SimProcess`
+        
+        :param resource:    Resource object to be assigned
+        :type resource:     :class:`SimResource`
+        
+        :param numToAssign: Resource object to be assigned
+        :type numToAssign:  int, range [1, resource capacity]
+        
+        :return:            Resource assignment as specified by above parameters
+        :rtype:             :class:`SimResourceAssignment`
+ 
+         """
+        if numToAssign <= 0 or numToAssign > resource.capacity: 
+            msg = "Assignment for {0} of resource {1} is not in range 1-capacity ({2})"
+            raise SimError(_REQUEST_ERROR, msg, numToAssign,
+                           resource.element_id, resource.capacity)
+        
         return SimResourceAssignment(txn, self, (resource,) * numToAssign)
 
-    def createMultipleResourceAssignment(self, txn, *resources):
+    def _create_multiple_resource_assignment(self, txn, *resources):
         """
         Create and return a SimResourceAssignment from the passed resources,
         which may be any combination of resource instances and/or sequences
-        of resources. A generalized version of createResourceAssignment().
+        of resources. A generalized version of :meth:_create_resource_assignment`
 
-        Args:
-            txn (SimProcess): Process to which resource(s) are to be assigned
-            resources:        One or more SimResource objects to be assigned
-        Returns:
-            SimResourceAssignment: Resource assignment as specified by above
-                                   parameters
+        :param txn:       The transaction to which resources are to be assigned
+        :type txn:        :class:`SimProcess`
+        
+        :param resources: Sequence of resource object to be assigned
+        :type resources:  Sequence of class :class:`SimResource`
+                
+        :return:          Resource assignment as specified by above parameters
+        :rtype:           :class:`SimResourceAssignment`
+        
         """
         def flatten(rsrcList):
             """
@@ -220,7 +244,7 @@ class ResourceAssignmentAgentMixin(object):
 
         return SimResourceAssignment(txn, self, flatten(resources))
 
-    def handleResourceRequest(self, msg):
+    def _handle_resource_request(self, msg):
         """
         The handler registered to handle resource request messages.
 
@@ -233,17 +257,18 @@ class ResourceAssignmentAgentMixin(object):
         If the requested cannot be fulfilled, just return False, which should
         place the request on the message queue for later processing/fulfillment.
 
-        Args:
-            msg (SimMessage): Resource Request message
+        :param msg: Resource Request message (SimMsgType RSRC_REQUEST)
+        :type msg:  :class:`SimMessage`
+                
+        :return:    True if request is fulfilled immediately, False if queued for
+                    fulfillment later.
+        :rtype:     bool
 
-        Returns:
-            bool: True if request is fulfilled immediately, False if queued for
-                  fulfillment later.
         """
         assert msg.msgType == SimMsgType.RSRC_REQUEST, "Invalid message type passed to handleResourceRequest()"
 
         # Validate the message, raising an exception if there is a problem.
-        self._validateRequest(msg)
+        self._validate_request(msg)
 
         # Determine if there is an earlier request on the queue that we
         # should attempt to fulfill first - if so, we'll defer processing of
@@ -255,15 +280,15 @@ class ResourceAssignmentAgentMixin(object):
         # queue. If we have a priority function, defer if the next request is
         # a higher (lower-valued) priority as compared to the request we are
         # handling.
-        nextRequest = self.nextRequestMessage()
+        nextRequest = self._next_request_message()
         if nextRequest and (self.message_priority(msg) is None or
                             self.message_priority(nextRequest) <= self.message_priority(msg)):
             return False
         else:
-            return self._processRequest(msg)
+            return self._process_request(msg)
 
 
-    def _validateRequest(self, requestMsg):
+    def _validate_request(self, requestMsg):
         """
         Validate request message data.
         This default implementation works when the message data specifies a
@@ -275,7 +300,7 @@ class ResourceAssignmentAgentMixin(object):
         assert numRequested > 0, "number of resources requested not greater than zero"
         assert isinstance(resource, SimResource), "Resource request data does not specify an instance of class SimResource"
 
-        if resource.assignmentAgent is not self:
+        if resource.assignment_agent is not self:
             errorMsg = "Request for resource {0} sent to agent that does not manage that resource"
             raise SimError(_REQUEST_ERROR, errorMsg, resource.element_id)
 
@@ -285,24 +310,24 @@ class ResourceAssignmentAgentMixin(object):
                            resource.element_id, resource.capacity)
 
 
-    def _processRequest(self, requestMsg):
+    def _process_request(self, requestMsg):
         """
         Attempt to process a resource request, returning True if successful (and
         False otherwise).
         """
-        resourceAssignment = self.assignFromRequest(requestMsg)
+        resourceAssignment = self._assign_from_request(requestMsg)
         if resourceAssignment:
             # Do assignTo(s) and sendResponse
             txn = requestMsg.msgData[0]
             for resource in resourceAssignment.resources:
-                resource.assignTo(txn)
+                resource.assign_to(txn)
             self.send_response(requestMsg, SimMsgType.RSRC_ASSIGNMENT, resourceAssignment)
             # Handled, so return True
             return True
         else:
             return False
 
-    def assignFromRequest(self, requestMsg):
+    def _assign_from_request(self, requestMsg):
         """
         This method, called by _processRequest(), actually implements the
         logic that determines whether a resource (or resources) can be
@@ -320,12 +345,13 @@ class ResourceAssignmentAgentMixin(object):
         Specializations of resource assignment agents may provide their own
         assignFromRequest() implementation to customize this behavior.
 
-        Args:
-            msg (SimMessage): Resource Request message
+        :param msg: Resource Request message (SimMsgType RSRC_REQUEST)
+        :type msg:  :class:`SimMessage`
+                
+        :return:    SimResourceAssignment or None: Depending on whether
+                    request can be fulfilled now.
+        :rtype:     :class:`SimResourceAssignment` or None
 
-        Returns:
-            SimResourceAssignment or None: Depending on whether request can be
-                                           fulfilled now.
         """
         # Extract the message data.
         txn, numRequested, resource = requestMsg.msgData
@@ -335,11 +361,11 @@ class ResourceAssignmentAgentMixin(object):
 
 
         if numRequested <= resource.available:
-            return self.createResourceAssignment(txn, resource, numRequested)
+            return self._create_resource_assignment(txn, resource, numRequested)
         else:
             return None
 
-    def handleResourceRelease(self, msg):
+    def _handle_resource_release(self, msg):
         """
         The handler registered to handle resource release messages.
 
@@ -353,11 +379,12 @@ class ResourceAssignmentAgentMixin(object):
         to one or more request messages in the message queue if they can now
         be fulfilled using the newly released resource(s).
 
-        Args:
-            msg (SimMessage): Resource Release message
+        :param msg: Resource Request message (SimMsgType RSRC_RELEASE)
+        :type msg:  :class:`SimMessage`
+                
+        :return:    ``True`` always, as the message is always handled
+        :rtype:     bool
 
-        Returns:
-            bool: ``True`` always
         """
         assert msg.msgType == SimMsgType.RSRC_RELEASE, "Invalid message type passed to handleResourceRelease()"
 
@@ -396,21 +423,21 @@ class ResourceAssignmentAgentMixin(object):
             raise SimError(_RELEASE_ERROR, errorMsg)
 
         for resource in resourcesToRelease:
-            if resource.assignmentAgent is not self:
+            if resource.assignment_agent is not self:
                 errorMsg = "Release for resource {0} sent to agent that does not manage that resource"
                 raise SimError(_RELEASE_ERROR, errorMsg, resource.element_id)
-            resource.releaseFrom(assignment.transaction, 1)
+            resource.release_from(assignment.transaction, 1)
 
         assignment.subtract(resourcesToRelease)
 
         # Now that we have one or more available resources, attempt to
         # respond to outstanding (queued) resource requests.
-        self.processQueuedRequests()
+        self._process_queued_requests()
 
         # Since we handled the release message, return True
         return True
 
-    def processQueuedRequests(self):
+    def _process_queued_requests(self):
         """
         This method is called by handleResourceRelease() after resource
         release; it is responsible for (at least attempting) to fulfill
@@ -429,22 +456,24 @@ class ResourceAssignmentAgentMixin(object):
         request to "jump the queue". Subclassed agents may choose to modify this
         behavior.
         """
-        nextRequest = self.nextRequestMessage()
-        while nextRequest and self._processRequest(nextRequest):
+        nextRequest = self._next_request_message()
+        while nextRequest and self._process_request(nextRequest):
             self.msgQueue.remove(nextRequest)
-            nextRequest = self.nextRequestMessage()
+            nextRequest = self._next_request_message()
 
-    def nextRequestMessage(self):
+    def _next_request_message(self):
         """
         Returns the next request message (type SimResource.REQUEST_MSGTYPE)
         in the resource's message queue, or None if there aren't any.
         Applies priority function, if any.
 
         Does NOT remove the message from the queue
+                
+        :return: SimMessage or None: Next request message in queue (based
+                 on priority) or None if there are no request messages in
+                 the queue
+        :rtype:  :class:`SimMessage` or None
 
-        Returns:
-           SimMessage or None: Next request message in queue (based on priority)
-                               or None if the queue is empty.
         """
         return self.next_queued_message(SimMsgType.RSRC_REQUEST)
 
@@ -459,20 +488,35 @@ class SimResource(SimStaticObject):
     more directly to ownership than to specific physical location at any
     given simulated time.)
 
-    Args:
-        name (str):                 Name of the resource, must be unique within
-                                    the resource's location
-        locationObj (SimLocation):  Location object to which resource belongs.
-                                    If None resource is assigned to Root location
-        animationObj:               None if the simulation is not animated
-        capacity (int > 0):         Capacity of resource, or number of
-                                    subresources. Defaults to 1.
-        assignmentAgent (SimAgent): Agent managing (assigning) this resource.
-                                    If None, the resource is assumed to be its
-                                    own agent.
+        :param name:            Resource name. As with other static objects, it
+                                must be unique within it's location
+        :type name:             str
+
+        :param initialLocation: Initial location object for the resource.
+                                If None, will default to parent location.
+        :type initialLocation:  :class:`SimLocation` or None
+
+        :param parentLocation: Location object to which resource belongs.
+                                If None defaults to Root location
+        :type parentLocation:  :class:`SimLocation` or None
+
+        :param capacity:        Capacity of resource, or number of subresources.
+                                Defaults to 1. Must be > 0. 
+        :type capacity:         int
+
+        :param assignmentAgent: Agent managing (assigning) this resource.
+                                If None, the resource is assumed to be its
+                                own agent.
+        :type assignmentAgent:  :class:`SimAgent` or None
+
+        :param moveable:        True if the resource can move (within it's
+                                parent location), False if it is filling
+                                Defaults to True. 
+        :type moveable:         bool
+
     """
     #TODO
-    #This becomes an abstract base class, with subclasses
+    #Maybe this becomes an abstract base class, with subclasses
     #SimCompositeResource and SimLeafResource (or similar name)
     #Add a __parentResource attribute (which must be None or a composite
     #resource) and a parent atttribute setter/getter
@@ -485,10 +529,14 @@ class SimResource(SimStaticObject):
     __slots__ = ('__processtimeDataCollector', '_capacity', '_utilCounter',
                  '_currentTxnAssignments', 'assignmentAgent')
 
-    def __init__(self, name, locationObj=None, animationObj=None, capacity=1,
-                 assignmentAgent=None):
-        super().__init__(name, locationObj, animationObj)
-
+    def __init__(self, name, initialLocation=None, parentLocation=None,
+                 capacity=1, assignmentAgent=None, moveable=True):
+        super().__init__(name, initialLocation, parentLocation, moveable)
+        
+        if not isinstance(capacity, int) or capacity <= 0: 
+            msg = "Resource {0} assigned invalid capacity of {1}: must be a positive integer"
+            raise SimError(_RESOURCE_ERROR, msg, self.element_id, capacity)
+        
         self._processtimeDataCollector = SimUnweightedDataCollector(self, "ProcessTime", SimTime)
         # TODO other data collectors or counters, to measure time by availability and/or reason,
         # policy mechanisms to determine what data to collect
@@ -500,33 +548,23 @@ class SimResource(SimStaticObject):
 
         self._currentTxnAssignments = {}
         if assignmentAgent is not None:
-            self.assignmentAgent = assignmentAgent
+            self.assignment_agent = assignmentAgent
         else:
-            self.assignmentAgent = self
-
-    @property
-    def isMoveable(self):
-        """
-        Indicates whether or not the resource is fixed or moveable. By default,
-        resources are moveable.
-
-        Returns:
-            bool: True if the resource can move (to SimLocations)
-        """
-        return True
+            self.assignment_agent = self
 
     @property
     def capacity(self):
         """
         The size/capacity of the resource (number of subresources in this
         resource)
+               
+        :return:    The resource's capacity
+        :rtype:     int
 
-        Returns:
-            int: The capacity of the resource, if finite.
         """
         return self._utilCounter.capacity
 
-    def assignTo(self, txn, number=1):
+    def assign_to(self, txn, number=1):
         """
         Assign this resource (or if this resource has capacity > 1, the passed
         number of subresources) to the passed transaction (task or process).
@@ -540,13 +578,22 @@ class SimResource(SimStaticObject):
         assignments - keyed by the transaction (task or process) requesting
         the assignment.
 
-        Args:
-            txn (SimProcess): Process to which this resource is to be assigned
-            number (int > 0): Number of resources to be assigned (can be > 1
-                              if the resource has capacity > 1)
+            :param txn:    Transaction/process to which the resource is assigned.
+            :type txn:     :class:`SimProcess`
+
+            :param number: Number of resources to be assigned (can be > 1 if the
+                           resource has capacity > 1)
+             :type number: int
+
         """
-        assert number <= self.available, "Resource is not available for assignment"
-        assert number > 0, "assignTo() number must be greater than zero"
+        if number <= 0:
+            msg = "Resource {0}: resources assigned ({1}} must be > 0"
+            raise SimError(_REQUEST_ERROR, msg, self.element_id, number)
+            
+        if number > self.available:
+            msg = "Resource {0}: resources available ({1}} is less than number assigned ({2})"
+            raise SimError(_REQUEST_ERROR, msg, self.element_id, self.available, number)        
+        
         self._utilCounter.increment(txn, number)
         if txn in self._currentTxnAssignments:
             self._currentTxnAssignments[txn][1] += number
@@ -554,7 +601,7 @@ class SimResource(SimStaticObject):
             self._currentTxnAssignments[txn] = [SimClock.now(), number]
 
     @property
-    def currentAssignments(self):
+    def current_assignments(self):
         """
         Return a list of all resource assignments involving this resource.
         """
@@ -567,13 +614,13 @@ class SimResource(SimStaticObject):
         return [assg for assg in assgIter if self in assg.resources]
 
     @property
-    def currentTransactions(self):
+    def current_transactions(self):
         """
         Returns a list of transactions (processes) currently using this resource.
         """
         return list(self._currentTxnAssignments)
 
-    def releaseFrom(self, txn, numToRelease=None):
+    def release_from(self, txn, numToRelease=None):
         """
         Releases this resource (or if this resource has capacity > 1, the
         passed number of subresources) from a previous assignment to the
@@ -636,19 +683,19 @@ class SimResource(SimStaticObject):
 
     @property
     @apidocskip
-    def minProcessTime(self):
+    def min_process_time(self):
         "Time spent processing an assignment - minimum"
         return self._processtimeDataCollector.min()
 
     @property
     @apidocskip
-    def maxProcessTime(self):
+    def max_process_time(self):
         "Timespent processing an assignment - maximum"
         return self._processtimeDataCollector.max()
 
     @property
     @apidocskip
-    def meanProcessTime(self):
+    def mean_process_time(self):
         "Time spent processing an assignment - mean"
         return self._processtimeDataCollector.mean()
 
@@ -768,9 +815,9 @@ class SimResourcePool(SimResourceAssignmentAgent):
         super().__init__()
         self._resources = []
         for r in resources:
-            self.addResource(r)
+            self.add_resource(r)
 
-    def addResource(self, resource):
+    def add_resource(self, resource):
         """
         Add a resource to the pool, making the pool it's assignment agent.
 
@@ -819,7 +866,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
         else:
             return [r for r in self._resources if isinstance(r, rsrcClass)]
 
-    def availableResources(self, rsrcClass=None):
+    def available_resources(self, rsrcClass=None):
         """
         Returns a list of all available resources in the pool that are
         instances of the specified resource class (or the entire pool, if the
@@ -827,25 +874,25 @@ class SimResourcePool(SimResourceAssignmentAgent):
         """
         return [r for r in self.resources(rsrcClass) if r.available]
 
-    def currentAssignments(self, rsrcClass=None):
+    def current_assignments(self, rsrcClass=None):
         """
         Returns an iterable to the current resource assignments for all
         resources in the pool of a specified class.  (Or current resource
         assignments for every resource in the pool, if the specified
         rsrcClass is None)
         """
-        return chain.from_iterable(r.currentAssignments
+        return chain.from_iterable(r.current_assignments
                                    for r in self.resources(rsrcClass))
 
-    def currentTransactions(self, rsrcClass=None):
+    def current_transactions(self, rsrcClass=None):
         """
         Returns a list of all of the transactions/processes using a pool
         resource of the specified class, or to all transactions using any of
         the pool's resources if rsrcClass is None.
         """
-        return [assg.transaction for assg in self.currentAssignments(rsrcClass)]
+        return [assg.transaction for assg in self.current_assignments(rsrcClass)]
 
-    def _validateRequest(self, requestMsg):
+    def _validate_request(self, requestMsg):
         """
         Validate request message data. Specialization for resource pools,
         which assumes that last message parameter (if any) is either None
@@ -874,7 +921,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
                            self.poolsize(rsrcClass), rsrcClass.__name__)
 
 
-    def assignFromRequest(self, requestMsg):
+    def assign_from_request(self, requestMsg):
         """
         Overridden method that will, if possible, create and return
         a resource assignment that meets the passed resource request.
@@ -896,7 +943,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
             # return a SimResourceAssignment
             rsrcsToAssign = []
             numNeeded = numRequested
-            for rsrc in self.availableResources(rsrcClass):
+            for rsrc in self.available_resources(rsrcClass):
                 n = min(rsrc.available, numNeeded)
                 rsrcsToAssign.extend((rsrc,) * n)
                 numNeeded -= n

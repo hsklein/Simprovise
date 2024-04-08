@@ -431,7 +431,7 @@ class SimTransaction(object):
             SimResourceAssignment: Assignment object that specifies assigned
                                    resource(s)
         """
-        assert resource.assignmentAgent, "Resource has no assignment agent!"
+        assert resource.assignment_agent, "Resource has no assignment agent!"
 
         if numrequested <= 0 or int(numrequested) != numrequested:
             errorMsg = "Resource acquire() number requested ({0}) must be an integer greater than zero"
@@ -439,7 +439,7 @@ class SimTransaction(object):
 
         # Send a resource request message to the desired resource's assignment
         # agent (which may or may not be the resource itself)
-        assignmentAgent = resource.assignmentAgent
+        assignmentAgent = resource.assignment_agent
         msgData = (self, numrequested, resource)
         return self._acquireImpl(assignmentAgent, msgData)
 
@@ -528,10 +528,10 @@ class SimTransaction(object):
         assert self.agent, "Transaction calling release() has no agent"
         assert self.isExecuting, "Resources can only be released by executing transactions"
         assert rsrcAssignment, "Null assignment passed to release()"
-        assert rsrcAssignment.assignmentAgent, "Resource assignment has no agent"
+        assert rsrcAssignment.assignment_agent, "Resource assignment has no agent"
         assert rsrcAssignment.transaction == self, "Resource assignment transaction is not this transaction"
 
-        assignmentAgent = rsrcAssignment.assignmentAgent
+        assignmentAgent = rsrcAssignment.assignment_agent
         msgType = SimMsgType.RSRC_RELEASE
         msgData = (rsrcAssignment, releaseSpec)
         self.agent.send_message(assignmentAgent, msgType, msgData)
