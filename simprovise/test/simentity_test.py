@@ -28,7 +28,7 @@ class SimEntityTests(unittest.TestCase):
     
     def testCreateTime(self):
         "Test: createTime value equals time that the entity was instantiated"
-        self.assertEqual(self.entity.createTime, SimClock.now())
+        self.assertEqual(self.entity.create_time, SimClock.now())
     
     def testSourceAttribute(self):
         "Test: source attribute value"
@@ -40,19 +40,19 @@ class SimEntityTests(unittest.TestCase):
     
     def testZeroProcessTime(self):
         "Test: at instantiation, process time is zero"
-        self.assertEqual(self.entity.processTime, SimTime(0))
+        self.assertEqual(self.entity.process_time, SimTime(0))
         
     def testProcessTime(self):
         "Test: process time is elapsed time since creation"
         SimClock.advanceTo(SimClock.now() + 5)
-        self.assertEqual(self.entity.processTime, SimTime(5))
+        self.assertEqual(self.entity.process_time, SimTime(5))
         
     def testProcessTimeAfterDestroy(self):
         "Test: process time is elapsed time between creation and destruction"
         SimClock.advanceTo(SimClock.now() + 5)
         self.entity.destroy()
         SimClock.advanceTo(SimClock.now() + 25)
-        self.assertEqual(self.entity.processTime, SimTime(5))
+        self.assertEqual(self.entity.process_time, SimTime(5))
 
 
 

@@ -163,14 +163,14 @@ class SimDataCollectorTests(unittest.TestCase):
         SimClock.initialize()
         self.dc1 = datacollector.SimUnweightedDataCollector()
         self.dcTW = datacollector.SimTimeWeightedDataCollector()
-        self.dc1.addValue(3)
-        self.dc1.addValue(1)
-        self.dc1.addValue(2)
-        self.dcTW.addValue(1)
+        self.dc1.add_value(3)
+        self.dc1.add_value(1)
+        self.dc1.add_value(2)
+        self.dcTW.add_value(1)
         SimClock.advanceTo(simtime.SimTime(1))
-        self.dcTW.addValue(4)
+        self.dcTW.add_value(4)
         SimClock.advanceTo(simtime.SimTime(3))
-        self.dcTW.addValue(100) # won't count without further clock advance
+        self.dcTW.add_value(100) # won't count without further clock advance
 
     def testEntries1(self):
         "Test: DataCollector (unweighted) entry count"
@@ -228,7 +228,7 @@ class SimDataCollectorTests(unittest.TestCase):
         "Test:  after reset, advance 1 second, add value of 200 to weighted collector (value 100 before reset), advance 1 second.  Mean = 150"
         self.dcTW.reset()
         SimClock.advanceTo(simtime.SimTime(4))
-        self.dcTW.addValue(200)
+        self.dcTW.add_value(200)
         SimClock.advanceTo(simtime.SimTime(5))
         self.assertEqual(self.dcTW.mean(), 150)
         
@@ -236,7 +236,7 @@ class SimDataCollectorTests(unittest.TestCase):
         "Test:  after reset, advance 1 second, add value of 200 to weighted collector (value 100 before reset), advance 1 second.  entry count = 1"
         self.dcTW.reset()
         SimClock.advanceTo(simtime.SimTime(4))
-        self.dcTW.addValue(200)
+        self.dcTW.add_value(200)
         SimClock.advanceTo(simtime.SimTime(5))
         self.assertEqual(self.dcTW.entries(), 1)
         
@@ -244,7 +244,7 @@ class SimDataCollectorTests(unittest.TestCase):
         "Test:  after reset, advance 1 second, add value of 200 to weighted collector (value 100 before reset), advance 1 second.  max = 200"
         self.dcTW.reset()
         SimClock.advanceTo(simtime.SimTime(4))
-        self.dcTW.addValue(200)
+        self.dcTW.add_value(200)
         SimClock.advanceTo(simtime.SimTime(5))
         self.assertEqual(self.dcTW.max(), 200)
         
@@ -252,7 +252,7 @@ class SimDataCollectorTests(unittest.TestCase):
         "Test:  after reset, advance 1 second, add value of 200 to weighted collector (value 100 before reset), advance 1 second.  min = 100"
         self.dcTW.reset()
         SimClock.advanceTo(simtime.SimTime(4))
-        self.dcTW.addValue(200)
+        self.dcTW.add_value(200)
         SimClock.advanceTo(simtime.SimTime(5))
         self.assertEqual(self.dcTW.min(), 100)
           
@@ -263,10 +263,10 @@ class SimDataCollectionClassMethodTests(unittest.TestCase):
         self.dcA = datacollector.SimUnweightedDataCollector()
         self.dcB = datacollector.SimUnweightedDataCollector()
         self.dcC = datacollector.SimTimeWeightedDataCollector()
-        self.dcA.addValue(5)
-        self.dcB.addValue(10)
-        self.dcC.addValue(20)
-        datacollector.SimDataCollector.resetAll()
+        self.dcA.add_value(5)
+        self.dcB.add_value(10)
+        self.dcC.add_value(20)
+        datacollector.SimDataCollector.reset_all()
  
     def testReinitialize1(self):
         "Test: After class reinitialize and creation of three data collectors, the collector list is of length 3"
@@ -291,7 +291,7 @@ class SimDataCollectionClassMethodTests(unittest.TestCase):
        
     def testCollection(self):
         "Test:  look at class collection"
-        self.dcA.addValue(5)
+        self.dcA.add_value(5)
         means = [dc.mean() for dc in datacollector.SimDataCollector.collectorList]
         self.assertEqual(means,  [5, None, None])    
         
@@ -300,9 +300,9 @@ class SimTimeDataCollectionTests(unittest.TestCase):
     "Tests for class SimDataCollector (unweighted), where the collected values are SimTimes"
     def setUp(self):
         self.dc1 = datacollector.SimUnweightedDataCollector()
-        self.dc1.addValue(simtime.SimTime(30, simtime.SECONDS))
-        self.dc1.addValue(simtime.SimTime(15, simtime.SECONDS))
-        self.dc1.addValue(simtime.SimTime(2, simtime.MINUTES))
+        self.dc1.add_value(simtime.SimTime(30, simtime.SECONDS))
+        self.dc1.add_value(simtime.SimTime(15, simtime.SECONDS))
+        self.dc1.add_value(simtime.SimTime(2, simtime.MINUTES))
  
     def testEntries1(self):
         "Test: DataCollector (unweighted) entry count"

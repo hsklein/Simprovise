@@ -30,7 +30,7 @@ class SimInfiniteCounterTests(unittest.TestCase):
 
     def testInfiniteFlag(self):
         "Test: isInfinite returns true"
-        self.assertEqual(self.counter.isInfinite, True)
+        self.assertEqual(self.counter.is_infinite, True)
 
     def testCapacity(self):
         "Test: capacity of an infinite capacity counter is None"
@@ -63,12 +63,12 @@ class SimInfiniteCounterTests(unittest.TestCase):
 
     def testInitialMean1(self):
         "Test: if clock has not advanced, mean value is None"
-        self.assertEqual(self.counter.meanValue, None)
+        self.assertEqual(self.counter.mean_value, None)
 
     def testInitialMean2(self):
         "Test: if clock has not advanced, mean value is None, even with an increment"
         self.counter.increment(self.process)
-        self.assertEqual(self.counter.meanValue, None)
+        self.assertEqual(self.counter.mean_value, None)
 
     def testIncrement1(self):
         "Test: value property after increment"
@@ -121,13 +121,13 @@ class SimInfiniteCounterTests(unittest.TestCase):
     def testMean1(self):
         "Test: if counter is not incremented and any time passes, mean is zero"
         SimClock.advanceTo(simtime.SimTime(1))
-        self.assertEqual(self.counter.meanValue, 0.0)
+        self.assertEqual(self.counter.mean_value, 0.0)
 
     def testMean2(self):
         "Test: if counter is incremented at time zero and any time passes, mean is 1"
         self.counter.increment(self.process)
         SimClock.advanceTo(simtime.SimTime(1))
-        self.assertEqual(self.counter.meanValue, 1.0)
+        self.assertEqual(self.counter.mean_value, 1.0)
 
     def testMean3(self):
         "Test: counter is incremented at time zero, decremented at time 1, and clock advanced to time 2 - mean = 0.5"
@@ -135,7 +135,7 @@ class SimInfiniteCounterTests(unittest.TestCase):
         SimClock.advanceTo(simtime.SimTime(1))
         self.counter.decrement()
         SimClock.advanceTo(simtime.SimTime(2))
-        self.assertEqual(self.counter.meanValue, 0.5)
+        self.assertEqual(self.counter.mean_value, 0.5)
 
     def testOverflow1(self):
         "Test: Attempt to increment by sys.maxsize raises an error"
@@ -221,7 +221,7 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
 
     def testInfiniteFlag(self):
         "Test: isInfinite returns false"
-        self.assertEqual(self.counter.isInfinite, False)
+        self.assertEqual(self.counter.is_infinite, False)
 
     def testCapacity(self):
         "Test: capacity of an finite capacity counter is CAP"
@@ -233,12 +233,12 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
 
     def testInitialMean1(self):
         "Test: if clock has not advanced, mean value is None"
-        self.assertEqual(self.counter.meanValue, None)
+        self.assertEqual(self.counter.mean_value, None)
 
     def testInitialMean2(self):
         "Test: if clock has not advanced, mean value is None, even with an increment"
         self.counter.increment(self.process)
-        self.assertEqual(self.counter.meanValue, None)
+        self.assertEqual(self.counter.mean_value, None)
 
     def testInitialUtilization(self):
         "Test: if clock has not advanced, utilization is None"
@@ -257,7 +257,7 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
     def testIncrement2a(self):
         "Test: waiting process count property after increment of 2 should be zero"
         self.counter.increment(self.process, 2)
-        self.assertEqual(self.counter.waitingTransactionCount, 0)
+        self.assertEqual(self.counter.waiting_transaction_count, 0)
 
     def testIncrement3(self):
         "Test: value property after increment of 1, 3"
@@ -268,7 +268,7 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
     def testIncrement4a(self):
         "Test: waiting process count property after increment of 4 (equal to capacity) should be zero"
         self.counter.increment(self.process, 4)
-        self.assertEqual(self.counter.waitingTransactionCount, 0)
+        self.assertEqual(self.counter.waiting_transaction_count, 0)
 
     def testIncrementPastCap1(self):
         "Test: value property after increment past capacity"
@@ -280,7 +280,7 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
         "Test: waiting process count property after increment one past capacity should be one"
         self.counter.increment(self.process, CAP)
         self.counter.increment(self.process2)
-        self.assertEqual(self.counter.waitingTransactionCount, 1)
+        self.assertEqual(self.counter.waiting_transaction_count, 1)
 
     def testDecrement1(self):
         "Test: value property after increment of 2, decrement of 1"
@@ -317,13 +317,13 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
     def testMean1(self):
         "Test: if counter is not incremented and any time passes, mean is zero"
         SimClock.advanceTo(simtime.SimTime(1))
-        self.assertEqual(self.counter.meanValue, 0.0)
+        self.assertEqual(self.counter.mean_value, 0.0)
 
     def testMean2(self):
         "Test: if counter is incremented at time zero and any time passes, mean is 1"
         self.counter.increment(self.process)
         SimClock.advanceTo(simtime.SimTime(1))
-        self.assertEqual(self.counter.meanValue, 1.0)
+        self.assertEqual(self.counter.mean_value, 1.0)
 
     def testMean3(self):
         "Test: counter is incremented at time zero, decremented at time 1, and clock advanced to time 2 - mean = 0.5"
@@ -331,7 +331,7 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
         SimClock.advanceTo(simtime.SimTime(1))
         self.counter.decrement()
         SimClock.advanceTo(simtime.SimTime(2))
-        self.assertEqual(self.counter.meanValue, 0.5)
+        self.assertEqual(self.counter.mean_value, 0.5)
 
     def testIncrementAboveCapacity(self):
         "Test: increment of an amount greater than capacity raises an error"
@@ -353,7 +353,7 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
 
     def testInfiniteFlag(self):
         "Test: isInfinite returns false"
-        self.assertEqual(self.counter.isInfinite, False)
+        self.assertEqual(self.counter.is_infinite, False)
 
     def testCapacity(self):
         "Test: capacity of an finite capacity counter is CAP"
@@ -365,12 +365,12 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
 
     def testInitialMean1(self):
         "Test: if clock has not advanced, mean value is None"
-        self.assertEqual(self.counter.meanValue, None)
+        self.assertEqual(self.counter.mean_value, None)
 
     def testInitialMean2(self):
         "Test: if clock has not advanced, mean value is None, even with an increment"
         self.counter.increment(self.process)
-        self.assertEqual(self.counter.meanValue, None)
+        self.assertEqual(self.counter.mean_value, None)
 
     def testInitialUtilization(self):
         "Test: if clock has not advanced, utilization is None"
@@ -389,7 +389,7 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
     def testIncrement2a(self):
         "Test: waiting process count property after increment of 2 should be zero"
         self.counter.increment(self.process, 2)
-        self.assertEqual(self.counter.waitingTransactionCount, 0)
+        self.assertEqual(self.counter.waiting_transaction_count, 0)
 
     def testIncrement3(self):
         "Test: value property after increment of 1, 3"
@@ -400,7 +400,7 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
     def testIncrement4a(self):
         "Test: waiting process count property after increment of 4 (equal to capacity) should be zero"
         self.counter.increment(self.process, 4)
-        self.assertEqual(self.counter.waitingTransactionCount, 0)
+        self.assertEqual(self.counter.waiting_transaction_count, 0)
 
     def testIncrementPastCap1(self):
         "Test: value property after increment past capacity"
@@ -412,7 +412,7 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
         "Test: waiting process count property after increment one past capacity should be one"
         self.counter.increment(self.process, CAP)
         self.counter.increment(self.process2)
-        self.assertEqual(self.counter.waitingTransactionCount, 1)
+        self.assertEqual(self.counter.waiting_transaction_count, 1)
 
     def testDecrement1(self):
         "Test: value property after increment of 2, decrement of 1"
@@ -449,13 +449,13 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
     def testMean1(self):
         "Test: if counter is not incremented and any time passes, mean is zero"
         SimClock.advanceTo(simtime.SimTime(1))
-        self.assertEqual(self.counter.meanValue, 0.0)
+        self.assertEqual(self.counter.mean_value, 0.0)
 
     def testMean2(self):
         "Test: if counter is incremented at time zero and any time passes, mean is 1"
         self.counter.increment(self.process)
         SimClock.advanceTo(simtime.SimTime(1))
-        self.assertEqual(self.counter.meanValue, 1.0)
+        self.assertEqual(self.counter.mean_value, 1.0)
 
     def testMean3(self):
         "Test: counter is incremented at time zero, decremented at time 1, and clock advanced to time 2 - mean = 0.5"
@@ -463,7 +463,7 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
         SimClock.advanceTo(simtime.SimTime(1))
         self.counter.decrement()
         SimClock.advanceTo(simtime.SimTime(2))
-        self.assertEqual(self.counter.meanValue, 0.5)
+        self.assertEqual(self.counter.mean_value, 0.5)
 
     def testIncrementAboveCapacity(self):
         "Test: increment of an amount greater than capacity raises an error"
@@ -485,7 +485,7 @@ class SimProcessResumeCounterTests(unittest.TestCase):
 
     def testWaitingProcessCount1(self):
         "Test: waiting process count after increment to (but not past) capacity"
-        self.assertEqual( self.counter.waitingTransactionCount, 0)
+        self.assertEqual( self.counter.waiting_transaction_count, 0)
 
     def testWaitingProcessCount1a(self):
         "Test: process not waiting after increment to (but not past) capacity"
@@ -494,7 +494,7 @@ class SimProcessResumeCounterTests(unittest.TestCase):
     def testWaitingProcessCount2(self):
         "Test: waiting process count after attempt to increment one past capacity"
         self.counter.increment(self.process2)
-        self.assertEqual( self.counter.waitingTransactionCount, 1)
+        self.assertEqual( self.counter.waiting_transaction_count, 1)
 
     def testWaitingProcessCount2a(self):
         "Test: waiting process count after attempt to increment one past capacity"
@@ -504,13 +504,13 @@ class SimProcessResumeCounterTests(unittest.TestCase):
     def testWaitingProcessCount3(self):
         "Test: waiting process count after attempt to increment three past capacity"
         self.counter.increment(self.process2, 3)
-        self.assertEqual(self.counter.waitingTransactionCount, 1)
+        self.assertEqual(self.counter.waiting_transaction_count, 1)
 
     def testWaitingProcessCount4(self):
         "Test: waiting process count after two attempts to increment past capacity"
         self.counter.increment(self.process2)
         self.counter.increment(self.process3)
-        self.assertEqual( self.counter.waitingTransactionCount, 2)
+        self.assertEqual( self.counter.waiting_transaction_count, 2)
 
     def testWaitingProcessCount4a(self):
         "Test: two processes incremented past capacity - both should be waiting"
@@ -577,7 +577,7 @@ class SimProcessResumeCounterTests(unittest.TestCase):
         self.counter.increment(self.process2)
         self.counter.increment(self.process3)
         self.counter.decrement(2)
-        self.assertEqual(self.counter.waitingTransactionCount, 0)
+        self.assertEqual(self.counter.waiting_transaction_count, 0)
 
     def testResumeAfterDencrement8a(self):
         "Test: process2 then process3 increment past capacity - decrement of two resumes process3 last"
@@ -683,19 +683,19 @@ class TimeWeightTests(unittest.TestCase):
 
     def testMean1(self):
         "Test: initial mean value is (1 + 2*3)/4"
-        self.assertEqual(self.counter.meanValue, 1.75)
+        self.assertEqual(self.counter.mean_value, 1.75)
 
     def testMean2(self):
         "Test: increment without clock advance does not impact mean"
-        initMean = self.counter.meanValue
+        initMean = self.counter.mean_value
         self.counter.increment(self.process)
-        self.assertEqual(self.counter.meanValue, initMean)
+        self.assertEqual(self.counter.mean_value, initMean)
 
     def testMean3(self):
         "Test: decrement without clock advance does not impact mean"
-        initMean = self.counter.meanValue
+        initMean = self.counter.mean_value
         self.counter.decrement()
-        self.assertEqual(self.counter.meanValue, initMean)
+        self.assertEqual(self.counter.mean_value, initMean)
 
     def testUtil1(self):
         "Test: initial utilization value is 1.75/4"

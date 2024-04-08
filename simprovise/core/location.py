@@ -431,7 +431,7 @@ class SimLocation(SimStaticObject):
         # and increment the statistics-gathering counter/datacollector
         self._residents.append((enteringObj, SimClock.now()))
         self._counter.increment(None, 1)
-        self._entryDataCollector.addValue(1) # the value doesn't really matter
+        self._entryDataCollector.add_value(1) # the value doesn't really matter
         self.on_enter_impl(enteringObj)
 
     def on_exit(self, exitingObj, nextLocation):
@@ -459,7 +459,7 @@ class SimLocation(SimStaticObject):
         obj, enterTime = self._residents.pop(objIndex)
 
         # Update the time-in-location statistics and the counter
-        self._timeDataCollector.addValue(SimClock.now() - enterTime)
+        self._timeDataCollector.add_value(SimClock.now() - enterTime)
         self._counter.decrement(1)
 
         # Invoke onExit for ancestors, from botton-up, so long as the

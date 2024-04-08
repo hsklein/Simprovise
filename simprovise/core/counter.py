@@ -98,7 +98,7 @@ class SimCounter(object):
         else:
             self.__datacollector = SimTimeWeightedDataCollector(element, name, int)
 
-        self.__datacollector.addValue(0)
+        self.__datacollector.add_value(0)
 
         # TODO - Measure queue (wait) size via a member counter?
         # TODO should utilization be tracked as a separate data collector?
@@ -107,7 +107,7 @@ class SimCounter(object):
         return self.__class__.__name__ + ' ' + str(self.__datacollector.name)
 
     @property
-    def isInfinite(self):
+    def is_infinite(self):
         """
         Returns `True` if the counter has infinite capacity, `False` otherwise.
         """
@@ -147,7 +147,7 @@ class SimCounter(object):
             raise SimError(_ERROR_NAME, errmsg, value)
 
         self.__capacity = value
-        if self.__normalize and not self.isInfinite and self.capacity > 1:
+        if self.__normalize and not self.is_infinite and self.capacity > 1:
             self.__normalizer = self.capacity
         else:
             self.__normalizer = 1
@@ -161,27 +161,27 @@ class SimCounter(object):
 
     @property
     @apidocskip
-    def minValue(self): return self.__datacollector.min()
+    def min_value(self): return self.__datacollector.min()
 
     @property
     @apidocskip
-    def maxValue(self): return self.__datacollector.max()
+    def max_value(self): return self.__datacollector.max()
 
     @property
     @apidocskip
-    def meanValue(self): return self.__datacollector.mean()
+    def mean_value(self): return self.__datacollector.mean()
 
     @property
     @apidocskip
     def utilization(self):
-        if self.__capacity == SimCounter.infinite or self.meanValue == None:
+        if self.__capacity == SimCounter.infinite or self.mean_value == None:
             return None
         else:
-            return self.meanValue / self.__capacity
+            return self.mean_value / self.__capacity
 
     @property
     @apidocskip
-    def waitingTransactionCount(self): return len(self.__waitingTransactions)
+    def waiting_transaction_count(self): return len(self.__waitingTransactions)
 
     def increment(self, txn=None, amount=1):
         """
@@ -212,11 +212,11 @@ class SimCounter(object):
             errmsg = "Invalid Counter increment: increment amount: {0} capacity: {1}"
             raise SimError(_ERROR_NAME, errmsg, amount, self.__capacity)
 
-        if self.isInfinite and SimCounter.infinite - self.__value <= amount:
+        if self.is_infinite and SimCounter.infinite - self.__value <= amount:
             errmsg = "Overflow on infinite capacity counter; current value: {0} increment amount: {1}"
             raise SimError(_ERROR_NAME, errmsg, self.__value, amount)
 
-        if not txn and not self.isInfinite:
+        if not txn and not self.is_infinite:
             errmsg = "Finite capacity counters can only be incremented by transactions"
             raise SimError(_ERROR_NAME, errmsg)
 
@@ -225,7 +225,7 @@ class SimCounter(object):
         # for a higher amount)
         if not self.__waitingTransactions and (self.__value + amount) <= self.__capacity:
             self.__value += amount
-            self.__datacollector.addValue(self.__value/self.__normalizer)
+            self.__datacollector.add_value(self.__value/self.__normalizer)
             logger.debug('%s: incrementing by %d (no wait) current value: %d waiting transaction count: %d',
                          self, amount, self.__value, len(self.__waitingTransactions))
         else:
@@ -258,7 +258,7 @@ class SimCounter(object):
             self.__value -= amount
         else:
             self.__value = 0
-        self.__datacollector.addValue(self.__value/self.__normalizer)
+        self.__datacollector.add_value(self.__value/self.__normalizer)
 
         logger.debug('%s: decremented by %d to %d', self, amount, self.__value)
 
@@ -283,7 +283,7 @@ class SimCounter(object):
             break
 
 
-        self.__datacollector.addValue(self.__value/self.__normalizer)
+        self.__datacollector.add_value(self.__value/self.__normalizer)
 
     @property
     @apidocskip

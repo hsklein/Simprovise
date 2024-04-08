@@ -90,7 +90,7 @@ class SimDbDatasink(object):
         self.__datasetID = database.getDatasetID(dataset)
         self.__run = runNumber
         self.__batch = None
-        self.__valuesAreSimTime = (dataset.valueType is SimTime)
+        self.__valuesAreSimTime = (dataset.valuetype is SimTime)
 
     @property
     def dbConnection(self):
@@ -101,7 +101,7 @@ class SimDbDatasink(object):
         return self.__dbConnection.cursor()
 
     @property
-    def datasetID(self):
+    def dataset_id(self):
         return self.__datasetID
 
     @property
@@ -142,7 +142,7 @@ class SimDbDatasink(object):
         Insert a new dataset value into the output database (and perhaps
         committing that insertion to disk)
         """
-        rowVals = (self.datasetID, self.run, self.batch, SimClock.now().seconds(), self._toScalar(value))
+        rowVals = (self.dataset_id, self.run, self.batch, SimClock.now().seconds(), self._toScalar(value))
         self.dbCursor.execute('insert into datasetvalue (dataset, run, batch, simtimestamp, value) values (?, ?, ?, ?, ?)',
                               rowVals)
         self.maybeCommit()
@@ -200,7 +200,7 @@ class SimDbTimeSeriesDatasink(SimDbDatasink):
         Return a scalar time value for the current simulated time
         (SimClock.now()) based on the dataset time unit.
 
-        TODO Currently works only if that timeUnit is seconds
+        TODO Currently works only if that timeunit is seconds
         """
         return SimClock.now().seconds()
 
@@ -218,7 +218,7 @@ class SimDbTimeSeriesDatasink(SimDbDatasink):
         the rowid of that row as __lastrowid
         """
         insertStmt = 'insert into datasetvalue (dataset, run, batch, simtimestamp, value) values (?, ?, ?, ?, ?)'
-        rowVals = (self.datasetID, self.run, self.batch, tm, value)
+        rowVals = (self.dataset_id, self.run, self.batch, tm, value)
         cursor = self.dbCursor
         cursor.execute(insertStmt, rowVals)
         self.__lastrowid = cursor.lastrowid
@@ -437,8 +437,8 @@ DbElement = namedtuple('DbElement',
 # It has all of the (read) properties provided by the Core package Dataset class (Model
 # element dataset objects are instances of that Core Dataset class.)
 DbDataset = namedtuple('DbDataset',
-                       ['element_id', 'name', 'valueType', 'isTimeWeighted',
-                        'timeUnit', 'elementType'])
+                       ['element_id', 'name', 'valuetype', 'istimeweighted',
+                        'timeunit', 'elementType'])
 
 class SimOutputDatabase(object):
     """
@@ -524,7 +524,7 @@ class SimOutputDatabase(object):
         """
         sqlstr = """
                   select element.id, dataset.name, dataset.valueType,
-                  dataset.istimeweighted, dataset.timeUnit, elementtype.name
+                  dataset.istimeweighted, dataset.timeunit, elementtype.name
                   from dataset
                   inner join element on dataset.element = element.id
                   inner join elementtype on element.type = elementtype.id
@@ -548,7 +548,7 @@ class SimOutputDatabase(object):
         """
         sqlstr = """
                   select element.id, dataset.name, dataset.valueType,
-                  dataset.istimeweighted, dataset.timeUnit, elementtype.name
+                  dataset.istimeweighted, dataset.timeunit, elementtype.name
                   from dataset
                   inner join element on dataset.element = element.id
                   inner join elementtype on element.type = elementtype.id
@@ -877,9 +877,9 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         assert dsetID == 1, "dataset table not empty before _load_datasets() call"
         
         for dset in self.__model.datasets:
-            valueType = dset.valueType.__name__
+            valueType = dset.valuetype.__name__
             dsetParms = (dsetID, dset.element_id, dset.name, valueType,
-                         dset.isTimeWeighted, dset.timeUnit)
+                         dset.is_time_weighted, dset.timeunit)
             datasetValues.append(dsetParms)
             dsetID += 1
 
@@ -950,7 +950,7 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         """
         Create a DB datasink for the passed dataset, and assign it to the dataset
         """
-        if dataset.isTimeWeighted:
+        if dataset.is_time_weighted:
             dataset.datasink = SimDbTimeSeriesDatasink(self, dataset, runNumber)
         else:
             dataset.datasink = SimDbDatasink(self, dataset, runNumber)
@@ -1000,7 +1000,7 @@ class SimOutputHistogramData(object):
         self.weights = None
         datasetID = outputDb.getDatasetID(dataset)
 
-        if dataset.isTimeWeighted:
+        if dataset.istimeweighted:
             self.getTimeWeightedData(datasetID, run, batch, outputDb)
         else:
             self.getUnweightedData(datasetID, run, batch, outputDb)
@@ -1094,7 +1094,7 @@ class SimTimeSeriesData(object):
 
         if dataset.name == _ENTRIES_DATASET_NAME:
             self.getCumulativeCountData(outputDb, datasetID, run, batch)
-        elif dataset.isTimeWeighted:
+        elif dataset.istimeweighted:
             self.getTimeWeightedData(outputDb, datasetID, run, batch)
         else:
             self.getUnweightedData(outputDb, datasetID, run, batch)
@@ -1113,7 +1113,7 @@ class SimTimeSeriesData(object):
             return minTime, maxTime
         else:
             # If the window is larger than the maximum timestamp, return zero
-            convertedWindowSize = self.windowSize.toUnits(self.dataset.timeUnit)
+            convertedWindowSize = self.windowSize.toUnits(self.dataset.timeunit)
             return max(maxTime - convertedWindowSize.value, minTime), maxTime
 
     def getTimeWeightedData(self, outputDb, datasetid, run, batch):
@@ -1162,7 +1162,7 @@ class SimTimeSeriesData(object):
         """
         minTime, maxTime = self.outputDb.batchTimeBounds(run, batch)
         if self.windowSize:
-            convertedWindowSize = self.windowSize.toUnits(self.dataset.timeUnit).value
+            convertedWindowSize = self.windowSize.toUnits(self.dataset.timeunit).value
         else:
             convertedWindowSize = maxTime - minTime
         movingAvgWindowSize = convertedWindowSize * self.movingAvgWindowPct
@@ -1210,7 +1210,7 @@ class LastValue(object):
         return self.last
 
 DatasetSummaryStatsRaw = namedtuple('DatasetSummaryStats',
-         ['element_id', 'datasetName', 'valueType', 'timeUnit',
+         ['element_id', 'datasetName', 'valuetype', 'timeunit',
           'currentValue', 'count', 'min', 'max', 'mean'])
 
 class DatasetSummaryStats(DatasetSummaryStatsRaw):
@@ -1220,8 +1220,8 @@ class DatasetSummaryStats(DatasetSummaryStatsRaw):
     # pylint doesn't like super() when the base class is a named tuple
     # pylint: disable=E1101
     def _convertSimTime(self, value):
-        if self.valueType == 'SimTime' and value is not None:
-            return SimTime(value, self.timeUnit)
+        if self.valuetype == 'SimTime' and value is not None:
+            return SimTime(value, self.timeunit)
         else:
             return value
 
@@ -1270,7 +1270,7 @@ class SimSummaryData(object):
         """
         batchStartTm, batchEndTm = outputDb.batchTimeBounds(run, batch)
         sqlstr = """
-        SELECT dataset.element, dataset.name, dataset.valueType, dataset.timeUnit,
+        SELECT dataset.element, dataset.name, dataset.valueType, dataset.timeunit,
                last(datasetvalue.value),
                COUNT(datasetvalue.value), MIN(datasetvalue.value), MAX(datasetvalue.value),
                CASE WHEN dataset.istimeweighted = 1 THEN
@@ -1348,7 +1348,7 @@ class SimPercentileData(object):
         non-time-weighted is reduced by better than 80%.
         """
         datasetid = self.outputDb.getDatasetID(dataset)
-        if dataset.isTimeWeighted:
+        if dataset.istimeweighted:
             batchStartTm, batchEndTm = outputDb.batchTimeBounds(run, batch)
             sqlstr = """
                 SELECT value,

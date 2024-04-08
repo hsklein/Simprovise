@@ -72,7 +72,7 @@ CREATE TABLE dataset(
 	, name TEXT NOT NULL
 	, valueType TEXT NOT NULL
 	, istimeweighted BOOLEAN 
-	, timeUnit INTEGER NOT NULL REFERENCES timeunit(id) ON DELETE RESTRICT ON UPDATE CASCADE
+	, timeunit INTEGER NOT NULL REFERENCES timeunit(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
 
 CREATE UNIQUE INDEX dataset_idx ON dataset(element, name);

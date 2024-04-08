@@ -234,7 +234,7 @@ class SimRunControlScheduler(QObject):
         """
         """
         logger.info("Warmup complete at %s", SimClock.now())
-        SimDataCollector.resetAll()
+        SimDataCollector.reset_all()
         self.finalize_batch(0)
         self.initialize_batch(1)
         msg = "Warmup completed at simulated time {0}. Collecting statistics for "
@@ -250,7 +250,7 @@ class SimRunControlScheduler(QObject):
         self.finalize_batch(batchNumber)
         if batchNumber < self.nbatches:
             self.initialize_batch(batchNumber + 1)
-            SimDataCollector.resetAll()
+            SimDataCollector.reset_all()
             msg = "Simulation batch {0} completed at simulated time {1}; starting data collection for batch {2}..."
             formattedMsg = msg.format(batchNumber, SimClock.now(), batchNumber+1)
             self.RunControlMessage.emit(formattedMsg)

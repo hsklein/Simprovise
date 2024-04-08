@@ -99,7 +99,7 @@ class SimEntity(SimTransientObject):
         self.__destroyTime = SimClock.now()
         if self.element:
             self.element.counter.decrement()
-            self.element.timeDataCollector.addValue(self.processTime)            
+            self.element.timeDataCollector.add_value(self.process_time)            
 
     @property
     def source(self):
@@ -135,7 +135,7 @@ class SimEntity(SimTransientObject):
         return self.__element
 
     @property
-    def createTime(self):
+    def create_time(self):
         """
        The simulated time when this entity was created.
 
@@ -145,7 +145,7 @@ class SimEntity(SimTransientObject):
         return self.__createTime
 
     @property
-    def destroyTime(self):
+    def destroy_time(self):
         """
         The simulated time when this entity was destroyed (upon reaching its
         SimEntitySink), or None if the entity is still in process
@@ -156,7 +156,7 @@ class SimEntity(SimTransientObject):
         return self.__destroyTime
 
     @property
-    def processTime(self):
+    def process_time(self):
         """
         The simulated time that this entity has been (or was) in process; so
         if the entity is still in-process, it is the simulated time since the
@@ -165,10 +165,10 @@ class SimEntity(SimTransientObject):
         Returns:
             SimTime: The entity's process time
         """
-        if self.destroyTime:
-            return self.destroyTime - self.createTime
+        if self.destroy_time:
+            return self.destroy_time - self.create_time
         else:
-            return SimClock.now() - self.createTime
+            return SimClock.now() - self.create_time
 
 class SimEntityElement(SimClassElement):
     """

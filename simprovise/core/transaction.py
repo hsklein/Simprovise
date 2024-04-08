@@ -236,7 +236,7 @@ class SimTransaction(object):
             startTime = SimClock.now()
             self.run()
             runTime = SimClock.now() - startTime
-            timeDataCollector.addValue(runTime)
+            timeDataCollector.add_value(runTime)
 
             # check for resource assignments that have not been released
             # (Transaction execution cannot end with unreleased resources)

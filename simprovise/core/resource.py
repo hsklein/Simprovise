@@ -604,7 +604,7 @@ class SimResource(SimStaticObject):
         self._utilCounter.decrement(numToRelease)
         numAssigned -= numToRelease
         if numAssigned == 0:
-            self._processtimeDataCollector.addValue(SimClock.now() - assignTime)
+            self._processtimeDataCollector.add_value(SimClock.now() - assignTime)
             del self._currentTxnAssignments[txn]
         else:
             txnAssignment[1] = numAssigned

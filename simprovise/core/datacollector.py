@@ -41,7 +41,7 @@ class Dataset(object):
     def __init__(self, element, dataCollector, name, valueType, isTimeWeighted):
         # TODO all parameters should be non-null. registerDataset() should
         # raise if the dataset name is a duplicate
-        # TODO timeUnit is currently hardwired to seconds.  Other code 
+        # TODO timeunit is currently hardwired to seconds.  Other code 
         # (e.g dbDatasink)  still assumes data in seconds, so a fix for this 
         # cascades to a number of places
         self.__element = element
@@ -78,14 +78,14 @@ class Dataset(object):
         return self.__name
 
     @property
-    def valueType(self):
+    def valuetype(self):
         """
         The type (int, float or SimTime) of the dataset's values.
         """
         return self.__valueType
 
     @property
-    def isTimeWeighted(self):
+    def is_time_weighted(self):
         """
         True if the dataset is collecting time series values - i.e., their
         analysis will weight them by time.  Typically applies to counters.
@@ -93,14 +93,14 @@ class Dataset(object):
         return self.__isTimeWeighted
 
     @property
-    def timeUnit(self):
+    def timeunit(self):
         """
         dataset time unit
         """
         return self.__timeUnit
 
-    @timeUnit.setter
-    def timeUnit(self, val):
+    @timeunit.setter
+    def timeunit(self, val):
         """
         TODO For now, everything assumes seconds, so raise if it's something
         else
@@ -156,14 +156,14 @@ class Dataset(object):
         if self.__isCollectingData:
             self.datasink.finalize_batch(batchnum)
 
-    def startDataCollection(self):
+    def start_data_collection(self):
         "Tell the datacollector to start collecting data by passing it the datasink"
         if not self.__isCollectingData:
             self.__isCollectingData = True
             self.__dataCollector.datasink = self.datasink
             self.datasink.initialize_batch(self.__batchNumber)
 
-    def stopDataCollection(self):
+    def stop_data_collection(self):
         "Tell the datacollector to stop collecting data by passing it a null datasink"
         if self.__isCollectingData:
             self.__isCollectingData = False
@@ -189,7 +189,7 @@ class UnweightedAggregate(object):
         "reset for a new set of statistics"
         self.initialize()
 
-    def initialMinMaxValue(self):
+    def initial_min_max_value(self):
         "Value used to initialize Min and Max of owning data collector after initialization or reset"
         return None
 
@@ -247,7 +247,7 @@ class TimeWeightedAggregate(object):
         "reset for a new set of statistics, leaving the current value as-is"
         self.initialize(self.__currentValue)
 
-    def initialMinMaxValue(self):
+    def initial_min_max_value(self):
         "Value used to initialize Min and Max of owning data collector after initialization or reset"
         return self.__initialValue
 
@@ -326,7 +326,7 @@ class SimDataCollector(object):
 
     @classmethod
     @apidocskip
-    def resetAll(cls):
+    def reset_all(cls):
         "Reset every collector in the class collectorList"
         for dc in cls.collectorList:
             dc.reset()
@@ -353,18 +353,18 @@ class SimDataCollector(object):
         "Initialize (or re-initialize) raw data collectors"
         self.__entries = 0
         self.__aggregate.initialize()
-        self.__min = self.__aggregate.initialMinMaxValue()
-        self.__max = self.__aggregate.initialMinMaxValue()
+        self.__min = self.__aggregate.initial_min_max_value()
+        self.__max = self.__aggregate.initial_min_max_value()
 
     @apidocskip
     def reset(self):
         "Reset the statistics and data collection, typically for a new batch"
         self.__entries = 0
         self.__aggregate.reset()
-        self.__min = self.__aggregate.initialMinMaxValue()
-        self.__max = self.__aggregate.initialMinMaxValue()
+        self.__min = self.__aggregate.initial_min_max_value()
+        self.__max = self.__aggregate.initial_min_max_value()
 
-    def addValue(self, newValue):
+    def add_value(self, newValue):
         """
         Add a new value to the dataset.
         """
@@ -468,7 +468,7 @@ class NullDataCollector(object):
 
     def initialize(self): pass
 
-    def addValue(self, newValue): pass
+    def add_value(self, newValue): pass
 
     def min(self):
         return None

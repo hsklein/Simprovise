@@ -41,7 +41,7 @@
 class NullDataSink(object):
     "Implements the DataSink interface with no-ops"
     @property
-    def datasetID(self):
+    def dataset_id(self):
         return None
 
     def put(self, value):

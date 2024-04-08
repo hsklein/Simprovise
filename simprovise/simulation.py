@@ -409,8 +409,8 @@ class SimulationResult(object):
         """
         unitName = ('seconds', 'minutes', 'hours')
         def unitstr(dataset):
-            if dataset.valueType == 'SimTime':
-                return unitName[dataset.timeUnit]
+            if dataset.valuetype == 'SimTime':
+                return unitName[dataset.timeunit]
             else:
                 return ''
 
@@ -665,8 +665,8 @@ class SimDatasetStatistics(object):
         """
         self.database = database
         self.dataset = dataset
-        self.valuetype = dataset.valueType
-        self.timeunit = dataset.timeUnit
+        self.valuetype = dataset.valuetype
+        self.timeunit = dataset.timeunit
 
         self.counts = SimSample(dataset)
         self.means = SimSample(dataset)
@@ -753,8 +753,8 @@ class SimSample(object):
         """
         """
         self.dataset = dataset
-        self.valuetype = dataset.valueType
-        self.timeunit = dataset.timeUnit
+        self.valuetype = dataset.valuetype
+        self.timeunit = dataset.timeunit
         self.values = []
 
     def append(self, value):
