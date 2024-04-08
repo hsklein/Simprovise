@@ -48,6 +48,7 @@ class SimProcess(SimTransaction):
               
         logger.info("Creating and registering a process element for %s", pe.element_id)
         cls.elements[pe.element_id] = pe
+        cls._classInitialized = False
 
     @classmethod
     @apidocskip
@@ -69,32 +70,6 @@ class SimProcess(SimTransaction):
                 for baseclass in cls.__bases__:
                     if issubclass(baseclass, SimProcess):
                         return SimProcess.get_simelement(baseclass)
-                    
-    @classmethod
-    @apidocskip
-    def initializeElement(cls, elementID):
-        """
-        Create the element object corresponding to this SimProcess subclass.
-        Also sets the classInitialized flag to False for this SimProcess
-        subclass and all of it's base classes, so that initializeClassData()
-        will be invoked when the next process instance is created.
-         
-         TODO this method goes away, replaced by simelement wrapper that creates element.
-         Change _initializeClassAndSuperClassData() so that not having the classInitialized
-         attribute is the same as false
-        """
-        cls.element = SimProcessElement(elementID)
-
-        # function that sets the classInitialized class attribute to False,
-        # and recursively does the same for all base classes that are
-        # derived from SimProcess
-        def resetInitializedFlag(pcls):
-            pcls.classInitialized = False
-            for base in pcls.__bases__:
-                if issubclass(base, SimProcess):
-                    resetInitializedFlag(base)
-
-        resetInitializedFlag(cls)       
     
     @classmethod
     @apidocskip
@@ -106,14 +81,18 @@ class SimProcess(SimTransaction):
         instantiated for the first time during a simulation run). Should be
         implemented by SimProcess subclasses as required.
         """
-        return not hasattr(cls, 'classInitialized') or not cls.classInitialized
+        return cls._classInitialized
+        #if hasattr(cls, 'classInitialized') and cls.classInitialized:
+            #return True
+        #else:
+            #return False
 
     @classmethod
     @apidocskip
-    def initializeClassData(cls):
+    def initialize_class_data(cls):
         """
-        Initialize any class members for the process (typically counters and
-        references to static objects), so should be invoked after model static
+        Initialize any class members for the process (typically references
+        to static objects), so should be invoked after model static
         initialization - we actually initialize lazily as process classes are
         instantiated for the first time during a simulation run). Should be
         implemented by SimProcess subclasses as required.
@@ -121,22 +100,22 @@ class SimProcess(SimTransaction):
         pass
 
     @classmethod
-    def _initializeClassAndSuperClassData(cls):
+    def _initialize_class_and_super_class_data(cls):
         """
         If this class's initializeClassData() has not been invoked,
         recursively check/initialize superclasses, and then initialize
         data for this class.
         """
-        if not cls._class_initialized():
+        if not cls._classInitialized:
             for base in cls.__bases__:
                 if base is not SimProcess and issubclass(base, SimProcess):
                     # pylint can't grok fact that this may be called on a
                     # SimProcess subclass
                     # pylint: disable=E1101
-                    base._initializeClassAndSuperClassData()
+                    base._initialize_class_and_super_class_data()
             logger.info("Initializing class data for class %s", cls.__name__)
-            cls.initializeClassData()
-            cls.classInitialized = True
+            cls.initialize_class_data()
+            cls._classInitialized = True
 
     def __init__(self):
         """
@@ -147,7 +126,7 @@ class SimProcess(SimTransaction):
         self.__executing = False
         self.__entity = None
         self.__resourceAssignments = []
-        self._initializeClassAndSuperClassData()
+        self._initialize_class_and_super_class_data()
 
     @property
     def entity(self):
