@@ -82,7 +82,6 @@ class SimProcess(SimTransaction):
         self.__executing = False
         self.__entity = None
         self.__resourceAssignments = []
-        self._initialize_class_and_super_class_data()
 
     @property
     def entity(self):
