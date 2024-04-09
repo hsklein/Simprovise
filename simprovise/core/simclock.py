@@ -55,7 +55,7 @@ class SimClock(object):
 
     @staticmethod
     @apidocskip
-    def advanceTo(newTime):
+    def advance_to(newTime):
         """
         Advance the simulation clock to the specified new time.  (New time
         must be greater than or equal to the current time)

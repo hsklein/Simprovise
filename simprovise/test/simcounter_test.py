@@ -120,21 +120,21 @@ class SimInfiniteCounterTests(unittest.TestCase):
 
     def testMean1(self):
         "Test: if counter is not incremented and any time passes, mean is zero"
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.assertEqual(self.counter.mean_value, 0.0)
 
     def testMean2(self):
         "Test: if counter is incremented at time zero and any time passes, mean is 1"
         self.counter.increment(self.process)
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.assertEqual(self.counter.mean_value, 1.0)
 
     def testMean3(self):
         "Test: counter is incremented at time zero, decremented at time 1, and clock advanced to time 2 - mean = 0.5"
         self.counter.increment(self.process)
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.counter.decrement()
-        SimClock.advanceTo(simtime.SimTime(2))
+        SimClock.advance_to(simtime.SimTime(2))
         self.assertEqual(self.counter.mean_value, 0.5)
 
     def testOverflow1(self):
@@ -316,21 +316,21 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
 
     def testMean1(self):
         "Test: if counter is not incremented and any time passes, mean is zero"
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.assertEqual(self.counter.mean_value, 0.0)
 
     def testMean2(self):
         "Test: if counter is incremented at time zero and any time passes, mean is 1"
         self.counter.increment(self.process)
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.assertEqual(self.counter.mean_value, 1.0)
 
     def testMean3(self):
         "Test: counter is incremented at time zero, decremented at time 1, and clock advanced to time 2 - mean = 0.5"
         self.counter.increment(self.process)
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.counter.decrement()
-        SimClock.advanceTo(simtime.SimTime(2))
+        SimClock.advance_to(simtime.SimTime(2))
         self.assertEqual(self.counter.mean_value, 0.5)
 
     def testIncrementAboveCapacity(self):
@@ -448,21 +448,21 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
 
     def testMean1(self):
         "Test: if counter is not incremented and any time passes, mean is zero"
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.assertEqual(self.counter.mean_value, 0.0)
 
     def testMean2(self):
         "Test: if counter is incremented at time zero and any time passes, mean is 1"
         self.counter.increment(self.process)
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.assertEqual(self.counter.mean_value, 1.0)
 
     def testMean3(self):
         "Test: counter is incremented at time zero, decremented at time 1, and clock advanced to time 2 - mean = 0.5"
         self.counter.increment(self.process)
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.counter.decrement()
-        SimClock.advanceTo(simtime.SimTime(2))
+        SimClock.advance_to(simtime.SimTime(2))
         self.assertEqual(self.counter.mean_value, 0.5)
 
     def testIncrementAboveCapacity(self):
@@ -675,11 +675,11 @@ class TimeWeightTests(unittest.TestCase):
         element = MockElement()
         self.counter = counter.SimCounter(element, 'Test', CAP)
         self.process = MockProcess()
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.counter.increment(self.process)
-        SimClock.advanceTo(simtime.SimTime(2))
+        SimClock.advance_to(simtime.SimTime(2))
         self.counter.increment(self.process, 2)
-        SimClock.advanceTo(simtime.SimTime(4))
+        SimClock.advance_to(simtime.SimTime(4))
 
     def testMean1(self):
         "Test: initial mean value is (1 + 2*3)/4"

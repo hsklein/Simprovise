@@ -23,7 +23,7 @@ class SimEntityTests(unittest.TestCase):
         
         self.process = MockProcess()
         self.source = MockSource(rootLoc)#
-        SimClock.advanceTo(simtime.SimTime(5))
+        SimClock.advance_to(simtime.SimTime(5))
         self.entity = TestEntity(self.source, self.process)
     
     def testCreateTime(self):
@@ -44,14 +44,14 @@ class SimEntityTests(unittest.TestCase):
         
     def testProcessTime(self):
         "Test: process time is elapsed time since creation"
-        SimClock.advanceTo(SimClock.now() + 5)
+        SimClock.advance_to(SimClock.now() + 5)
         self.assertEqual(self.entity.process_time, SimTime(5))
         
     def testProcessTimeAfterDestroy(self):
         "Test: process time is elapsed time between creation and destruction"
-        SimClock.advanceTo(SimClock.now() + 5)
+        SimClock.advance_to(SimClock.now() + 5)
         self.entity.destroy()
-        SimClock.advanceTo(SimClock.now() + 25)
+        SimClock.advance_to(SimClock.now() + 25)
         self.assertEqual(self.entity.process_time, SimTime(5))
 
 

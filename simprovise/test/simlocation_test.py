@@ -213,10 +213,10 @@ class SimParentLocationExitTests(unittest.TestCase):
         
         for i in range(5):
             self.parentLoc.on_enter(self.testObj[i])
-        SimClock.advanceTo(SimTime(5))
+        SimClock.advance_to(SimTime(5))
         self.parentLoc.on_exit(self.testObj[0], self.exitToLoc)
         self.parentLoc.on_exit(self.testObj[1], self.exitToLoc)
-        SimClock.advanceTo(SimTime(10))
+        SimClock.advance_to(SimTime(10))
         self.parentLoc.on_exit(self.testObj[2], self.exitToLoc)
         self.parentLoc.on_exit(self.testObj[3], self.exitToLoc)
 
@@ -341,7 +341,7 @@ class SimChildLocationEntryTests2(unittest.TestCase):
 
         self.parentLoc.on_enter(self.testObj[0])
         self.childLoc.on_enter(self.testObj[1])
-        SimClock.advanceTo(SimTime(2))
+        SimClock.advance_to(SimTime(2))
         self.childLoc.on_enter(self.testObj[0])
         
     def testChildEntries(self):
@@ -425,7 +425,7 @@ class SimChildLocationExitTests1(unittest.TestCase):
         self.childLoc.on_enter(self.testObj[1])
         self.childLoc.on_enter(self.testObj[2])
         self.childLoc.on_enter(self.testObj[3])
-        SimClock.advanceTo(SimTime(2))
+        SimClock.advance_to(SimTime(2))
         self.childLoc.on_enter(self.testObj[4])
         self.parentLoc.on_exit(self.testObj[0], self.exitToLoc)
         self.childLoc.on_exit(self.testObj[1], self.exitToLoc)
@@ -670,7 +670,7 @@ class SimLocatableMoveTests(unittest.TestCase):
         self.testObj[3].move_to(self.childLoc)
         self.testObj[4].move_to(self.childLoc)
                 
-        SimClock.advanceTo(SimTime(2))
+        SimClock.advance_to(SimTime(2))
         
         self.testObj[0].move_to(self.exitToLoc)
         self.testObj[1].move_to(self.childLoc)
@@ -678,7 +678,7 @@ class SimLocatableMoveTests(unittest.TestCase):
         self.testObj[3].move_to(self.exitToLoc)
         self.testObj[4].move_to(self.parentLoc)
                 
-        SimClock.advanceTo(SimTime(4))
+        SimClock.advance_to(SimTime(4))
                       
     def testLocation0(self):
         "Test: object 0 located at exit"

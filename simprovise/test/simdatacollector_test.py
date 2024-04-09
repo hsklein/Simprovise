@@ -54,7 +54,7 @@ class SimTimeWeightedAggregateTests(unittest.TestCase):
 
     def testZeroTime2(self):
         "Test: Time-weighted values added after advancing clock do not effect mean"
-        SimClock.advanceTo(simtime.SimTime(100))
+        SimClock.advance_to(simtime.SimTime(100))
         self.dc1 += 1
         self.dc1 += 55
         self.assertEqual(self.dc1.mean(), 0.0)
@@ -62,55 +62,55 @@ class SimTimeWeightedAggregateTests(unittest.TestCase):
     def testZeroTime3(self):
         "Test: Time-weighted mean of 0 (1 min), zero-length values and 3 (2 min) is 2"
         self.dc1 += 0
-        SimClock.advanceTo(simtime.SimTime(1, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(1, simtime.MINUTES))
         self.dc1 += 20
         self.dc1 += 50
         self.dc1 += 3
-        SimClock.advanceTo(simtime.SimTime(3, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(3, simtime.MINUTES))
         self.assertEqual(self.dc1.mean(), 2)
         
     def testOneValue(self):
         "Test: Time-weighted mean of a single value is that value"
         self.dc1 += 1
-        SimClock.advanceTo(simtime.SimTime(100))
+        SimClock.advance_to(simtime.SimTime(100))
         self.assertEqual(self.dc1.mean(), 1)
         
     def testTwoValues(self):
         "Test: Time-weighted mean of 0 (1 min) and 3 (2 min) is 2"
         self.dc1 += 0
-        SimClock.advanceTo(simtime.SimTime(1, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(1, simtime.MINUTES))
         self.dc1 += 3
-        SimClock.advanceTo(simtime.SimTime(3, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(3, simtime.MINUTES))
         self.assertEqual(self.dc1.mean(), 2)
         
     def testTwoValues2(self):
         "Test: Time-weighted mean works with mean() call in middle"
         self.dc1 += 0
-        SimClock.advanceTo(simtime.SimTime(1, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(1, simtime.MINUTES))
         x = self.dc1.mean()
         self.dc1 += 3
-        SimClock.advanceTo(simtime.SimTime(3, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(3, simtime.MINUTES))
         self.assertEqual(self.dc1.mean(), 2)
         
     def testReset1(self):
         "Test: Time-weighted mean after reset: if no time passes after reset, mean is None"
         self.dc1 += 0
-        SimClock.advanceTo(simtime.SimTime(1, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(1, simtime.MINUTES))
         self.dc1 += 3
-        SimClock.advanceTo(simtime.SimTime(3, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(3, simtime.MINUTES))
         self.dc1.reset()
         self.assertEqual(self.dc1.mean(), None)
         
     def testReset2(self):
         "Test: Time-weighted mean after reset: value at reset is 3, after a minute, add a 5 (and wait one more minute"
         self.dc1 += 0
-        SimClock.advanceTo(simtime.SimTime(1, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(1, simtime.MINUTES))
         self.dc1 += 3
-        SimClock.advanceTo(simtime.SimTime(3, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(3, simtime.MINUTES))
         self.dc1.reset()
-        SimClock.advanceTo(simtime.SimTime(4, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(4, simtime.MINUTES))
         self.dc1 += 5
-        SimClock.advanceTo(simtime.SimTime(5, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(5, simtime.MINUTES))
         self.assertEqual(self.dc1.mean(), 4)
         
 class SimDataCollectorInitialStateTests(unittest.TestCase):
@@ -146,7 +146,7 @@ class SimDataCollectorInitialStateTests(unittest.TestCase):
 
     def testMeanTW2(self):
         "Test: DataCollector (unweighted) mean - no entries, but clock advanced"
-        SimClock.advanceTo(simtime.SimTime(1, simtime.MINUTES))
+        SimClock.advance_to(simtime.SimTime(1, simtime.MINUTES))
         self.assertEqual(self.dcTW.mean(), 0)
 
     def testMinTW(self):
@@ -167,9 +167,9 @@ class SimDataCollectorTests(unittest.TestCase):
         self.dc1.add_value(1)
         self.dc1.add_value(2)
         self.dcTW.add_value(1)
-        SimClock.advanceTo(simtime.SimTime(1))
+        SimClock.advance_to(simtime.SimTime(1))
         self.dcTW.add_value(4)
-        SimClock.advanceTo(simtime.SimTime(3))
+        SimClock.advance_to(simtime.SimTime(3))
         self.dcTW.add_value(100) # won't count without further clock advance
 
     def testEntries1(self):
@@ -227,33 +227,33 @@ class SimDataCollectorTests(unittest.TestCase):
     def testResetMeanTW(self):
         "Test:  after reset, advance 1 second, add value of 200 to weighted collector (value 100 before reset), advance 1 second.  Mean = 150"
         self.dcTW.reset()
-        SimClock.advanceTo(simtime.SimTime(4))
+        SimClock.advance_to(simtime.SimTime(4))
         self.dcTW.add_value(200)
-        SimClock.advanceTo(simtime.SimTime(5))
+        SimClock.advance_to(simtime.SimTime(5))
         self.assertEqual(self.dcTW.mean(), 150)
         
     def testResetEntriesTW(self):
         "Test:  after reset, advance 1 second, add value of 200 to weighted collector (value 100 before reset), advance 1 second.  entry count = 1"
         self.dcTW.reset()
-        SimClock.advanceTo(simtime.SimTime(4))
+        SimClock.advance_to(simtime.SimTime(4))
         self.dcTW.add_value(200)
-        SimClock.advanceTo(simtime.SimTime(5))
+        SimClock.advance_to(simtime.SimTime(5))
         self.assertEqual(self.dcTW.entries(), 1)
         
     def testResetMaxTW(self):
         "Test:  after reset, advance 1 second, add value of 200 to weighted collector (value 100 before reset), advance 1 second.  max = 200"
         self.dcTW.reset()
-        SimClock.advanceTo(simtime.SimTime(4))
+        SimClock.advance_to(simtime.SimTime(4))
         self.dcTW.add_value(200)
-        SimClock.advanceTo(simtime.SimTime(5))
+        SimClock.advance_to(simtime.SimTime(5))
         self.assertEqual(self.dcTW.max(), 200)
         
     def testResetMinTW(self):
         "Test:  after reset, advance 1 second, add value of 200 to weighted collector (value 100 before reset), advance 1 second.  min = 100"
         self.dcTW.reset()
-        SimClock.advanceTo(simtime.SimTime(4))
+        SimClock.advance_to(simtime.SimTime(4))
         self.dcTW.add_value(200)
-        SimClock.advanceTo(simtime.SimTime(5))
+        SimClock.advance_to(simtime.SimTime(5))
         self.assertEqual(self.dcTW.min(), 100)
           
 class SimDataCollectionClassMethodTests(unittest.TestCase):

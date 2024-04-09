@@ -59,7 +59,7 @@ class SimQueueTimeTests( unittest.TestCase ):
         SimClock.initialize()
         for i in range(3):
             self.queue.add( i )
-            SimClock.advanceTo( simtime.SimTime( i+1 ) )
+            SimClock.advance_to( simtime.SimTime( i+1 ) )
         for i in range(3):
             self.queue.remove()
 

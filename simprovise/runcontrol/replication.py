@@ -177,7 +177,7 @@ class SimReplication(QObject):
 
             startTime = time.time()
             self._send_status_message(SimMessageQueue.STATUS_STARTED)
-            nEvents = eventProcessor.processEvents(self.__totalRunLength)
+            nEvents = eventProcessor.process_events(self.__totalRunLength)
             print("Run", self.__runControlParameters.run_number,
                   "execution complete:", nEvents, "events processed. Process Time:",
                   time.time()-startTime)

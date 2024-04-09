@@ -148,7 +148,7 @@ class EventProcessor(object):
         """
         initialize()
 
-    def processEvents(self, until_time=None):
+    def process_events(self, until_time=None):
         """
         Processes (executes) events until until_time; if until_time is None,
         processes until we run out of events.
@@ -166,19 +166,19 @@ class EventProcessor(object):
             else:
                 next_event_time = event_heap[0][0]
                 if until_time is not None and next_event_time > until_time:
-                    SimClock.advanceTo(until_time)
+                    SimClock.advance_to(until_time)
                     break
 
                 next_event = heappop(event_heap)[-1]
                 entry_finder.pop(next_event)
                 assert next_event.time == next_event_time, "entry time and event time do not match!"
-                SimClock.advanceTo(next_event_time)
+                SimClock.advance_to(next_event_time)
                 next_event.process_impl()
                 next(processCount)
 
         # if we run out of events before until time, advance the clock
         if until_time is not None and SimClock.now() < until_time:
-            SimClock.advanceTo(until_time)
+            SimClock.advance_to(until_time)
 
         return next(processCount)
 

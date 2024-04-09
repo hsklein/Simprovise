@@ -17,23 +17,23 @@ class simclockTests( unittest.TestCase ):
         
     def testAdvance1( self ):
         "Test: advance from zero to 10 seconds"
-        SimClock.advanceTo( self.ti_10secs )
+        SimClock.advance_to( self.ti_10secs )
         self.assertEqual( SimClock.now(), self.ti_10secs )
         
     def testAdvance2( self ):
         "Test: advance from 10 seconds to two minutes"
-        SimClock.advanceTo( self.ti_10secs )
-        SimClock.advanceTo( self.ti_2mins )
+        SimClock.advance_to( self.ti_10secs )
+        SimClock.advance_to( self.ti_2mins )
         self.assertEqual( SimClock.now(), self.ti_2mins )
         
     def testAdvance3( self ):
         "Test: advance from two minutes to 10 seconds raises simexception.Error"
-        SimClock.advanceTo( self.ti_2mins )
-        self.assertRaises( simexception.SimError, SimClock.advanceTo, self.ti_10secs  )
+        SimClock.advance_to( self.ti_2mins )
+        self.assertRaises( simexception.SimError, SimClock.advance_to, self.ti_10secs  )
         
     def testAdvance4( self ):
         "Test: advanceTo() with integer parameter raises simexception.Error"
-        self.assertRaises( simexception.SimError, SimClock.advanceTo, 5  )
+        self.assertRaises( simexception.SimError, SimClock.advance_to, 5  )
 
 
     def testClockProtect1( self ):
