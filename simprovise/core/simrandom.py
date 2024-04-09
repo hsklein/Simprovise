@@ -191,48 +191,51 @@ class SimDistribution(object):
     specified distribution. uniform(a,b), for example, returns a function
     that produces numbers uniformly distributed between a and b.
 
-    There are two methods (function(), and functionNames()) provided for the
-    benefit of a UI. functionNames() provides sequence of distribution
-    functions by name (e.g., for populating a list box), while function()
-    maps those names back to a function object.
+    There are two methods (:meth:`~function` and :meth:`.function_names`) provided
+    for the benefit of a UI. :meth:`function_names` provides a sequence of
+    distribution functions by name (e.g., for populating a list box), while
+    :meth:`function` maps those names back to a function object.
 
-    The final method, number_generator(), returns a Python generator using one
-    of the above described methods. It is passed both a reference to one of
+    The final method, :meth:`number_generator`, returns a Python generator using 
+    one of the above described methods. It is passed both a reference to one of
     these functions and it's parameters. The code below returns a generator
     yielding pseudo-random values uniformly distributed between 100 and 200,
-    based on random number stream #4::
-
-        SimDistribution.number_generator(SimDistribution.uniform, 100, 200, 4)
-
+    based on random number stream #4:
+    
+    ``SimDistribution.number_generator(SimDistribution.uniform, 100, 200, 4)``
 
     In many (if not most) cases, these methods are being used to generate
-    time values (class :class:`.SimTime`) - e.g., we need a generator for
+    time values (class :class:`~.simtime.SimTime`) - e.g., we need a generator for
     interarrival times. If any of the arguments passed to
-    SimDistribution.number_generator() are SimTime instances, the resulting
-    generator will also return SimTime instances (in the units of the first
-    SimTime argument) The generator takes care of unit conversion - i.e., it
-    is OK to pass SimTime arguments with different time units. For example,
-    the following returns a generator yielding SimTime values uniformly
-    distributed between 30 and 120 seconds::
-
-        SimDistribution.number_generator(SimDistribution.uniform,
+    ``SimDistribution.number_generator()`` are :class:`~.simtime.SimTime`
+    instances, the resulting generator will also return SimTime instances
+    (in the units of the first SimTime argument) The generator takes care
+    of unit conversion - i.e., it is OK to pass SimTime arguments with 
+    ifferent time units. For example, the following returns a generator
+    yielding SimTime values uniformly distributed between 30 and 120 seconds:
+    
+    .. code-block:: python
+    
+       SimDistribution.number_generator(SimDistribution.uniform,
                                         SimTime(30, simtime.SECONDS),
                                         SimTime(2, simtime.MINUTES))
 
-    Finally, note that in a few cases (:meth:`roundRobin`, :meth:`choice`)
+    Finally, note that in a few cases (:meth:`round_robin`, :meth:`choice`)
     the values returned can be non-numeric and non-time (despite the name
     'number_generator'). We could, for example, define an entity generator (for
-    a :class:`.SimEntitySource` object) that instantiates a randomly-selected
-    SimEntity subclass via::
+    a :class:`SimEntitySource` object) that instantiates a randomly-selected
+    SimEntity subclass via:
 
-        entityClasses = (MyEntity1, MyEntity2, MyEntity3)
-        entityGenerator = SimDistribution.number_generator(SimDistribution.choice,
-                                                          entityClasses)
+    .. code-block:: python
+
+       entity_classes = (MyEntity1, MyEntity2, MyEntity3)
+       et_generator = SimDistribution.number_generator(SimDistribution.choice,
+                                                       entity_classes)
+ 
     """
     functionDict = {}
 
     @staticmethod
-    @apidocskip
     def function_names():
         """
         Returns a sequence of the available (defined) distribution function names
@@ -240,7 +243,6 @@ class SimDistribution(object):
         return SimDistribution.functionDict.keys()
 
     @staticmethod
-    @apidocskip
     def function(functionName):
         """
         Returns the SimDistribution distribution function mapped to the passed name
@@ -332,7 +334,7 @@ class SimDistribution(object):
         Args:
             mean:           The mean value of the desired exponentially
                             distributed sample. May be either numeric or a
-                            :class:`.SimTime` instance
+                            :class:`SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
@@ -353,10 +355,10 @@ class SimDistribution(object):
 
         Args:
             a:              The low bound of the desired uniformly distributed
-                            sample. May be either numeric or a :class:`.SimTime`
+                            sample. May be either numeric or a :class:`SimTime`
                             instance
             b:              The high bound of the desired uniformly distributed
-                            sample. May be either numeric or a :class:`.SimTime`
+                            sample. May be either numeric or a :class:`SimTime`
                             instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
@@ -375,11 +377,11 @@ class SimDistribution(object):
 
         Args:
             low:            The low bound of the desired triangular distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`SimTime` instance
             high:           The high bound of the desired triangular distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`SimTime` instance
             mode:           The mode of the desired triangular distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
        """
@@ -404,9 +406,9 @@ class SimDistribution(object):
 
         Args:
             mu:             The mean value of the desired gaussian distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`SimTime` instance
             sigma:          The std deviation of the desired gaussian distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
@@ -433,9 +435,9 @@ class SimDistribution(object):
 
         Args:
             alpha:          The scale parameter of the desired weibull distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`SimTime` instance
             beta:           The shape paramter of the desired triangular distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
@@ -453,7 +455,7 @@ class SimDistribution(object):
 
         Args:
             alpha:          The shape parameter of the desired pareto distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
@@ -469,9 +471,9 @@ class SimDistribution(object):
 
         Args:
             mu:             The location parameter of the desired lognormal distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`SimTime` instance
             sigma:          The scale parameter of the desired lognormal distribution.
-                            May be either numeric or a :class:`.SimTime` instance,
+                            May be either numeric or a :class:`SimTime` instance,
                             but must be greater than zero
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
@@ -491,10 +493,10 @@ class SimDistribution(object):
 
         Args:
             alpha:          Shape parameter of the desired beta distribution.
-                            May be either numeric or a :class:`.SimTime` instance.
+                            May be either numeric or a :class:`SimTime` instance.
                             Must be greater than zero
             beta:           Shape parameter of the desired beta distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`SimTime` instance
                             Must be greater than zero
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
@@ -536,7 +538,6 @@ class SimDistribution(object):
     functionDict["gamma"] = gamma
 
     @staticmethod
-    @apidocskip
     def number_generator(func, *args, **kwargs):
         """
         Creates and returns a number generator using the passed function and
@@ -545,14 +546,22 @@ class SimDistribution(object):
         called with the passed arguments (or modified arguments, as described
         below) return a (related) function that will then be called by the
         generator to create the yielded values.
+        
+        For example, the code below returns a generator yielding pseudo-random
+        values uniformly distributed between 100 and 200, based on random number
+        stream #4:
+    
+        ``SimDistribution.number_generator(SimDistribution.uniform, 100, 200, 4)``
 
-        If any of the passed arguments are SimTime instances, the generator
-        will yield SimTime instances. In that case, the passed arguments are,
-        in effect, converted to the same units (the unit of the first SimTime
-        encountered), and the resulting scalar values are passed to func. The
-        generator then converts the generated values back into SimTime
-        instances and yields them. In this way, the number functions do not
-        have to be aware of SimTime.
+        If any of the passed arguments are :class:`~.simtime.SimTime` instances,
+        the generator will yield :class:`~.simtime.SimTime` instances. In that
+        case, the passed arguments are, in effect, converted to the same units
+        (the unit of the first :class:`~.simtime.SimTime` encountered), and the
+        resulting scalar values are passed to func. The generator then converts
+        the generated values back into :class:`~.simtime.SimTime` instances and
+        yields them. In this way, the number functions do not have to be aware of
+        :class:`~.simtime.SimTime`.
+        
         """
         # TODO: if any argument is a SimTime, then they all should be.
         # Check and raise if that is not the case.

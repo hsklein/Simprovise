@@ -22,7 +22,7 @@ from simprovise.core.utility import SimUtility
 @apidoc
 class SimEntitySource(SimLocation):
     """
-    SimEntitySources exist solely to create :class:`.SimEntity` instances
+    SimEntitySources exist solely to create :class:`SimEntity` instances
     during a simulation run, initialize them (primarily by also creating the
     :class:`.SimProcess` that will execute on their behalf), and start them
     on their way by initiating that process.
@@ -102,11 +102,11 @@ class SimEntitySource(SimLocation):
         Initializes a stream of entities to be generated via the following
         specification:
 
-        - The class (:class:`.SimEntity`SimEntity or SimEntity-derived) of the
+        - The class (:class:`SimEntity` or SimEntity-derived) of the
           entities to be generated
         - The class (SimProcess-derived) of the generated entity's process
         - An interarrival generator-creating function defined in
-          :class:`.SimDistribution`
+          :class:`SimDistribution`
         - The parameters (specified as positional and/or keyword arguments) of
           the interarrival function.
 
@@ -159,7 +159,7 @@ class SimEntitySource(SimLocation):
         ``addGeneratorPair()`` is an alternative to :meth:`addEntityGenerator`,
         typically used when either:
 
-        (a) the :class:`.SimEntity` and/or :class:`.SimProcess` classes require
+        (a) the :class:`SimEntity` and/or :class:`SimProcess` classes require
             additional initializer parameters, or
         (b) we wish to generate several classes of entity and/or process using a
             single interarrival distribution.
@@ -169,13 +169,13 @@ class SimEntitySource(SimLocation):
         1. An entity generator, each iteration of which yields a new entity
            (and its SimProcess)
         2. An interarrival time generator, each iteration of which yields the
-           time (:class:`.SimTime`) until the next work item is generated
+           time (:class:`SimTime`) until the next work item is generated
 
         Args:
             entityGenerator:       A generator that yields :class:`.SimEntity`
                                    (or objects derived from ``SimEntity``)
             interarrivalGenerator: A generator that yields interarrival times
-                                   (class :class:`.SimTime`)
+                                   (class :class:`SimTime`)
         """
         # As with addEntityGenerator(), we cannot actually create the
         # SimEntityGenerationEvent here, since this method may be called before

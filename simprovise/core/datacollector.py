@@ -311,8 +311,8 @@ class SimDataCollector(object):
 
     `SimDataCollector` is essentially an abstract base class; client code
     should instantiate one of its subclasses, either
-    :class:`.SimTimeWeightedDataCollector` or
-    :class:`.SimUnweightedDataCollector`.
+    :class:`SimTimeWeightedDataCollector` or
+    :class:`SimUnweightedDataCollector`.
     """
     __slots__ = ('__dataset', '__aggregate', '__entries', '__min', '__max')
     collectorList = []
@@ -439,7 +439,7 @@ class SimUnweightedDataCollector(SimDataCollector):
                                  associated with this collector. Must be unique
                                  within the element.
         datasetValueType (type): The (Python) type of the data being collected.
-                                 Generally `int`, `float` or :class:`.SimTime`
+                                 Generally `int`, `float` or :class:`SimTime`
     """
     # TODO should be no default values
     def __init__(self, element=None, datasetName=None, datasetValueType=None):
@@ -458,7 +458,7 @@ class SimTimeWeightedDataCollector(SimDataCollector):
                                  associated with this collector. Must be unique
                                  within the element.
         datasetValueType (type): The (Python) type of the data being collected.
-                                 Generally `int`, `float` or :class:`.SimTime`
+                                 Generally `int`, `float` or :class:`SimTime`
     """
     def __init__(self, element=None, datasetName=None, datasetValueType=None):
         super().__init__(element, datasetName, datasetValueType, True, TimeWeightedAggregate())

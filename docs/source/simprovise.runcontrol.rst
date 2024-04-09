@@ -4,18 +4,18 @@ simprovise.runcontrol package
 Submodules
 ----------
 
-simprovise.runcontrol.simmessagequeue module
---------------------------------------------
+simprovise.runcontrol.messagequeue module
+-----------------------------------------
 
-.. automodule:: simprovise.runcontrol.simmessagequeue
+.. automodule:: simprovise.runcontrol.messagequeue
     :members:
     :undoc-members:
     :show-inheritance:
 
-simprovise.runcontrol.simreplication module
--------------------------------------------
+simprovise.runcontrol.replication module
+----------------------------------------
 
-.. automodule:: simprovise.runcontrol.simreplication
+.. automodule:: simprovise.runcontrol.replication
     :members:
     :undoc-members:
     :show-inheritance:

@@ -31,7 +31,8 @@ class SimTime(object):
 
     Args:
         value (scalar or :class:`.SimTime`)
-        units: Time unit if value is not a :class:`.SimTime`
+        units: Time unit if value is not a :class:`SimTime`
+        
     """
     __slots__ = ('_value', '_units')
 

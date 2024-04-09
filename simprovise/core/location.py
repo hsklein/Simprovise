@@ -165,14 +165,14 @@ class SimLocation(SimStaticObject):
     location may contain multiple child locations - e.g., a work area
     location might contain several workstations.
 
-    :class:`.SimLocatableObject` objects enter and leave SimLocations via the
-    SimLocatable's :meth:`.SimLocatableObject.move_to` method.
-    :meth:`.SimTransientObject.move_to` also invokes :meth:`on_enter` and/or
+    :class:`SimLocatableObject` objects enter and leave SimLocations via the
+    SimLocatable's :meth:`SimLocatableObject.move_to` method.
+    :meth:`SimTransientObject.move_to` also invokes :meth:`on_enter` and/or
     :meth:`on_exit` methods on the SimLocation(s) involved.
     SimLocation.on_enter/on_exit generally should only be invoked by
     transient objects.
 
-    Strictly speaking, :class:`.SimLocatableObject` instances should only
+    Strictly speaking, :class:`SimLocatableObject` instances should only
     move to leaf locations within a SimLocation hierarchy. We do, however,
     want to facilitate the notion of hierarchical modeling - e.g., a entity
     moving from one area of the model to another might invoke

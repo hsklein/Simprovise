@@ -37,7 +37,7 @@ class SimCounter(object):
     collects counter statistics. Primary public methods are :meth:increment and
     :meth:decrement. increment() calls may block (for simulated time) on finite
     capacity counters, so such increment() calls must also include the
-    :class:`.SimTransaction` (:class:`.SimProcess`) on which the increment is
+    :class:`.SimTransaction` (:class:`SimProcess`) on which the increment is
     being called - if increment blocks, the transaction will be paused, and
     then resumed once the counter can be successfully incremented by the
     requested amount.
@@ -188,8 +188,8 @@ class SimCounter(object):
         Increment the counter by a specified amount, which defaults to one.
         If the counter is of finite capacity, this method will block if the
         requested capacity is not available; for that reason, finite capacity
-        counters must be incremented using a :class:`.SimTransaction`
-        (:class:`.SimProcess`), specified via the txn argument, which will
+        counters must be incremented using a :class:`SimTransaction`
+        (:class:`SimProcess`), specified via the txn argument, which will
         get blocked if the requested capacity is not immediately available.
 
         Blocked increment() requests are fulfilled on a first come/first

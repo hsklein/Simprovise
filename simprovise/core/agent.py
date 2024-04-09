@@ -32,9 +32,9 @@ if generating_docs:
         It is a namedtuple; its members are:
 
         * msgID: A unique sequence number identifier for the message
-        * msgType: One of the :class:`SimMsgType` strings
-        * sendTime: A :class:`.SimTime` representing the simulated time the
-          message was sent
+        * msgType: One of the :class:`SimMsgType` strings 
+        * sendTime: A :class:`SimTime` representing the
+                simulated time the message was sent
         * sender: The sending :class:`SimAgent`
         * receiver: The recipient :class:`SimAgent`
         * originatingMsg: The msgID of the message to which this is a response
@@ -45,6 +45,7 @@ if generating_docs:
         :meth:`.sendMessage` and :meth:`.sendResponse`. Client code should
         always use one of those methods (directly or indirectly) to send
         messages.
+        
         """
 
 _msgcount = 0
@@ -59,6 +60,7 @@ class SimMsgType(object):
     Basically, a namespace of message types.
     TODO Refactor, possibly into a Python 3.4 enum. We also need a means for
     client code to extend this, adding new message types.
+    
     """
     RSRC_REQUEST = "ResourceRequest"
     RSRC_ASSIGNMENT = "ResourceAssignment"
@@ -76,7 +78,6 @@ class SimAgent(object):
     process messages, both synchronously and asynchronously. SimAgents
     (and the instances of classes derived from SimAgent) are the only objects
     that send messages, and are the only objects allowed to receive  them.
-
 
     """
     def __init__(self):
@@ -126,6 +127,7 @@ class SimAgent(object):
              tuple (pair): The message created and sent by this call and a list
              of any response messages sent immediately by the message recipient
              (which may be empty, if the recipient did not immediately respond)
+             
         """
         assert toAgent, "Null toAgent (recipient) argument to sendMessage()"
         assert msgType, "Null msgType argument to sendMessage()"
@@ -145,6 +147,7 @@ class SimAgent(object):
             Implemented as a context manager so that this agent's intercept
             handler can be returned to its original state after leaving the
             context.
+            
             """
             responses = []
             def handler(msg):
@@ -175,6 +178,7 @@ class SimAgent(object):
             msgType (SimMsgType):        Message type of the response message
             msgData:                     Message content of the response message,
                                          form of which varies by message type.
+                                         
         """
         assert originatingMsg, "Null originatingMsg argument to sendResponse()"
         assert msgType, "Null msgType argument to sendResponse()"
@@ -198,6 +202,7 @@ class SimAgent(object):
         it to the message queue for later processing.
 
         TODO consider a handler chain, with multiple interceptors?
+        
         """
         assert msg, "Null msg argument to receiveMessage()"
         assert msg.receiver is self, "msg recipient does not match agent processing receiveMessage()"
@@ -221,6 +226,7 @@ class SimAgent(object):
 
         Handler functions/methods are registered via the registerHandler()
         method.
+        
         """
         msgType = msg.msgType
         if msgType in self._msgTypeHandler:
@@ -247,6 +253,7 @@ class SimAgent(object):
             msgType (SimMsgType): message type of messages to be processed
                                   by this handler
             handler (function):   Handler function
+            
         """
         assert msgType, "null message type passed to registerHandler()"
         assert callable(handler), "handler passed to registerHandler() is not a callable"
@@ -268,6 +275,7 @@ class SimAgent(object):
             msgType (SimMsgType): Type of messages prioritized by the passed
                                   function
             func (function):      Priority function as described above
+            
         """
         assert msgType, "null message type passed to registerPriorityFunc()"
         assert callable(func), "function passed to registerPriorityFunc() is not a callable"
@@ -277,6 +285,7 @@ class SimAgent(object):
         """
         Returns the registered priority function for the specified message
         type (or None if nothing is registered for that type)
+        
         """
         if msgType in self._msgPriorityFunc:
             return self._msgPriorityFunc[msgType]
@@ -301,6 +310,7 @@ class SimAgent(object):
                         priority (or the oldest message, if no priority
                         function has been registered for msgType) (or None
                         if there are no queued messages of type msgType)
+                        
         """
         msgs = [msg for msg in self.msgQueue if msg.msgType == msgType]
         if len(msgs) == 0:
@@ -314,6 +324,7 @@ class SimAgent(object):
         """
         Return the priority of a passed message - if there is a priority
         function registered for that message's type. If not, return None.
+        
         """
         if msg.msgType in self._msgPriorityFunc:
             return self._msgPriorityFunc[msg.msgType](msg)

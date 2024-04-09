@@ -17,15 +17,15 @@ _ERROR_NAME = "SimEntitySinkError"
 @apidoc
 class SimEntitySink(SimStaticObject):
     """
-    Defines an entity sink - where :class:`.SimEntity` objects go to die. Every
-    :meth:`.SimProcess.run` implementation should end with the equivalent of::
+    Defines an entity sink - where :class:`SimEntity` objects go to die. Every
+    :meth:`SimProcess.run` implementation should end with the equivalent of::
 
         entity.move_to(sink)
 
     SimEntitySink acts (to some extent) like a :class:`.SimLocation`, but
     doesn't inherit from it, as we don't need all of SimLocation's baggage.
     Nonetheless, it does need to at least provide no-op versions of the
-    :class:`.SimLocation` interface. (Though no ``onExit()`` is needed, since
+    :class:`SimLocation` interface. (Though no ``onExit()`` is needed, since
     entities check in, but they don't check out.)
     
     SimEntitySinks take no parent location parameter; they are always assigned
@@ -88,7 +88,7 @@ class SimEntitySink(SimStaticObject):
     @property
     def entry_point(self):
         """
-        As with a leaf :class:`.SimLocation`, the SimEntitySink is its own
+        As with a leaf :class:`SimLocation`, the SimEntitySink is its own
         entry point.
         """
         return self

@@ -34,12 +34,12 @@ class SimLocatableObject(SimAgent):
       
     - Static or Transient. Static locatables (:class:`SimStaticObject`) are
       created prior to the start of a simulation run and exist for the entire
-      run. Transient locatables (:class:`.SimTransientObject`) may be created
-      and/or destroyed during a run. :class:`.SimEntity` is the primary
+      run. Transient locatables (:class:`SimTransientObject`) may be created
+      and/or destroyed during a run. :class:`SimEntity` is the primary
       transient locatable class; most others are static.
     
     Note that SimStaticObjects, while usually fixed, can be moveable; the
-    main example is :class:`.SimResource`, some of which can move from place
+    main example is :class:`SimResource`, some of which can move from place
     to place. Static objects are assigned both an initial location and parent
     "owning" location specified at construction. Moveable static objects can
     only move to that parent or sublocations of that parent.
@@ -150,7 +150,7 @@ class SimTransientObject(SimLocatableObject):
         locations) the location is its own entry point. Non-leaf locations
         must explcitly designate one of their child locations as their entry
         point - otherwise, any attempt to move to that non-leaf location will
-        raise a :class:`.SimError`
+        raise a :class:`SimError`
 
         Args:
             toLocation (SimLocation): location to move to

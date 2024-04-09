@@ -8,13 +8,17 @@ Core Modeling Constructs and Base Classes
 Agent and Message Classes
 -------------------------
 
-.. automodule:: simprovise.core.simagent
+.. automodule:: simprovise.core.agent
     :members:
 
 Static and Transient Simulation Object Base Classes
 ---------------------------------------------------
 
 .. automodule:: simprovise.core.simelement
+    :members:
+    :show-inheritance:
+
+.. automodule:: simprovise.core.location
     :members:
     :show-inheritance:
 
@@ -25,33 +29,33 @@ Static and Transient Simulation Object Base Classes
 Resource-Related Classes
 ------------------------
 
-.. automodule:: simprovise.core.simresource
+.. automodule:: simprovise.core.resource
     :members:
     :show-inheritance:
 
 Entity-Related Classes
 ----------------------
 
-.. automodule:: simprovise.core.simentity
+.. automodule:: simprovise.core.entity
     :members:
     :show-inheritance:
 
-.. automodule:: simprovise.core.simentitysource
+.. automodule:: simprovise.core.entitysource
     :members:
     :show-inheritance:
 
-.. automodule:: simprovise.core.simentitysink
+.. automodule:: simprovise.core.entitysink
     :members:
     :show-inheritance:
 
 Transactions and Processes
 --------------------------
 
-.. automodule:: simprovise.core.simtransaction
+.. automodule:: simprovise.core.transaction
     :members:
     :inherited-members:
 
-.. automodule:: simprovise.core.simprocess
+.. automodule:: simprovise.core.process
     :members:
     :show-inheritance:
 
@@ -83,13 +87,13 @@ Counters and Data Collection
 Counters
 --------
 
-.. automodule:: simprovise.core.simcounter
+.. automodule:: simprovise.core.counter
     :members:
 
 Datasets and DataCollectors
 ---------------------------
 
-.. automodule:: simprovise.core.simdatacollector
+.. automodule:: simprovise.core.datacollector
     :members:
     :show-inheritance:
 
