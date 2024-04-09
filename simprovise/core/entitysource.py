@@ -135,7 +135,7 @@ class SimEntitySource(SimLocation):
             **iaKwargs:                  Keyword arguments to interarrivalFunc
         """
         # Create a generator object from the interarrival function and parameters
-        interarrivalGenerator = SimDistribution.numberGenerator(interarrivalFunc,
+        interarrivalGenerator = SimDistribution.number_generator(interarrivalFunc,
                                                                 *iaArgs,
                                                                 **iaKwargs)
 

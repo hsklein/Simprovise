@@ -39,11 +39,11 @@
 # The initialization method initializes a list of random.Random number generator
 # instances, one per stream (i.e., a list of 100 RNGs).
 #
-# SimDistribution provides the static method numberGenerator() that returns
+# SimDistribution provides the static method number_generator() that returns
 # a Python generator function that generates values in a (possibly)
 # pseudo-random distribution. For example:
 #
-#    SimDistribution.numberGenerator(SimDistribution.uniform, 100, 200, 4)
+#    SimDistribution.number_generator(SimDistribution.uniform, 100, 200, 4)
 #
 # returns a generator that uses the RNG for substream 4 (as created by
 # initialize()) to generate uniformly distributed values in the range
@@ -81,7 +81,7 @@ _RAND_PARAMETER_ERROR = "Invalid Psuedo-Random Distribution Parameter(s)"
 
 _rng = []
 
-def _readStateFile():
+def _read_state_file():
     """
     The initial states for all generators for all runs are maintained in a
     numpy 3-D array, pre-built and stored in a .npy file. The array is of the
@@ -125,14 +125,14 @@ def _readStateFile():
 # run.
 _rng_state_array = None
 
-def _initializeStateArrayIfRequired():
+def _initialize_state_array_if_required():
     """
     Read the initial states for all random number generators (all runs, all
     streams) into module variable _rng_state_array
     """
     global _rng_state_array
     if _rng_state_array is None:
-        _rng_state_array = _readStateFile()
+        _rng_state_array = _read_state_file()
 
 @apidocskip
 def initialize(run_number=1):
@@ -144,7 +144,7 @@ def initialize(run_number=1):
     The state data used to initialize the generators are a slice of the
     state array read by _readStateFile().
     """
-    _initializeStateArrayIfRequired() # read rng state array if necessary
+    _initialize_state_array_if_required() # read rng state array if necessary
 
     # pylint thinks that state_array is an NpzFile (which doesn't have a shape)
     # pylint: disable=E1101
@@ -196,44 +196,44 @@ class SimDistribution(object):
     functions by name (e.g., for populating a list box), while function()
     maps those names back to a function object.
 
-    The final method, numberGenerator(), returns a Python generator using one
+    The final method, number_generator(), returns a Python generator using one
     of the above described methods. It is passed both a reference to one of
     these functions and it's parameters. The code below returns a generator
     yielding pseudo-random values uniformly distributed between 100 and 200,
     based on random number stream #4::
 
-        SimDistribution.numberGenerator(SimDistribution.uniform, 100, 200, 4)
+        SimDistribution.number_generator(SimDistribution.uniform, 100, 200, 4)
 
 
     In many (if not most) cases, these methods are being used to generate
     time values (class :class:`.SimTime`) - e.g., we need a generator for
     interarrival times. If any of the arguments passed to
-    SimDistribution.numberGenerator() are SimTime instances, the resulting
+    SimDistribution.number_generator() are SimTime instances, the resulting
     generator will also return SimTime instances (in the units of the first
     SimTime argument) The generator takes care of unit conversion - i.e., it
     is OK to pass SimTime arguments with different time units. For example,
     the following returns a generator yielding SimTime values uniformly
     distributed between 30 and 120 seconds::
 
-        SimDistribution.numberGenerator(SimDistribution.uniform,
+        SimDistribution.number_generator(SimDistribution.uniform,
                                         SimTime(30, simtime.SECONDS),
                                         SimTime(2, simtime.MINUTES))
 
     Finally, note that in a few cases (:meth:`roundRobin`, :meth:`choice`)
     the values returned can be non-numeric and non-time (despite the name
-    'numberGenerator'). We could, for example, define an entity generator (for
+    'number_generator'). We could, for example, define an entity generator (for
     a :class:`.SimEntitySource` object) that instantiates a randomly-selected
     SimEntity subclass via::
 
         entityClasses = (MyEntity1, MyEntity2, MyEntity3)
-        entityGenerator = SimDistribution.numberGenerator(SimDistribution.choice,
+        entityGenerator = SimDistribution.number_generator(SimDistribution.choice,
                                                           entityClasses)
     """
     functionDict = {}
 
     @staticmethod
     @apidocskip
-    def functionNames():
+    def function_names():
         """
         Returns a sequence of the available (defined) distribution function names
         """
@@ -256,12 +256,12 @@ class SimDistribution(object):
             raise SimError("SimDistribution Error", msg, functionName)
 
     @staticmethod
-    def nRandomNumberStreams():
+    def n_random_number_streams():
         """
         Returns the number of initialized random number streams. By default,
         this is 100.
         """
-        _initializeStateArrayIfRequired() # read rng state array if necessary
+        _initialize_state_array_if_required() # read rng state array if necessary
         # pylint thinks that state_array is an NpzFile (which doesn't have a shape)
         # pylint: disable=E1101
         return _rng_state_array.shape[1]
@@ -272,7 +272,7 @@ class SimDistribution(object):
         Returns a function that returns a specified constant value. For example,
         the below returns a generator that always yields 42::
 
-            SimDistribution.numberGenerator(SimDistribution.constant, 42)
+            SimDistribution.number_generator(SimDistribution.constant, 42)
 
         Args:
             constValue: The value (any type) to be returned by the function/
@@ -283,13 +283,13 @@ class SimDistribution(object):
     functionDict["constant"] = constant
 
     @staticmethod
-    def roundRobin(choices):
+    def round_robin(choices):
         """
         Returns a function that returns values from a passed sequence of
         choices, cycling through them deterministically. For example, the
         below returns a generator that yields the sequence (2,4,6,2,4,6,2...)::
 
-            SimDistribution.numberGenerator(SimDistribution.roundRobin, (2,4,6))
+            SimDistribution.number_generator(SimDistribution.roundRobin, (2,4,6))
 
         Args:
             choices: A sequence of values to be returned, one at a time,
@@ -299,7 +299,7 @@ class SimDistribution(object):
         def f():
             return next(cycle)
         return f
-    functionDict["roundRobin"] = roundRobin
+    functionDict["roundRobin"] = round_robin
 
     @staticmethod
     def choice(choices, rnStream=1):
@@ -308,7 +308,7 @@ class SimDistribution(object):
         the passed sequence of choices. The below returns a generator that
         yields a random sequence containing only the values 2, 4 or 6::
 
-            SimDistribution.numberGenerator(SimDistribution.choice, (2,4,6))
+            SimDistribution.number_generator(SimDistribution.choice, (2,4,6))
 
         Args:
             choices:        A sequence of the possible values to be returned by
@@ -327,7 +327,7 @@ class SimDistribution(object):
         exponential distribution with a specified mean. To generate
         exponentially distributed values with a mean of 42 use::
 
-            SimDistribution.numberGenerator(SimDistribution.exponential, 42)
+            SimDistribution.number_generator(SimDistribution.exponential, 42)
 
         Args:
             mean:           The mean value of the desired exponentially
@@ -346,7 +346,7 @@ class SimDistribution(object):
         Returns a function that returns pseudo-random values from the uniform
         distribution with the specified bounds. Sample usage::
 
-            SimDistribution.numberGenerator(SimDistribution.uniform,
+            SimDistribution.number_generator(SimDistribution.uniform,
                                             SimTime(10, simtime.SECONDS),
                                             SimTime(1.5, simtime.MINUTES),
                                             rnStream=12)
@@ -371,7 +371,7 @@ class SimDistribution(object):
         Returns a function that returns pseudo-random values from the triangular
         distribution with the specified bounds. Sample usage::
 
-            SimDistribution.numberGenerator(SimDistribution.triangular, 2, 9, 4)
+            SimDistribution.number_generator(SimDistribution.triangular, 2, 9, 4)
 
         Args:
             low:            The low bound of the desired triangular distribution.
@@ -394,7 +394,7 @@ class SimDistribution(object):
         distribution with the specified mu (mean) and sigma (standard deviation).
         Sample usage::
 
-            SimDistribution.numberGenerator(SimDistribution.gaussian, 27, 4.5)
+            SimDistribution.number_generator(SimDistribution.gaussian, 27, 4.5)
 
         Gaussian distribution values are not guaranteed to be positive, and
         negative values are obviously a problem in many situations (e.g.,
@@ -429,7 +429,7 @@ class SimDistribution(object):
         distribution with the specified alpha (scale) and beta (shape)
         parameters. Sample usage::
 
-            SimDistribution.numberGenerator(SimDistribution.weibull, 2, 0.7)
+            SimDistribution.number_generator(SimDistribution.weibull, 2, 0.7)
 
         Args:
             alpha:          The scale parameter of the desired weibull distribution.
@@ -449,7 +449,7 @@ class SimDistribution(object):
         Returns a function that returns pseudo-random values from the pareto
         distribution with the specified alpha (shape) parameter. Sample usage::
 
-            SimDistribution.numberGenerator(SimDistribution.pareto, 1.5)
+            SimDistribution.number_generator(SimDistribution.pareto, 1.5)
 
         Args:
             alpha:          The shape parameter of the desired pareto distribution.
@@ -537,7 +537,7 @@ class SimDistribution(object):
 
     @staticmethod
     @apidocskip
-    def numberGenerator(func, *args, **kwargs):
+    def number_generator(func, *args, **kwargs):
         """
         Creates and returns a number generator using the passed function and
         arguments. The passed function will typically be one of the
@@ -604,72 +604,72 @@ class SimDistribution(object):
 if __name__ == '__main__':
     import time
     initialize()
-    for n in SimDistribution.functionNames():
+    for n in SimDistribution.function_names():
         print(n)
 
-    gen = SimDistribution.numberGenerator(SimDistribution.constant, 10)
+    gen = SimDistribution.number_generator(SimDistribution.constant, 10)
     total = 0
-    cpustart = time.clock()
+    cpustart = time.process_time()
     for i in range(100000):
         total += next(gen)
-    cpuend = time.clock()
-    print("SimDistribution numberGenerator constant scalar", cpuend - cpustart, "mean value:", total / 100000)
+    cpuend = time.process_time()
+    print("SimDistribution number_generator constant scalar", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.numberGenerator(SimDistribution.exponential, 10)
+    gen = SimDistribution.number_generator(SimDistribution.exponential, 10)
     total = 0
-    cpustart = time.clock()
+    cpustart = time.process_time()
     for i in range(100000):
         total += next(gen)
-    cpuend = time.clock()
-    print("SimDistribution numberGenerator exponential scalar", cpuend - cpustart, "mean value:", total / 100000)
+    cpuend = time.process_time()
+    print("SimDistribution number_generator exponential scalar", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.numberGenerator(SimDistribution.exponential, SimTime(9), 2)
+    gen = SimDistribution.number_generator(SimDistribution.exponential, SimTime(9), 2)
     total = SimTime(0)
-    cpustart = time.clock()
+    cpustart = time.process_time()
     for i in range(100000):
         total += next(gen)
-    cpuend = time.clock()
-    print("SimDistribution numberGenerator exponential SimTime", cpuend - cpustart, "mean value:", total / 100000)
+    cpuend = time.process_time()
+    print("SimDistribution number_generator exponential SimTime", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.numberGenerator(SimDistribution.uniform, SimTime(10), SimTime(1, simtime.MINUTES))
+    gen = SimDistribution.number_generator(SimDistribution.uniform, SimTime(10), SimTime(1, simtime.MINUTES))
     total = 0
-    cpustart = time.clock()
+    cpustart = time.process_time()
     for i in range(100000):
         total += next(gen)
-    cpuend = time.clock()
-    print("SimDistribution numberGenerator uniform time", cpuend - cpustart, "mean value:", total / 100000)
+    cpuend = time.process_time()
+    print("SimDistribution number_generator uniform time", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.numberGenerator(SimDistribution.triangular, SimTime(10), SimTime(1, simtime.MINUTES), 35)
+    gen = SimDistribution.number_generator(SimDistribution.triangular, SimTime(10), SimTime(1, simtime.MINUTES), 35)
     total = 0
-    cpustart = time.clock()
+    cpustart = time.process_time()
     for i in range(100000):
         total += next(gen)
-    cpuend = time.clock()
-    print("SimDistribution numberGenerator triangular time", cpuend - cpustart, "mean value:", total / 100000)
+    cpuend = time.process_time()
+    print("SimDistribution number_generator triangular time", cpuend - cpustart, "mean value:", total / 100000)
 
     args1 = [SimTime(10)]
     kwargs1 = {}
     kwargs1['high'] = SimTime(1, simtime.MINUTES)
     kwargs1['mode'] = 35
-    gen = SimDistribution.numberGenerator(SimDistribution.triangular, *args1, **kwargs1)
+    gen = SimDistribution.number_generator(SimDistribution.triangular, *args1, **kwargs1)
     total = 0
-    cpustart = time.clock()
+    cpustart = time.process_time()
     for i in range(100000):
         total += next(gen)
-    cpuend = time.clock()
-    print("SimDistribution numberGenerator triangular time", cpuend - cpustart, "mean value:", total / 100000)
+    cpuend = time.process_time()
+    print("SimDistribution number_generator triangular time", cpuend - cpustart, "mean value:", total / 100000)
 
 
-    gen = SimDistribution.numberGenerator(SimDistribution.gaussian, SimTime(10), 4)
+    gen = SimDistribution.number_generator(SimDistribution.gaussian, SimTime(10), 4)
     total = 0
     negativeCount = 0
-    cpustart = time.clock()
+    cpustart = time.process_time()
     for i in range(1000):
         nextVal = next(gen)
         total += nextVal
         if nextVal < 0: negativeCount += 1
-    cpuend = time.clock()
-    print("SimDistribution numberGenerator gaussian time", cpuend - cpustart, negativeCount, "mean value:", total / 1000)
+    cpuend = time.process_time()
+    print("SimDistribution number_generator gaussian time", cpuend - cpustart, negativeCount, "mean value:", total / 1000)
 
     r = random.Random()
     n = pow(10, 6)

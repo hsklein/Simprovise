@@ -30,7 +30,7 @@ serverLocation = SimLocation("ServerLocation")
 source = SimEntitySource("Source")
 sink = SimEntitySink("Sink")
 
-stimeGenerator = SimDistribution.numberGenerator(SimDistribution.exponential,
+stimeGenerator = SimDistribution.number_generator(SimDistribution.exponential,
                                                  meanServiceTime, 2)
 
 class mm1Process(SimProcess):
