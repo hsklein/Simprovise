@@ -61,6 +61,30 @@ class SimEntity(SimTransientObject):
               
         logger.info("Creating and registering an entity element for %s", e.element_id)
         cls.elements[e.element_id] = e
+
+    @classmethod
+    def final_initialize(cls):
+        """
+        final_initialize() is used to do any :class:`SimEntity`-derived
+        class (not instance) member initialization that can't be done when the 
+        class's module is imported. This method will be called for each
+        SimEntity-derived class IF AND ONLY IF the method is defined
+        for that derived class; it will be called at the same time that
+        final_initialize() is called on all :class:`SimStaticObject`
+        objects in the model - after all simulation elements are created,
+        after the simulation clock, random number streams and event processor
+        are created/initialized, but before the simulation execution actually
+        starts.
+            
+        While a no-op final_initialize() is defined for :class:`SimEntity`,
+        It is not necessary to do so for subclasses that need no final
+        initialization processing. If the method is not defined on a subclass,
+        final_initialize() will not be called. (The calling code makes sure
+        not to call any implementation inherited from a base class)
+        
+        Client code should not call this method.
+        """
+        pass
             
     def __init__(self, source, process):
         super().__init__(source)

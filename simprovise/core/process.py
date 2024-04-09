@@ -48,74 +48,30 @@ class SimProcess(SimTransaction):
               
         logger.info("Creating and registering a process element for %s", pe.element_id)
         cls.elements[pe.element_id] = pe
-        cls._classInitialized = False
 
     @classmethod
-    @apidocskip
-    def get_simelement(cls):
+    def final_initialize(cls):
         """
-        Return the SimProcessElement associated with this class.
-        If the model has not created a SimProcessElement for this specific
-        class (by wrapping the class definition with the simelement decorator),
-        look up the class hierarchy to see if a base SimProcess class has
-        an element - if so, return that instead. If this class and none of it's
-        SimProcess base classes has an element, return None.
-        """
-        try:
-            return cls.element
-        except AttributeError:
-            if cls is SimProcess:
-                return None
-            else:
-                for baseclass in cls.__bases__:
-                    if issubclass(baseclass, SimProcess):
-                        return SimProcess.get_simelement(baseclass)
-    
-    @classmethod
-    @apidocskip
-    def _class_initialized(cls):
-        """
-        Initialize any class members for the process (typically counters and
-        references to static objects), so should be invoked after model static
-        initialization - we actually initialize lazily as process classes are
-        instantiated for the first time during a simulation run). Should be
-        implemented by SimProcess subclasses as required.
-        """
-        return cls._classInitialized
-        #if hasattr(cls, 'classInitialized') and cls.classInitialized:
-            #return True
-        #else:
-            #return False
-
-    @classmethod
-    @apidocskip
-    def initialize_class_data(cls):
-        """
-        Initialize any class members for the process (typically references
-        to static objects), so should be invoked after model static
-        initialization - we actually initialize lazily as process classes are
-        instantiated for the first time during a simulation run). Should be
-        implemented by SimProcess subclasses as required.
+        final_initialize() is used to do any :class:`SimProcess`-derived
+        class (not instance) member initialization that can't be done when the 
+        class's module is imported. This method will be called for each
+        SimProcess-derived class IF AND ONLY IF the method is defined
+        for that derived class; it will be called at the same time that
+        final_initialize() is called on all :class:`SimStaticObject`
+        objects in the model - after all simulation elements are created,
+        after the simulation clock, random number streams and event processor
+        are created/initialized, but before the simulation execution actually
+        starts.
+        
+        While a no-op final_initialize() is defined for :class:`SimProcess`,
+        It is not necessary to do so for subclasses that need no final
+        initialization processing. If the method is not defined on a subclass,
+        final_initialize() will not be called. (The calling code makes sure
+        not to call any implementation inherited from a base class)
+        
+        Client code should not call this method.
         """
         pass
-
-    @classmethod
-    def _initialize_class_and_super_class_data(cls):
-        """
-        If this class's initializeClassData() has not been invoked,
-        recursively check/initialize superclasses, and then initialize
-        data for this class.
-        """
-        if not cls._classInitialized:
-            for base in cls.__bases__:
-                if base is not SimProcess and issubclass(base, SimProcess):
-                    # pylint can't grok fact that this may be called on a
-                    # SimProcess subclass
-                    # pylint: disable=E1101
-                    base._initialize_class_and_super_class_data()
-            logger.info("Initializing class data for class %s", cls.__name__)
-            cls.initialize_class_data()
-            cls._classInitialized = True
 
     def __init__(self):
         """

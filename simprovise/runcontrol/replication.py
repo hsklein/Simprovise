@@ -148,8 +148,9 @@ class SimReplication(QObject):
             eventProcessor = EventProcessor()
             
             # Invoke staticInitialize on all static objects in the model
-            for staticobj in self.__model.static_objects:
-                staticobj.staticInitialize()
+            #for staticobj in self.__model.static_objects:
+            for e in self.__model.elements:
+                e.final_initialize()
             
             # Do any model initialization functions (a TODO)
                
@@ -591,12 +592,12 @@ class SimReplicator(QObject):
         way.
         """
         self.cleanup()
-        simrandom.initialize(1)
-        SimClock.initialize()
+        #simrandom.initialize(1)
+        #SimClock.initialize()
         
         # Invoke staticInitialize on all static objects in the model
-        for staticobj in self.__model.static_objects:
-            staticobj.staticInitialize()
+        #for staticobj in self.__model.static_objects:
+        #    staticobj.staticInitialize()
         
         databaseManager = SimDatabaseManager()
         databaseManager.createOutputDatabase(self.__model)

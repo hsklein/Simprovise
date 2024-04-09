@@ -142,7 +142,7 @@ class SimStaticObject(SimLocatableObject, SimElement):
         return isinstance(self, (SimLocation, SimRootLocation))
             
     @apidocskip
-    def staticInitialize(self):
+    def final_initialize(self):
         """
         Do any initialization that must occur after the entire model is loaded
         and the core simulation infrastructure (random number streams,

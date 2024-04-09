@@ -108,6 +108,26 @@ class SimElement(object):
         """
         if dataset not in self.datasets:
             self._datasets.append(dataset)
+          
+    @apidocskip
+    def final_initialize(self):
+        """
+        Do any initialization that must occur after the entire model is 
+        loaded and the core simulation infrastructure (random number
+        streams, simulation clock and event processor) are initialized.
+        
+        SimEntitySource is the only core static object class that requires
+        this sort of initialization - it generates the initial entity creation
+        events (which won't work until after the event process is created).
+                
+        :class:`SimProcessElement` and :class:`SimEntityElement` objects
+        call final_initialize() class methods on their respective 
+        :class:`SimProcess` or :class:`SimEntity`-derived classes;
+        model-defined process or entity subclasses can define
+        final_initialize() when they need to initialize class member data
+        at that point just before the simulation execution starts.
+        """
+        pass
 
 
 class SimClassElement(SimElement):   
@@ -161,3 +181,35 @@ class SimClassElement(SimElement):
         :rtype: List
         """
         return self._datasets
+          
+    @apidocskip
+    def final_initialize(self):
+        """
+        Do any initialization that must occur after the entire model is loaded
+        and the core simulation infrastructure (random number streams,
+        simulation clock and event processor) are initialized.
+        
+        In this case, we are using SimClassElements (:class:`SimProcessElement`
+        and :class:`SimEntityElement`) to do final initialization, if any,
+        for the process and entity classes that they wrap, by determining
+        if there is a final_initialize() classmethod defined for that process
+        or entity class and calling it if there is.
+        
+        Note that we do NOT want to invoke a final_initialize() that is
+        inherited from a base class, since that base class should already
+        have it's own corresponding SimClassElement. That's why we check
+        the class's __dict__ attribute for a member keyed by that method
+        name.        
+
+        """
+        cls = self.element_class
+        if 'final_initialize' in cls.__dict__:
+            try:
+                logger.info("Invoking final_initialize() on class %s", cls)
+                cls.final_initialize()
+            except TypeError:
+                # The class has an attribute named 'final_initialize that's
+                # not callable. Not a great idea, but we'll just eat the
+                # resulting exception with a warning
+                logger.warn("Class %s has a non-callable final_initialize member", cls)
+ 

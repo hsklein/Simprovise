@@ -73,9 +73,9 @@ class SimEntitySource(SimLocation):
         return self.__generatorDefs
 
     @apidocskip
-    def staticInitialize(self):
+    def final_initialize(self):
         """
-        At static initialization, translate entity/interarrival generator
+        At final initialization, translate entity/interarrival generator
         pairs (created via addEntityGenerator() and/or addGeneratorPair())
         into entity generation events (which are then registered).
 
