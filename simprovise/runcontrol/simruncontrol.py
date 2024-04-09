@@ -30,7 +30,7 @@ from simprovise.core import SimDataCollector, SimClock, SimError
 from simprovise.core import SimLogging, SimTime
 from simprovise.core.simevent import SimEvent
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "SimRunControl Error"
 

@@ -13,7 +13,7 @@ from simprovise.core import (SimError, SimClock, SimLogging)
 from simprovise.core.apidoc import apidoc, apidocskip
 from simprovise.core.apidoc import generating_docs
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _MESSAGE_HANDLING_ERROR = "SimMessage Handling Error"
 

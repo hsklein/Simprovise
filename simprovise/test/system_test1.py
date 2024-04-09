@@ -632,6 +632,6 @@ def makeTestSuite():
 
 
 if __name__ == '__main__':
-    SimLogging.setLevel(logging.CRITICAL)
+    SimLogging.set_level(logging.CRITICAL)
     unittest.main()
 

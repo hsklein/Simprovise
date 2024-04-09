@@ -13,7 +13,7 @@ from simprovise.core import (SimClock, SimTimeWeightedDataCollector,
 
 from simprovise.core.apidoc import apidoc, apidocskip
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 _ERROR_NAME = "SimCounter Error"
 
 

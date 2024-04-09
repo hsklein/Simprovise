@@ -12,7 +12,7 @@ from simprovise.core import (SimClock, simtime, SimLogging, SimError)
 from simprovise.core.datasink import NullDataSink
 from simprovise.core.apidoc import apidoc, apidocskip
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "Sim DataCollector Error"
 

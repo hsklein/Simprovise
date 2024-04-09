@@ -12,7 +12,7 @@ from simprovise.core import SimError, SimLogging, SimEntity, SimProcess
 from simprovise.core.location import SimStaticObject
 from simprovise.core.utility import SimUtility
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "SimModelError"
 

@@ -392,7 +392,7 @@ def _set_verbosity(verbosity):
 
     if verbosity:
         assert verbosity in level, "Invalid verbosity specifier"
-        SimLogging.setLevel(level[verbosity])
+        SimLogging.set_level(level[verbosity])
 
 def _execute(args):
     """

@@ -22,7 +22,7 @@ import urllib, urllib.request, urllib.parse
 
 from simprovise.core import SimError, SimLogging
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "SimUtilityError"
 

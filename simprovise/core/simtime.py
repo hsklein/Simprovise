@@ -12,7 +12,7 @@ __all__ = ['SimTime']
 from simprovise.core import SimError, SimLogging
 from simprovise.core.apidoc import apidoc, apidocskip
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 # TimeUnit constants
 SECONDS = 0

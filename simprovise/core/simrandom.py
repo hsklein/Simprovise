@@ -63,7 +63,7 @@ import simprovise
 from simprovise.core import SimError, SimLogging, SimTime, simtime
 from simprovise.core.apidoc import apidoc, apidocskip
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _STATE_SIZE = 624
 

@@ -13,7 +13,7 @@ from simprovise.core.apidoc import apidoc, apidocskip
 
 _LOCATABLE_ERROR_NAME = "SimLocatableObjectError"
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 
 @apidoc

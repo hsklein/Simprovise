@@ -22,7 +22,7 @@ _LOCATION_ERROR_NAME = "SimLocationError"
 _ENTRIES_DATASET_NAME = simelement.ENTRIES_DATASET_NAME
 _ROOT_LOCATION_NAME = "Root"
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 
 

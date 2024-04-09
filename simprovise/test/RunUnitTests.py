@@ -19,7 +19,7 @@ from simprovise.core import SimLogging
 import logging
 
 def run_tests():
-    SimLogging.setLevel(logging.CRITICAL)
+    SimLogging.set_level(logging.CRITICAL)
 
     suite = unittest.TestSuite()
 

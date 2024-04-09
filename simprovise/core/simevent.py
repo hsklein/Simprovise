@@ -39,7 +39,7 @@ from greenlet import greenlet        # pylint: disable=E0611
 from simprovise.core import SimClock, SimTime, SimLogging
 from simprovise.core.apidoc import apidoc, apidocskip
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 event_heap = []
 entry_finder = {}

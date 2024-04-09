@@ -15,7 +15,7 @@ ENTRIES_DATASET_NAME = "Entries"
 
 _SIMELEMENT_ERROR_NAME = "SimElementError"
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 @apidoc
 class SimElement(object):   

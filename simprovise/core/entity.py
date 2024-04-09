@@ -13,7 +13,7 @@ from simprovise.core.simobject import SimTransientObject
 from simprovise.core.apidoc import apidoc, apidocskip
 
 from simprovise.core import SimLogging, SimError
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "SimEntityError"
         

@@ -25,7 +25,7 @@ _RESULT_ERROR = "Simulation Result Error"
 _MIN_IQR_RUNS = 4
 _DEFAULT_OUTPUTDB_EXT = ".simoutput"
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 @apidoc
 class Simulation(object):
@@ -843,8 +843,8 @@ if __name__ == '__main__':
     scriptpath = "models\\mm1.py"
     multi_replication = True
     
-    SimLogging.setLevel(logging.WARN)
-    SimLogging.setLevel(logging.INFO, 'simprovise.core.process')
+    SimLogging.set_level(logging.WARN)
+    SimLogging.set_level(logging.INFO, 'simprovise.core.process')
     
     if not multi_replication:
         print("Running a single replication...")

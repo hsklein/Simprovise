@@ -35,7 +35,7 @@ from simprovise.runcontrol.simruncontrol import (SimRunControlParameters,
 from simprovise.runcontrol.messagequeue import (SimMessageQueue,
                                                 SimMessageQueueSender)
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "Replication Error"
 _STATUS_NOT_STARTED = 'NOT_STARTED'
@@ -104,7 +104,7 @@ class SimReplication(QObject):
         sets up a non-animated run, initializes the random number generators
         for this run, initializes the simulation clock, and loads the model.
         """
-        SimLogging.setLevel(logging.WARN)
+        SimLogging.set_level(logging.WARN)
         self.__databaseManager = SimDatabaseManager()
         self.__dbPath = dbPath
         self.__model = model

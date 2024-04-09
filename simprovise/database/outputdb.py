@@ -31,7 +31,7 @@ _ELEMENT_TYPE_CLASSES = (SimProcessElement, SimResource, SimLocation, SimEntityS
 #_PROCESS_ELEMENT_TYPE = 1
 #_ENTITY_ELEMENT_TYPE = 6
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "Sim Output Database Error"
 _ENTRIES_DATASET_NAME = simelement.ENTRIES_DATASET_NAME

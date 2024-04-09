@@ -19,7 +19,7 @@ except ImportError:
 
 from simprovise.core import SimLogging, SimError
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _STATUS_MSG_TYPE = 1
 _LOG_MSG_TYPE = 2

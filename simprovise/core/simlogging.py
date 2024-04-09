@@ -78,7 +78,7 @@ class SimLogging(object):
     and configuring standard Python logging.
     """                      
     @staticmethod
-    def getLogger(name, level=logging.NOTSET):
+    def get_logger(name, level=logging.NOTSET):
         """
         Create and optionally set the level for a new logger. Typically usage is:
 
@@ -115,7 +115,7 @@ class SimLogging(object):
         return logger
 
     @staticmethod
-    def setLevel(lvl, name=None):
+    def set_level(lvl, name=None):
         """
         Static method that sets a logger's logging level to a passed
         level (as defined by the standard library logging module). The
@@ -137,7 +137,7 @@ class SimLogging(object):
         logging.getLogger(name).setLevel(lvl)
 
     @staticmethod
-    def getLevel(name=None):
+    def get_level(name=None):
         """
         Return the level of a logger specified by name. If name
         is none, returns the level of the base logger.
@@ -155,14 +155,16 @@ class SimLogging(object):
 
     @apidocskip
     @staticmethod
-    def addHandler(dest):
+    def add_handler(dest):
         """
         Add a StreamHandler directed to the passed destination. Can be used
         by a UI to direct log messages to an output window (instead or in
-        addition to the console)
+        addition to the console). For example, this could be used to direct
+        logging output to a Qt Widget derived from a QtGui.QPlainTextEdit.
 
-        Args:
-            dest: a stream-like object
+        :param dest: A destination object (e.g. a Qt Widget) that can
+                     handle the logging output
+        :type dest:  object
         """
         hdlr = logging.StreamHandler(dest)
         hdlr.setFormatter(_formatter)

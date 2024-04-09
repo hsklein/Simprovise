@@ -20,7 +20,7 @@ from simprovise.core.agent import SimAgent, SimMsgType
 from simprovise.core.location import SimStaticObject
 from simprovise.core.apidoc import apidoc, apidocskip
 
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _RESOURCE_ERROR = "Resource Error"
 _REQUEST_ERROR = "Resource Request Error"

@@ -23,7 +23,7 @@ from simprovise.core.counter import SimNullCounter
 from simprovise.core.datacollector import NullDataCollector
 from simprovise.core.apidoc import apidoc, apidocskip
 from simprovise.core import SimLogging
-logger = SimLogging.getLogger(__name__)
+logger = SimLogging.get_logger(__name__)
 
 _ACQUIRE_ERROR = "Resource Acquisition Error"
 
