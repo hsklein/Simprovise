@@ -39,8 +39,8 @@ INSERT INTO elementtype VALUES(2, 'Resource');
 INSERT INTO elementtype VALUES(3, 'Location');
 INSERT INTO elementtype VALUES(4, 'Source');
 INSERT INTO elementtype VALUES(5, 'Sink');
-INSERT INTO elementtype VALUES(6, 'Counter');
-INSERT INTO elementtype VALUES(7, 'Entity');
+--INSERT INTO elementtype VALUES(6, 'Counter');
+INSERT INTO elementtype VALUES(6, 'Entity');
 
 CREATE TABLE elementclass(
 	  id INTEGER PRIMARY KEY

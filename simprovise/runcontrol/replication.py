@@ -780,31 +780,6 @@ if __name__ == '__main__':
         tp = TestPool()
         tp.run()
 
-    def testReplication():
-        #SimAnimatableObject.setAnimating(False)
-        simrandom.initialize(1)
-        databaseManager = SimDatabaseManager()
-        model = SimModel(MODEL_DEFAULTS_PATH)
-        model.load(modelPath)
-        model.doStaticInitialization()
-        model.initializeExecutionElements()
-        databaseManager.create_output_database(model)
-        dbpath = databaseManager.database.db_path
-        databaseManager.close_output_database(delete=False)
-
-        result = execute_replication(modelPath, dbpath, runNumber, warmupLength,
-                                    batchLength, nBatches)
-
-        run, dbpath, exception = result
-
-        archiveDb = SimArchivedOutputDatabase(dbpath)
-        summaryData = SimSummaryData(archiveDb, runNumber, "Queue1")
-        for dset in archiveDb.datasets:
-            sumdata = summaryData.getData(dset)
-            print(dset.element_id, dset.name, sumdata.mean, sumdata.count)
-        archiveDb.close_database()
-
-        os.remove(dbpath)
 
     class ReplicatorTester(QObject):
         Done = Signal()
@@ -853,7 +828,7 @@ if __name__ == '__main__':
             for i in range(self.fromRun, self.toRun+1):
                 summaryData = SimSummaryData(db, i, "Queue1")
                 dset = db.get_dataset('Queue1', 'Time')
-                sumdata = summaryData.getData(dset)
+                sumdata = summaryData.get_data(dset)
                 print(i, dset.element_id, dset.name, sumdata.mean, sumdata.count)
             #db.closeDatabase()
             #os.remove(dbPath)

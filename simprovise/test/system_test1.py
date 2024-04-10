@@ -34,7 +34,7 @@ def executeSingleReplication(modelpath, dbMgr):
 def printOutput(dbMgr):
     for dset in dbMgr.current_datasets():
         summaryData = SimSummaryData(dbMgr.database, 1, dset.elementID, batch=1)
-        sumdata = summaryData.getData(dset)
+        sumdata = summaryData.get_data(dset)
         print(dset.elementID, dset.name, sumdata.count, sumdata.mean,
               sumdata.min, sumdata.max)
 
@@ -79,12 +79,12 @@ class ReplicatorTests(unittest.TestCase):
     def summaryDsetData(self, elementID, datasetName, run=1, batch=None):
         summarydata = SimSummaryData(self.dbMgr.database, run, elementID, batch)
         dset = self.dbMgr.database.get_dataset(elementID, datasetName)
-        return summarydata.getData(dset)
+        return summarydata.get_data(dset)
 
     def getMedian(self, elementID, datasetName, run=1, batch=None):
         pctileData = SimPercentileData(self.dbMgr.database)
         dset = self.dbMgr.database.get_dataset(elementID, datasetName)
-        percentiles = pctileData.getPercentiles(dset, run, batch)
+        percentiles = pctileData.get_percentiles(dset, run, batch)
         return percentiles[50]
 
 
@@ -255,13 +255,13 @@ class ReplicatorTests(unittest.TestCase):
         "Test WorkLocation1 population at end of warmup is zero"
         elementID = "WorkLocation1"
         dsetname = "Population"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 0).currentValue, 0)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 0).current_value, 0)
 
     def testWorkLocation1PopulationCurrent1(self):
         "Test WorkLocation1 population at end of batch 1 is zero"
         elementID = "WorkLocation1"
         dsetname = "Population"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).currentValue, 0)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).current_value, 0)
 
     def testWorkLocation1PopulationMin0(self):
         "Test WorkLocation1 minimum population during warmup is zero"
@@ -405,13 +405,13 @@ class ReplicatorTests(unittest.TestCase):
         "Test WorkLocation2 population at end of warmup is 3"
         elementID = "WorkLocation2"
         dsetname = "Population"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 0).currentValue, 3)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 0).current_value, 3)
 
     def testWorkLocation2PopulationCurrent1(self):
         "Test WorkLocation2 population at end of batch 1 is 3"
         elementID = "WorkLocation2"
         dsetname = "Population"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).currentValue, 3)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).current_value, 3)
 
     def testWorkLocation2PopulationMin0(self):
         "Test WorkLocation2 minimum population during warmup is zero"
@@ -524,7 +524,7 @@ class ReplicatorTests(unittest.TestCase):
         elementID = "WorkLocation1.EntryQueue"
         dsetname = "Population"
         sdata = self.summaryDsetData(elementID, dsetname, 1)
-        meanMinMaxCurrent = (sdata.mean, sdata.min, sdata.max, sdata.currentValue)
+        meanMinMaxCurrent = (sdata.mean, sdata.min, sdata.max, sdata.current_value)
         self.assertEqual(meanMinMaxCurrent, (0.4, 0, 1, 0))
 
     #===========================================================================
@@ -563,7 +563,7 @@ class ReplicatorTests(unittest.TestCase):
         elementID = "WorkLocation1.RsrcQueue"
         dsetname = "Population"
         sdata = self.summaryDsetData(elementID, dsetname, 1)
-        minMaxCurrent = (sdata.min, sdata.max, sdata.currentValue)
+        minMaxCurrent = (sdata.min, sdata.max, sdata.current_value)
         self.assertEqual(minMaxCurrent, (0, 1, 0))
 
 
@@ -603,7 +603,7 @@ class ReplicatorTests(unittest.TestCase):
         elementID = "WorkLocation2.RsrcQueue"
         dsetname = "Population"
         sdata = self.summaryDsetData(elementID, dsetname, 1)
-        minMaxCurrent = (sdata.min, sdata.max, sdata.currentValue)
+        minMaxCurrent = (sdata.min, sdata.max, sdata.current_value)
         self.assertEqual(minMaxCurrent, (0, 2, 1))
 
 

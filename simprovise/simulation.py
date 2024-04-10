@@ -705,7 +705,7 @@ class SimDatasetStatistics(object):
                 for batch in batches:
                     sdata = SimSummaryData(database, run,
                                            dataset.element_id, batch)
-                    dsdata = sdata.getRawData(dataset)
+                    dsdata = sdata.get_raw_data(dataset)
                     count = dsdata.count
                     self.counts.append(count)
                     self.means.append(count)
@@ -724,12 +724,12 @@ class SimDatasetStatistics(object):
                 for batch in batches:
                     sdata = SimSummaryData(database, run,
                                            dataset.element_id, batch)
-                    dsdata = sdata.getRawData(dataset)
+                    dsdata = sdata.get_raw_data(dataset)
                     self.counts.append(dsdata.count)
                     self.means.append(dsdata.mean)
                     self.mins.append(dsdata.min)
                     self.maxs.append(dsdata.max)
-                    percentiles = pctileData.getPercentiles(dataset, run, batch)
+                    percentiles = pctileData.get_percentiles(dataset, run, batch)
                     self.medians.append(percentiles[50])
                     self.pct05s.append(percentiles[5])
                     self.pct10s.append(percentiles[10])

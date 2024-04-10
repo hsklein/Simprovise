@@ -36,7 +36,7 @@ logger = SimLogging.get_logger(__name__)
 _ERROR_NAME = "Sim Output Database Error"
 _ENTRIES_DATASET_NAME = simelement.ENTRIES_DATASET_NAME
 
-class SimElementTypeXXX(object):
+class SimElementType(object):
     """
     Essentially an enumeration of element types, with the types corresponding
     to the values in the elementtype table.
@@ -46,8 +46,7 @@ class SimElementTypeXXX(object):
     location = 3
     source = 4
     sink = 5
-    counter = 6
-    entity = 7
+    entity = 6
 
 
 class SimDbDatasink(object):
@@ -430,7 +429,7 @@ class SimDatabaseManager(object):
 
 # DbElement is constructed from the element and elementtype tables
 DbElement = namedtuple('DbElement',
-                       ['element_id', 'className', 'elementType', 'elementTypeName'])
+                       ['element_id', 'classname', 'elementtype', 'elementtypename'])
 
 
 # DbDataset is constructed from the dataset and element tables in an output database.
@@ -438,7 +437,7 @@ DbElement = namedtuple('DbElement',
 # element dataset objects are instances of that Core Dataset class.)
 DbDataset = namedtuple('DbDataset',
                        ['element_id', 'name', 'valuetype', 'istimeweighted',
-                        'timeunit', 'elementType'])
+                        'timeunit', 'elementtype'])
 
 class SimOutputDatabase(object):
     """
@@ -1001,11 +1000,11 @@ class SimOutputHistogramData(object):
         datasetID = outputDb.getDatasetID(dataset)
 
         if dataset.istimeweighted:
-            self.getTimeWeightedData(datasetID, run, batch, outputDb)
+            self.get_time_weighted_data(datasetID, run, batch, outputDb)
         else:
-            self.getUnweightedData(datasetID, run, batch, outputDb)
+            self.get_unweighted_data(datasetID, run, batch, outputDb)
 
-    def getTimeWeightedData(self, datasetid, run, batch, outputDb):
+    def get_time_weighted_data(self, datasetid, run, batch, outputDb):
         """
         Get the data and weights (weight for each data value is total simulated time for that
         data value).  Then normalize those weights (total times) as a percentage of the total
@@ -1036,7 +1035,7 @@ class SimOutputHistogramData(object):
         else:
             self.values = []
 
-    def getUnweightedData(self, datasetid, run, batch, outputDb):
+    def get_unweighted_data(self, datasetid, run, batch, outputDb):
         """
         Get data and set nbins for an unweighted dataset histogram.
         nbins is calculated according to the Freedman-Diaconis rule, but then rounded
@@ -1093,13 +1092,13 @@ class SimTimeSeriesData(object):
         datasetID = outputDb.getDatasetID(dataset)
 
         if dataset.name == _ENTRIES_DATASET_NAME:
-            self.getCumulativeCountData(outputDb, datasetID, run, batch)
+            self.get_cumulative_count_data(outputDb, datasetID, run, batch)
         elif dataset.istimeweighted:
-            self.getTimeWeightedData(outputDb, datasetID, run, batch)
+            self.get_timeweighted_data(outputDb, datasetID, run, batch)
         else:
-            self.getUnweightedData(outputDb, datasetID, run, batch)
+            self.get_unweighted_data(outputDb, datasetID, run, batch)
 
-    def fromToTimestamps(self):
+    def fromto_timestamps(self):
         """
         Return the from timestamp (lower bound of the query) based on the current maximum
         timestamp and the specified window size.  Also return that maximum timestamp, as it
@@ -1116,7 +1115,7 @@ class SimTimeSeriesData(object):
             convertedWindowSize = self.windowSize.toUnits(self.dataset.timeunit)
             return max(maxTime - convertedWindowSize.value, minTime), maxTime
 
-    def getTimeWeightedData(self, outputDb, datasetid, run, batch):
+    def get_timeweighted_data(self, outputDb, datasetid, run, batch):
         """
         For time-weighted data, simply return the timestamps (x values) and corresponding
         dataset values (y values) for all entries in the time window.
@@ -1127,7 +1126,7 @@ class SimTimeSeriesData(object):
         time value to the start of the window.  The final retrieved value is also the value at
         the end of the window, so we append a row to the result set to reflect that.
         """
-        fromTime, toTime = self.fromToTimestamps()
+        fromTime, toTime = self.fromto_timestamps()
         sqlstr = """
                  select simtimestamp, value from datasetvalue
                  where dataset = ? and run = ? and batch = ? and
@@ -1146,7 +1145,7 @@ class SimTimeSeriesData(object):
                 result.append((toTime, lastY))
             self.timevalues, self.yvalues = zip(*result)
 
-    def getUnweightedData(self, outputDb, datasetid, run, batch):
+    def get_unweighted_data(self, outputDb, datasetid, run, batch):
         """
         For unweighted data, return timestamps and corresponding y values that represent a
         rolling average of the dataset values.  That rolling average is the average of
@@ -1182,7 +1181,7 @@ class SimTimeSeriesData(object):
         if len(result) > 0:
             self.timevalues, self.yvalues = zip(*result)
 
-    def getCumulativeCountData(self, outputDb, datasetid, run, batch):
+    def get_cumulative_count_data(self, outputDb, datasetid, run, batch):
         """
         For Entries datasets, we just want to accumulate the number of dataset values
         over time.
@@ -1210,8 +1209,8 @@ class LastValue(object):
         return self.last
 
 DatasetSummaryStatsRaw = namedtuple('DatasetSummaryStats',
-         ['element_id', 'datasetName', 'valuetype', 'timeunit',
-          'currentValue', 'count', 'min', 'max', 'mean'])
+         ['element_id', 'datasetname', 'valuetype', 'timeunit',
+          'currentvalue', 'count', 'min', 'max', 'mean'])
 
 class DatasetSummaryStats(DatasetSummaryStatsRaw):
     """
@@ -1219,27 +1218,27 @@ class DatasetSummaryStats(DatasetSummaryStatsRaw):
     """
     # pylint doesn't like super() when the base class is a named tuple
     # pylint: disable=E1101
-    def _convertSimTime(self, value):
+    def _convert_sim_time(self, value):
         if self.valuetype == 'SimTime' and value is not None:
             return SimTime(value, self.timeunit)
         else:
             return value
 
     @property
-    def currentValue(self):
-        return self._convertSimTime(super().currentValue)
+    def current_value(self):
+        return self._convert_sim_time(super().currentvalue)
 
     @property
     def min(self):
-        return self._convertSimTime(super().min)
+        return self._convert_sim_time(super().min)
 
     @property
     def max(self):
-        return self._convertSimTime(super().max)
+        return self._convert_sim_time(super().max)
 
     @property
     def mean(self):
-        return self._convertSimTime(super().mean)
+        return self._convert_sim_time(super().mean)
 
 class SimSummaryData(object):
     """
@@ -1254,12 +1253,12 @@ class SimSummaryData(object):
         self.__resultDict = {}
         if batch is None:
             batch = outputDb.last_batch(run)
-        rows = self._fetchData(outputDb, run, batch, elementID)
+        rows = self._fetch_data(outputDb, run, batch, elementID)
         for row in rows:
-            rowkey = (row.element_id, row.datasetName)
+            rowkey = (row.element_id, row.datasetname)
             self.__resultDict[rowkey] = row
 
-    def _fetchData(self, outputDb, run, batch, elementID):
+    def _fetch_data(self, outputDb, run, batch, elementID):
         """
         Assume that dataset was flushed at startTime
         Note the multiplication by 1.0, to ensure that the result of a time-weighted
@@ -1297,7 +1296,7 @@ class SimSummaryData(object):
         finally:
             outputDb.connection.row_factory = savedRowFactory
 
-    def getData(self, dataset):
+    def get_data(self, dataset):
         """
         Returns the DatasetSummaryStats for a specified dataset
         (DatasetSummaryStats property values are converted to SimTime values
@@ -1311,13 +1310,13 @@ class SimSummaryData(object):
                                             None, None, None, None)
             return nullStats
 
-    def getRawData(self, dataset):
+    def get_raw_data(self, dataset):
         """
         Returns the DatasetSummaryStatsRaw for a specified dataset -
         DatasetSummaryStatsRaw property values are straight from the
         database, and never SimTime objects.
         """
-        return DatasetSummaryStatsRaw(*self.getData(dataset))
+        return DatasetSummaryStatsRaw(*self.get_data(dataset))
 
 
 class SimPercentileData(object):
@@ -1330,17 +1329,17 @@ class SimPercentileData(object):
         """
         self.outputDb = outputDb
 
-    def getPercentiles(self, dataset, run, batch=None):
+    def get_percentiles(self, dataset, run, batch=None):
         """
         Get percentile values for a specified dataset, run and batch
         """
         if batch is None:
             batch = self.outputDb.last_batch(run)
 
-        rows = self._fetchData(self.outputDb, dataset, run, batch)
-        return self._calculatePercentiles(rows)
+        rows = self._fetch_data(self.outputDb, dataset, run, batch)
+        return self._calculate_percentiles(rows)
 
-    def _fetchData(self, outputDb, dataset, run, batch):
+    def _fetch_data(self, outputDb, dataset, run, batch):
         """
         Assume that dataset was flushed at startTime.
         The choice of different queries (time-weighted vs. non-time-weighted
@@ -1369,7 +1368,7 @@ class SimPercentileData(object):
             result = outputDb.runQuery(sqlstr, datasetid, run, batch)
         return result
 
-    def _calculatePercentiles(self, rows):
+    def _calculate_percentiles(self, rows):
         """
         Calculate and return a list of percentile values (0 through 100) based
         on the data in the passed row collection.
