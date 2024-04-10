@@ -327,11 +327,11 @@ class SimAgent(object):
         :param msgType: The type of message desired
         :type msgType: :class:`SimMsgType`
 
-         :return:       The queued message of type msgType with the highest
+        :return:       The queued message of type msgType with the highest
                         priority, or the oldest message, if no priority
                         function has been registered for msgType. (or None
                         if there are no queued messages of type msgType)
-         :rtype:        :class:`SimMessage`
+        :rtype:        :class:`SimMessage`
                         
         """
         msgs = [msg for msg in self.msgQueue if msg.msgType == msgType]
