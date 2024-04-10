@@ -40,6 +40,10 @@ html_sidebars = {
         'donate.html',
     ]
 }
+html_theme_options = {
+    'fixed_sidebar': 'true',
+    'page_width': 'auto'
+}
 
 def setup(app):
     from simprovise.core import apidoc
