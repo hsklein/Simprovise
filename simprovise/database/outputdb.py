@@ -69,7 +69,7 @@ class SimDbDatasink(object):
     commitRate = 1
 
     @staticmethod
-    def setCommitRate(rate):
+    def set_commit_rate(rate):
         """
         Static method to globally set the commitRate for all SimDbSinks.  When 1,
         maybeCommit() always does a commit.  When zero, maybeCommit() never commits
@@ -93,11 +93,11 @@ class SimDbDatasink(object):
         self.__valuesAreSimTime = (dataset.valuetype is SimTime)
 
     @property
-    def dbConnection(self):
+    def db_connection(self):
         return self.__dbConnection
 
     @property
-    def dbCursor(self):
+    def db_cursor(self):
         return self.__dbConnection.cursor()
 
     @property
@@ -130,24 +130,24 @@ class SimDbDatasink(object):
                            batchnum, self.batch)
         self.flush()
 
-    def maybeCommit(self):
+    def maybe_commit(self):
         """
         If the class variable commitRate is set, commit put() values to disk.
         """
         if SimDbDatasink.commitRate:
-            self.dbConnection.commit()
+            self.db_connection.commit()
 
     def put(self, value):
         """
         Insert a new dataset value into the output database (and perhaps
         committing that insertion to disk)
         """
-        rowVals = (self.dataset_id, self.run, self.batch, SimClock.now().seconds(), self._toScalar(value))
-        self.dbCursor.execute('insert into datasetvalue (dataset, run, batch, simtimestamp, value) values (?, ?, ?, ?, ?)',
+        rowVals = (self.dataset_id, self.run, self.batch, SimClock.now().seconds(), self._to_scalar(value))
+        self.db_cursor.execute('insert into datasetvalue (dataset, run, batch, simtimestamp, value) values (?, ?, ?, ?, ?)',
                               rowVals)
-        self.maybeCommit()
+        self.maybe_commit()
 
-    def _toScalar(self, value):
+    def _to_scalar(self, value):
         """
         If the dataset values are SimTime values, return the passed value in
         seconds. Otherwise, just return the value.
@@ -162,7 +162,7 @@ class SimDbDatasink(object):
         """
         Commit any unsaved additions/changes to disk
         """
-        self.dbConnection.commit()
+        self.db_connection.commit()
 
 
 class SimDbTimeSeriesDatasink(SimDbDatasink):
@@ -183,19 +183,19 @@ class SimDbTimeSeriesDatasink(SimDbDatasink):
         self.__lastValue = initialValue
         #self.put(initialValue, batch)
 
-    def initializeBatch(self, batchnum):
+    def initialize_batch(self, batchnum):
         """
         Initialize a new batch. For time series data, insert the current
         value (self.__lastvalue) so that we have a row timestamped for the
         beginning of the batch.
         """
         super().initialize_batch(batchnum)
-        tm = self._scalarSimNow()
-        self._insertRow(self.__lastValue, tm)
-        self.dbConnection.commit()
+        tm = self._scalar_sim_now()
+        self._insert_row(self.__lastValue, tm)
+        self.db_connection.commit()
         self.__lastTimestamp = tm
 
-    def _scalarSimNow(self):
+    def _scalar_sim_now(self):
         """
         Return a scalar time value for the current simulated time
         (SimClock.now()) based on the dataset time unit.
@@ -204,22 +204,22 @@ class SimDbTimeSeriesDatasink(SimDbDatasink):
         """
         return SimClock.now().seconds()
 
-    def _updateLastToTime(self, toTime):
+    def _update_last_to_time(self, toTime):
         """
         Update/set the totimestamp column value of the most recently inserted row
         """
         if self.__lastrowid is not None:
             sqlstr = "update datasetvalue set totimestamp = ? where rowid = ?"
-            self.dbCursor.execute(sqlstr, (toTime, self.__lastrowid))
+            self.db_cursor.execute(sqlstr, (toTime, self.__lastrowid))
 
-    def _insertRow(self, value, tm):
+    def _insert_row(self, value, tm):
         """
         Insert a new row into dataset value (without a totimestamp) and save
         the rowid of that row as __lastrowid
         """
         insertStmt = 'insert into datasetvalue (dataset, run, batch, simtimestamp, value) values (?, ?, ?, ?, ?)'
         rowVals = (self.dataset_id, self.run, self.batch, tm, value)
-        cursor = self.dbCursor
+        cursor = self.db_cursor
         cursor.execute(insertStmt, rowVals)
         self.__lastrowid = cursor.lastrowid
 
@@ -228,21 +228,21 @@ class SimDbTimeSeriesDatasink(SimDbDatasink):
         Insert a new dataset value into the output database (and perhaps
         committing that insertion to disk)
         """
-        value = self._toScalar(value)
+        value = self._to_scalar(value)
         if value == self.__lastValue:
             return
 
-        tm = self._scalarSimNow()
-        cursor = self.dbCursor
+        tm = self._scalar_sim_now()
+        cursor = self.db_cursor
 
         if tm == self.__lastTimestamp and self.__lastrowid is not None:
             sqlstr = "update datasetvalue set value = ? where rowid = ?"
             cursor.execute(sqlstr, (value, self.__lastrowid))
         else:
-            self._updateLastToTime(tm)
-            self._insertRow(value, tm)
+            self._update_last_to_time(tm)
+            self._insert_row(value, tm)
 
-        self.maybeCommit()
+        self.maybe_commit()
 
         self.__lastValue = value
         self.__lastTimestamp = tm
@@ -251,9 +251,9 @@ class SimDbTimeSeriesDatasink(SimDbDatasink):
         """
         Commit any unsaved additions/changes to disk
         """
-        tm = self._scalarSimNow()
-        self._updateLastToTime(tm)
-        self.dbConnection.commit()
+        tm = self._scalar_sim_now()
+        self._update_last_to_time(tm)
+        self.db_connection.commit()
 
 class SimDatabaseManager(object):
     """
@@ -264,7 +264,7 @@ class SimDatabaseManager(object):
     def __init__(self):
         self.database = None
 
-    def createOutputDatabase(self, model, inMemory=False):
+    def create_output_database(self, model, inMemory=False):
         """
         Creates a new "live" output database - a database for a simulation
         that is being (or is about to be) executed - and initializes it based
@@ -274,98 +274,98 @@ class SimDatabaseManager(object):
         If an output database is already open, that database is closed first.
         Relies on called methods to raise a SimError if they fail.
         """
-        self.closeOutputDatabase()
+        self.close_output_database()
         self.database = SimLiveOutputDatabase()
         self.database.initialize(model, inMemory)
  
-    def openExistingDatabase(self, model, dbpath, *, isTemporary=False):
+    def open_existing_database(self, model, dbpath, *, isTemporary=False):
         """
         Open an existing live output database, typically when we are about to
         start an additional run/replication. Close the currently open database
         first, if any. Either operation may raise a SimError on failure.
         """
-        self.closeOutputDatabase()
+        self.close_output_database()
         self.database = SimLiveOutputDatabase()
-        self.database.initializeExisting(model, dbpath, isTemporary)
+        self.database.initialize_existing(model, dbpath, isTemporary)
 
-    def initializeRun(self, runNumber):
+    def initialize_run(self, runNumber):
         """
         Initialize the database in preparation for a run, typically by removing
         any dataset values for the specified run number.
         """
         if self.database:
-            self.database.initializeRun(runNumber)
+            self.database.initialize_run(runNumber)
         else:
             raise SimError(_ERROR_NAME, "initializeRun() failure. There is no open database")
 
-    def setCommitRate(self, commitRate):
+    def set_commit_rate(self, commitRate):
         """
         Sets the global rate for database commits.  If zero, commits only occur at the
         end of batches.  If one, commits occur on every database update.  Generally we
         use zero for background runs (replications), and one for interactive (animated)
         runs.
         """
-        SimDbDatasink.setCommitRate(commitRate)
+        SimDbDatasink.set_commit_rate(commitRate)
 
-    def openArchivedDatabase(self, dbpath, isTemporary=False):
+    def open_archived_database(self, dbpath, isTemporary=False):
         """
         Open an archived database - a database saved by the user after one or
         more simulation runs. Close an open database first. Either operation
         may raise a SimError on failure.
         """
-        self.closeOutputDatabase()
+        self.close_output_database()
         self.database = SimArchivedOutputDatabase(dbpath, isTemporary)
 
-    def hasOpenDatabase(self):
+    def has_open_database(self):
         """
         Returns True if the manager has a currently-open database, False otherwise
         """
         return self.database is not None
 
     @property
-    def currentDatabasePath(self):
+    def current_database_path(self):
         """
         The dbPath of the currently open database, or None if no database is open
         """
         if self.database:
-            return self.database.dbPath
+            return self.database.db_path
         else:
             return None
 
-    def currentDatasets(self):
+    def current_datasets(self):
         """
         Returns all datasets for the current model/database (if a database is open)
         Raises an error if no database is currently open.
         """
-        self._raiseIfDatabaseNotOpen()
+        self._raise_if_database_not_open()
         return self.database.datasets
 
-    def flushDatasets(self):
+    def flush_datasets(self):
         """
         Flushes all datasets if a database is open; a no-op otherwise.
         """
         if self.database:
-            self.database.flushDatasets()
+            self.database.flush_datasets()
 
-    def hasUnsavedDatabase(self):
+    def has_unsaved_database(self):
         """
         Returns True if there is an open, temporary (or in-memory) database
         with dataset values (in other words, a simulation run is in progress)
         """
-        return self.database and self.database.isTemporary and self.database.hasDatasetValues()
+        return self.database and self.database.is_temporary and self.database.has_dataset_values()
 
-    def defaultSavePath(self):
+    def default_savepath(self):
         """
         Returns a default save path if the currently open database is temporary.
         Returns None if no database is open or the open database is not
         temporary.
         """
-        if self.database and self.database.isTemporary:
-            return self.database.defaultDbPath
+        if self.database and self.database.is_temporary:
+            return self.database.default_dbpath
         else:
             return None
 
-    def closeOutputDatabase(self, *, savePath=None, delete=True):
+    def close_output_database(self, *, savePath=None, delete=True):
         """
         Initiate a close for the currently-open database, if there is one.
         If the database is temporary, provides the ability to save the
@@ -393,12 +393,12 @@ class SimDatabaseManager(object):
         if not self.database:
             return 
 
-        dbPath = self.database.dbPath
-        isTemporary = self.database.isTemporary
+        dbPath = self.database.db_path
+        isTemporary = self.database.is_temporary
         assert not (delete and not isTemporary), "closeOutputDatabase() called with delete=True on a not-temporary database"
         assert not savePath or isTemporary, "closeOutputDatabase() attempt to save a non-temporary database"
 
-        self.database.closeDatabase()
+        self.database.close_database()
         
         if isTemporary:
             if savePath:
@@ -419,7 +419,7 @@ class SimDatabaseManager(object):
                     
         self.database = None
 
-    def _raiseIfDatabaseNotOpen(self):
+    def _raise_if_database_not_open(self):
         """
         Utility method that raises a SimError if the manager does not have a
         currently-open database.
@@ -466,14 +466,14 @@ class SimOutputDatabase(object):
         return self.__connection
 
     @property
-    def dbPath(self):
+    def db_path(self):
         """
         The database filepath that is/was open
         """
         return self.__dbpath
 
     @property
-    def isTemporary(self):
+    def is_temporary(self):
         """
         Returns True if there is a connected database and it is a temporary
         (or in-memory) file.
@@ -481,7 +481,7 @@ class SimOutputDatabase(object):
         if self.__dbpath:
             return self.__isTemporary
 
-    def flushDatasets(self):
+    def flush_datasets(self):
         """
         Default is a no-op - implemented for live output databases
         """
@@ -541,10 +541,10 @@ class SimOutputDatabase(object):
         finally:
             self.connection.row_factory = savedRowFactory
 
-    def getDatasets(self, elementID):
+    def get_datasets(self, element_id):
         """
-        Returns all datasets belonging to a single element (as specified by
-        elementID)
+        Returns all datasets in the database belonging to a single element
+        (as specified by element_id)
         """
         sqlstr = """
                   select element.id, dataset.name, dataset.valueType,
@@ -561,12 +561,12 @@ class SimOutputDatabase(object):
         savedRowFactory = self.connection.row_factory
         try:
             self.connection.row_factory = datasetTupleFactory
-            result = self.runQuery(sqlstr, elementID)
+            result = self.runQuery(sqlstr, element_id)
             return result
         finally:
             self.connection.row_factory = savedRowFactory
 
-    def lastBatch(self, run):
+    def last_batch(self, run):
         """
         Returns the last (highest) batch number for a specified run, or zero if
         there are none.
@@ -582,7 +582,7 @@ class SimOutputDatabase(object):
         else:
             raise SimError(_ERROR_NAME, "lastBatch() query returned {0} row(s)".format(len(result)))
 
-    def batchTimeBounds(self, run, batch):
+    def batch_time_bounds(self, run, batch):
         """
         Returns the current unitless (time) bounds for a specified run and batch,
         as specified by the lowest simtimestamp and highest totimestamp for that
@@ -594,7 +594,7 @@ class SimOutputDatabase(object):
         time-weighted datasets. We check for this first.
         TODO - implement version that does not require a timeweighted dataset.
         """
-        if not self.hasTimeWeightedDataset():
+        if not self.has_time_weighted_dataset():
             msg = "batchTimeBounds() requires at least one time-weighted dataset. There are none."
             raise SimError(_ERROR_NAME, msg)
 
@@ -609,7 +609,7 @@ class SimOutputDatabase(object):
             raise SimError(_ERROR_NAME,
                            "batchTimeBounds() query returned {0} row(s)".format(len(result)))
 
-    def hasTimeWeightedDataset(self):
+    def has_time_weighted_dataset(self):
         """
         Returns true if the database has had at least one time-weighted dataset.
         """
@@ -617,13 +617,13 @@ class SimOutputDatabase(object):
         result = self.runQuery(sqlstr)
         return len(result) > 0
 
-    def initializeRun(self, runNumber):
+    def initialize_run(self, runNumber):
         """
         Implemented only for Live output databases
         """
         pass
 
-    def hasDatasetValues(self):
+    def has_dataset_values(self):
         """
         Returns true if the database has had at least one dataset value inserted.
         """
@@ -632,7 +632,7 @@ class SimOutputDatabase(object):
         return len(result) > 0
 
 
-    def closeDatabase(self):
+    def close_database(self):
         """
         Close the database (if open) and set the connection to None. Raises
         a SimError if the sqlite3 close() operation fails.
@@ -646,7 +646,7 @@ class SimOutputDatabase(object):
                                self.__dbpath, e)                                  
             self.__connection = None
 
-    def getElementType(self, elementID):
+    def get_element_type(self, elementID):
         """
         Return the element type ID of an element (as specified by element ID)
         """
@@ -768,7 +768,7 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         self.__model = None
         self.__saved = False
 
-    def initializeExisting(self, model, dbpath, isTemporary=False):
+    def initialize_existing(self, model, dbpath, isTemporary=False):
         """
         Open an existing database.  Under the assumption that there may be concurrent
         writes, set the transaction type to IMMEDIATE.
@@ -798,13 +798,13 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         """
         self.__model = model
         if inMemory:
-            self._createInMemoryDatabase()
+            self._create_in_memory_database()
         else:
-            self._createDatabase()
-        self._initializeDatabase(model)
+            self._create_database()
+        self._initialize_database(model)
 
     @property
-    def defaultDbPath(self):
+    def default_dbpath(self):
         """
         Returns the filename, including absolute path, of the output database
         for the current model. It is of form <modelname>.simoutput and is
@@ -817,7 +817,7 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         databaseName = fname + ".simoutput"
         return os.path.join(modelDir, databaseName)
 
-    def _createInMemoryDatabase(self):
+    def _create_in_memory_database(self):
         """
         Creates a new in-memory database and initializes the schema/fixed
         tables
@@ -826,7 +826,7 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         self._connect(":memory:", False)
         self._runScript('CreateOutputDb.sql')
 
-    def _createDatabase(self):
+    def _create_database(self):
         """
         Creates a new database in a temporary file and initializes the schema and
         fixed tables.
@@ -839,7 +839,7 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         self._connect(dbpath, True)
         self._runScript('CreateOutputDb.sql')
 
-    def _initializeDatabase(self, model):
+    def _initialize_database(self, model):
         """
         Initialize the static portion of the output database, based on
         the model and passed package manager data.
@@ -916,17 +916,17 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         else:
             return 0
 
-    def initializeRun(self, runNumber):
+    def initialize_run(self, runNumber):
         """
         Initialize the database for the current run, by:
         1.  Deleting any existing data for that run
         2.  Loading the datasets for that run
         """
-        self._deleteRun(runNumber)
-        self._createDatasinks(runNumber)
+        self._delete_run(runNumber)
+        self._create_datasinks(runNumber)
         self.commit()
 
-    def _deleteRun(self, runNumber):
+    def _delete_run(self, runNumber):
         """
         Delete all data for the specified run.  Deletes datasetvaluye rows for a specified run
         """
@@ -939,14 +939,14 @@ class SimLiveOutputDatabase(SimOutputDatabase):
             raise SimError(_ERROR_NAME, "Failure executing delete for run number: {0}; {1}",
                            runNumber, str(e))
 
-    def _createDatasinks(self, runNumber):
+    def _create_datasinks(self, runNumber):
         """
         Create datasinks for each of the model's datasets
         """
         for dset in self.__model.datasets:
-            self._createDatasink(dset, runNumber)
+            self._create_datasink(dset, runNumber)
 
-    def _createDatasink(self, dataset, runNumber):
+    def _create_datasink(self, dataset, runNumber):
         """
         Create a DB datasink for the passed dataset, and assign it to the dataset
         """
@@ -955,7 +955,7 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         else:
             dataset.datasink = SimDbDatasink(self, dataset, runNumber)
 
-    def flushDatasets(self):
+    def flush_datasets(self):
         """
         Flush all of the datasets in the model (NOT the database) -
         which in turn flushes the active datasinks.
@@ -992,7 +992,7 @@ class SimOutputHistogramData(object):
         self.dataset = dataset
         self.run = run
         if batch is None:
-            batch = outputDb.lastBatch(run)
+            batch = outputDb.last_batch(run)
         self.batch = batch
         self.outputDb = outputDb
         self.values = None
@@ -1023,7 +1023,7 @@ class SimOutputHistogramData(object):
                  GROUP BY value;
                  """
 
-        minTime, maxTime = outputDb.batchTimeBounds(run, batch)
+        minTime, maxTime = outputDb.batch_time_bounds(run, batch)
         result = outputDb.runQuery(sqlstr, maxTime, datasetid, run, batch)
         if len(result) == 0:
             self.values = []
@@ -1082,7 +1082,7 @@ class SimTimeSeriesData(object):
         self.dataset = dataset
         self.run = run
         if batch is None:
-            batch = outputDb.lastBatch(run)
+            batch = outputDb.last_batch(run)
         self.batch = batch
         self.windowSize = windowSize
         self.movingAvgWindowPct = 0.05
@@ -1108,7 +1108,7 @@ class SimTimeSeriesData(object):
         If windowSize is None, the effective window is the entire batch, so just return the
         start of the batch (as returned by SimOutputData.batchBounds()) as the lower bound.
         """
-        minTime, maxTime = self.outputDb.batchTimeBounds(self.run, self.batch)
+        minTime, maxTime = self.outputDb.batch_time_bounds(self.run, self.batch)
         if not self.windowSize:
             return minTime, maxTime
         else:
@@ -1160,7 +1160,7 @@ class SimTimeSeriesData(object):
         at timestamp 900 seconds is the average value recorded between 800 and 900 seconds on
         the simulated clock.
         """
-        minTime, maxTime = self.outputDb.batchTimeBounds(run, batch)
+        minTime, maxTime = self.outputDb.batch_time_bounds(run, batch)
         if self.windowSize:
             convertedWindowSize = self.windowSize.toUnits(self.dataset.timeunit).value
         else:
@@ -1253,7 +1253,7 @@ class SimSummaryData(object):
         """
         self.__resultDict = {}
         if batch is None:
-            batch = outputDb.lastBatch(run)
+            batch = outputDb.last_batch(run)
         rows = self._fetchData(outputDb, run, batch, elementID)
         for row in rows:
             rowkey = (row.element_id, row.datasetName)
@@ -1268,7 +1268,7 @@ class SimSummaryData(object):
         Data are returned as DatasetSummaryStats objects, whose properties
         convert time values to SimTime objects as required.
         """
-        batchStartTm, batchEndTm = outputDb.batchTimeBounds(run, batch)
+        batchStartTm, batchEndTm = outputDb.batch_time_bounds(run, batch)
         sqlstr = """
         SELECT dataset.element, dataset.name, dataset.valueType, dataset.timeunit,
                last(datasetvalue.value),
@@ -1335,7 +1335,7 @@ class SimPercentileData(object):
         Get percentile values for a specified dataset, run and batch
         """
         if batch is None:
-            batch = self.outputDb.lastBatch(run)
+            batch = self.outputDb.last_batch(run)
 
         rows = self._fetchData(self.outputDb, dataset, run, batch)
         return self._calculatePercentiles(rows)
@@ -1349,7 +1349,7 @@ class SimPercentileData(object):
         """
         datasetid = self.outputDb.getDatasetID(dataset)
         if dataset.istimeweighted:
-            batchStartTm, batchEndTm = outputDb.batchTimeBounds(run, batch)
+            batchStartTm, batchEndTm = outputDb.batch_time_bounds(run, batch)
             sqlstr = """
                 SELECT value,
                         SUM(CASE WHEN totimestamp IS NULL THEN ?

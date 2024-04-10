@@ -156,13 +156,13 @@ class SimReplication(QObject):
                
             # Do output database initialization
             if self.__dbPath:
-                self.__databaseManager.openExistingDatabase(self.__model, self.__dbPath)
+                self.__databaseManager.open_existing_database(self.__model, self.__dbPath)
             else:
-                self.__databaseManager.createOutputDatabase(self.__model)
-                self.__dbPath = self.__databaseManager.currentDatabasePath
+                self.__databaseManager.create_output_database(self.__model)
+                self.__dbPath = self.__databaseManager.current_database_path
                 
-            self.__databaseManager.setCommitRate(0)
-            self.__databaseManager.initializeRun(runNumber)
+            self.__databaseManager.set_commit_rate(0)
+            self.__databaseManager.initialize_run(runNumber)
             
             # Initialize the first batch
             for dset in self.__model.datasets:
@@ -181,10 +181,10 @@ class SimReplication(QObject):
             print("Run", self.__runControlParameters.run_number,
                   "execution complete:", nEvents, "events processed. Process Time:",
                   time.time()-startTime)
-            self.__databaseManager.closeOutputDatabase(delete=False)
+            self.__databaseManager.close_output_database(delete=False)
         except Exception as e:
             try:
-                self.__databaseManager.closeOutputDatabase(delete=True)
+                self.__databaseManager.close_output_database(delete=True)
             except Exception as dbexcpt:
                 closemsg = "Unable to close/delete temporary output database: %s"
                 logger.error(closemsg, dbexcpt)
@@ -600,9 +600,9 @@ class SimReplicator(QObject):
         #    staticobj.staticInitialize()
         
         databaseManager = SimDatabaseManager()
-        databaseManager.createOutputDatabase(self.__model)
-        self.__initializedDbPath = databaseManager.database.dbPath
-        databaseManager.closeOutputDatabase(delete=False)
+        databaseManager.create_output_database(self.__model)
+        self.__initializedDbPath = databaseManager.database.db_path
+        databaseManager.close_output_database(delete=False)
 
     def _clone_initialized_database(self):
         """
@@ -788,9 +788,9 @@ if __name__ == '__main__':
         model.load(modelPath)
         model.doStaticInitialization()
         model.initializeExecutionElements()
-        databaseManager.createOutputDatabase(model)
-        dbpath = databaseManager.database.dbPath
-        databaseManager.closeOutputDatabase(delete=False)
+        databaseManager.create_output_database(model)
+        dbpath = databaseManager.database.db_path
+        databaseManager.close_output_database(delete=False)
 
         result = execute_replication(modelPath, dbpath, runNumber, warmupLength,
                                     batchLength, nBatches)
@@ -802,7 +802,7 @@ if __name__ == '__main__':
         for dset in archiveDb.datasets:
             sumdata = summaryData.getData(dset)
             print(dset.element_id, dset.name, sumdata.mean, sumdata.count)
-        archiveDb.closeDatabase()
+        archiveDb.close_database()
 
         os.remove(dbpath)
 
@@ -842,8 +842,8 @@ if __name__ == '__main__':
             print("test slot", s, threading.get_ident())
 
         def done(self):
-            if not self.dbMgr.hasOpenDatabase():
-                self.dbMgr.openExistingDatabase(self.model, self.replicator.output_dbpath)
+            if not self.dbMgr.has_open_database():
+                self.dbMgr.open_existing_database(self.model, self.replicator.output_dbpath)
             self.printOutput()
 
 
@@ -852,7 +852,7 @@ if __name__ == '__main__':
             db = self.dbMgr.database
             for i in range(self.fromRun, self.toRun+1):
                 summaryData = SimSummaryData(db, i, "Queue1")
-                dset = db.getDataset('Queue1', 'Time')
+                dset = db.get_dataset('Queue1', 'Time')
                 sumdata = summaryData.getData(dset)
                 print(i, dset.element_id, dset.name, sumdata.mean, sumdata.count)
             #db.closeDatabase()

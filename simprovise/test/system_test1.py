@@ -29,10 +29,10 @@ def executeSingleReplication(modelpath, dbMgr):
     replicationParameters.set_replication_range(1, 1)
     replicator.execute_replications(replicationParameters, async=False)
     #dbMgr = SimDatabaseManager()
-    dbMgr.openExistingDatabase(model, replicator.output_dbpath)
+    dbMgr.open_existing_database(model, replicator.output_dbpath)
 
 def printOutput(dbMgr):
-    for dset in dbMgr.currentDatasets():
+    for dset in dbMgr.current_datasets():
         summaryData = SimSummaryData(dbMgr.database, 1, dset.elementID, batch=1)
         sumdata = summaryData.getData(dset)
         print(dset.elementID, dset.name, sumdata.count, sumdata.mean,
@@ -56,11 +56,11 @@ class ReplicatorTests(unittest.TestCase):
         replicationParameters.set_replication_range(1, 1)
         replicator.execute_replications(replicationParameters, async=False)
         cls.dbMgr = SimDatabaseManager()
-        cls.dbMgr.openExistingDatabase(cls.model, replicator.output_dbpath, isTemporary=True)
+        cls.dbMgr.open_existing_database(cls.model, replicator.output_dbpath, isTemporary=True)
 
     @classmethod
     def tearDownClass(cls):
-        cls.dbMgr.closeOutputDatabase()
+        cls.dbMgr.close_output_database()
 
     @property
     def model(self):
@@ -78,12 +78,12 @@ class ReplicatorTests(unittest.TestCase):
 
     def summaryDsetData(self, elementID, datasetName, run=1, batch=None):
         summarydata = SimSummaryData(self.dbMgr.database, run, elementID, batch)
-        dset = self.dbMgr.database.getDataset(elementID, datasetName)
+        dset = self.dbMgr.database.get_dataset(elementID, datasetName)
         return summarydata.getData(dset)
 
     def getMedian(self, elementID, datasetName, run=1, batch=None):
         pctileData = SimPercentileData(self.dbMgr.database)
-        dset = self.dbMgr.database.getDataset(elementID, datasetName)
+        dset = self.dbMgr.database.get_dataset(elementID, datasetName)
         percentiles = pctileData.getPercentiles(dset, run, batch)
         return percentiles[50]
 
@@ -91,7 +91,7 @@ class ReplicatorTests(unittest.TestCase):
     def test_datasets1(self):
         "Test that model datasets (elementID/dataset name) match output database datasets"
         model_dsets = set((dset.elementID, dset.name) for dset in self.model.datasets)
-        db_dsets = set((dset.elementID, dset.name) for dset in self.dbMgr.currentDatasets())
+        db_dsets = set((dset.elementID, dset.name) for dset in self.dbMgr.current_datasets())
         self.assertEqual(model_dsets, db_dsets)
 
     def test_runs(self):
@@ -100,40 +100,40 @@ class ReplicatorTests(unittest.TestCase):
 
     def test_batchcount1(self):
         "Test that run 1 last batch is 2"
-        self.assertEqual(self.dbMgr.database.lastBatch(1), 2)
+        self.assertEqual(self.dbMgr.database.last_batch(1), 2)
 
     def test_batchcount2(self):
         "Test that run 2 (which wasn't executed) last batch is 0"
-        self.assertEqual(self.dbMgr.database.lastBatch(2), 0)
+        self.assertEqual(self.dbMgr.database.last_batch(2), 0)
 
     def test_batchtime0(self):
         "Test that batch zero (warmup) bounds are zero, 40"
         expectedBounds = (0, 40)
-        self.assertEqual(self.dbMgr.database.batchTimeBounds(1,0), expectedBounds)
+        self.assertEqual(self.dbMgr.database.batch_time_bounds(1,0), expectedBounds)
 
     def test_batchtime1(self):
         "Test that batch 1 bounds are 40, 340"
         expectedBounds = (40, 340)
-        self.assertEqual(self.dbMgr.database.batchTimeBounds(1,1), expectedBounds)
+        self.assertEqual(self.dbMgr.database.batch_time_bounds(1,1), expectedBounds)
 
     def test_batchtime2(self):
         "Test that batch 2 bounds are 340, 640"
         expectedBounds = (340, 640)
-        self.assertEqual(self.dbMgr.database.batchTimeBounds(1,2), expectedBounds)
+        self.assertEqual(self.dbMgr.database.batch_time_bounds(1,2), expectedBounds)
 
     def test_batchtime3(self):
         "Test that batch 3 bounds are 0, 0"
         expectedBounds = (0, 0)
-        self.assertEqual(self.dbMgr.database.batchTimeBounds(1,3), expectedBounds)
+        self.assertEqual(self.dbMgr.database.batch_time_bounds(1,3), expectedBounds)
 
     def test_batchtime4(self):
         "Test that batch bounds for non-existent run is 0, 0"
         expectedBounds = (0, 0)
-        self.assertEqual(self.dbMgr.database.batchTimeBounds(2,1), expectedBounds)
+        self.assertEqual(self.dbMgr.database.batch_time_bounds(2,1), expectedBounds)
 
     def test_lastbatch1(self):
         "Test that last batch for run 1 is 2"
-        self.assertEqual(self.dbMgr.database.lastBatch(1), 2)
+        self.assertEqual(self.dbMgr.database.last_batch(1), 2)
 
     def test_lastbatch2(self):
         "Test that last batch for (non-existent) run 2 is 0"

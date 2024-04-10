@@ -339,7 +339,7 @@ class SimulationResult(object):
         logger.info("Simulation result created for output DB {0} {1}", dbpath, isTemporary)
         #print("==========", dbpath, isTemporary)
         self.dbMgr = SimDatabaseManager()
-        self.dbMgr.openArchivedDatabase(dbpath, isTemporary)
+        self.dbMgr.open_archived_database(dbpath, isTemporary)
         self.datasetStatistics = None
 
     @apidocskip
@@ -352,13 +352,13 @@ class SimulationResult(object):
         Close the database if it is open. If the database is temporary, it will
         be deleted as well.
         """
-        if self.dbMgr.hasOpenDatabase():
-            if self.dbMgr.database.isTemporary:
+        if self.dbMgr.has_open_database():
+            if self.dbMgr.database.is_temporary:
                 print("Closing and removing output database...")
-                self.dbMgr.closeOutputDatabase(delete=True)
+                self.dbMgr.close_output_database(delete=True)
             else:
-                print("Closing output database", self.dbMgr.database.dbPath, "...")
-                self.dbMgr.closeOutputDatabase()
+                print("Closing output database", self.dbMgr.database.db_path, "...")
+                self.dbMgr.close_output_database()
 
     def _get_sim_dataset_statistics(self, dataset):
         """
@@ -401,11 +401,11 @@ class SimulationResult(object):
 
         """
         # TODO better error checking in closeOutputDatabase, overwrite checking?
-        assert self.dbMgr.hasOpenDatabase(), "Cannot save non-open database"
-        assert self.dbMgr.database.isTemporary, "Cannot save non-temporary (archive) database"
+        assert self.dbMgr.has_open_database(), "Cannot save non-open database"
+        assert self.dbMgr.database.is_temporary, "Cannot save non-temporary (archive) database"
 
         print("Closing and saving output database to {0}...".format(filename))
-        self.dbMgr.closeOutputDatabase(savePath=filename)
+        self.dbMgr.close_output_database(savePath=filename)
 
     def save_summary_csv(self, filename):
         """
@@ -428,7 +428,7 @@ class SimulationResult(object):
         runs = database.runs()
         if not runs:
             raise SimError(_RESULT_ERROR, "Result database has no simulation runs")
-        nbatches = database.lastBatch(runs[0])
+        nbatches = database.last_batch(runs[0])
 
         with open(filename, 'w') as f:
             print('ElementID', 'Dataset', 'Unit', 'Sample', 'Count', 'Mean',
@@ -486,7 +486,7 @@ class SimulationResult(object):
         nruns = len(runs)
         if not runs:
             raise SimError(_RESULT_ERROR, "Result database has no simulation runs")
-        nbatches = database.lastBatch(runs[0])
+        nbatches = database.last_batch(runs[0])
 
         if nruns == 1 and nbatches == 1:
             # If there's only one run and one batch, there's no range to get
@@ -583,7 +583,7 @@ class SimulationResult(object):
     def _getFormatWidths(self):
         """
         """
-        datasets = self.dbMgr.currentDatasets()
+        datasets = self.dbMgr.current_datasets()
         eidwidth = max([len(dset.element_id) for dset in datasets])
         namewidth = max([len(dset.name) for dset in datasets])
         numberwidth = 9
@@ -694,7 +694,7 @@ class SimDatasetStatistics(object):
         # If there is just a single run and multiple batches, collect
         # summary statistics from each batch
         if self.nruns == 1:
-            nbatches = database.lastBatch(runs[0])
+            nbatches = database.last_batch(runs[0])
             batches = range(1, nbatches+1)
         else:
             batches = [None,]
