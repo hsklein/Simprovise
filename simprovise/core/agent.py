@@ -121,8 +121,7 @@ class SimAgent(object):
         sendMessage()) or a later asynchronous response which will be
         delegated to one of the agent's message handler based on the
         :class:`.SimMsgType` of the response.
-
-        
+       
         :param toAgent: Agent which is the target/recipient of the message
         :type toAgent: :class:`SimAgent`
        

@@ -487,33 +487,33 @@ class SimResource(SimStaticObject):
     which it belongs does not change. (For static objects, location refers
     more directly to ownership than to specific physical location at any
     given simulated time.)
+    
+    :param name:            Resource name. As with other static objects, it
+                            must be unique within it's location
+    :type name:             str
 
-        :param name:            Resource name. As with other static objects, it
-                                must be unique within it's location
-        :type name:             str
+    :param initialLocation: Initial location object for the resource.
+                            If None, will default to parent location.
+    :type initialLocation:  :class:`~.location.SimLocation` or None
 
-        :param initialLocation: Initial location object for the resource.
-                                If None, will default to parent location.
-        :type initialLocation:  :class:`SimLocation` or None
+    :param parentLocation: Location object to which resource belongs.
+                           If None defaults to Root location
+    :type parentLocation:  :class:`~.location.SimLocation` or None
 
-        :param parentLocation: Location object to which resource belongs.
-                                If None defaults to Root location
-        :type parentLocation:  :class:`SimLocation` or None
+    :param capacity:       Capacity of resource, or number of subresources.
+                           Defaults to 1. Must be > 0. 
+    :type capacity:        int
 
-        :param capacity:        Capacity of resource, or number of subresources.
-                                Defaults to 1. Must be > 0. 
-        :type capacity:         int
+    :param assignmentAgent: Agent managing (assigning) this resource.
+                            If None, the resource is assumed to be its
+                            own agent.
+    :type assignmentAgent:  :class:`SimAgent` or None
 
-        :param assignmentAgent: Agent managing (assigning) this resource.
-                                If None, the resource is assumed to be its
-                                own agent.
-        :type assignmentAgent:  :class:`SimAgent` or None
-
-        :param moveable:        True if the resource can move (within it's
-                                parent location), False if it is filling
-                                Defaults to True. 
-        :type moveable:         bool
-
+    :param moveable:        True if the resource can move (within it's
+                            parent location), False if it is filling
+                            Defaults to True. 
+    :type moveable:         bool
+        
     """
     #TODO
     #Maybe this becomes an abstract base class, with subclasses
@@ -531,6 +531,8 @@ class SimResource(SimStaticObject):
 
     def __init__(self, name, initialLocation=None, parentLocation=None,
                  capacity=1, assignmentAgent=None, moveable=True):
+        """
+        """       
         super().__init__(name, initialLocation, parentLocation, moveable)
         
         if not isinstance(capacity, int) or capacity <= 0: 
