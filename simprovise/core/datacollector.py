@@ -1,5 +1,5 @@
 #===============================================================================
-# MODULE SimDataCollector
+# MODULE datacollector
 #
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
@@ -26,7 +26,7 @@ class Dataset(object):
     should be directed into.  Also defines methods that tell the element to start
     or stop collecting data.
 
-    Note::
+    Note:
 
         Core Datasets are instantiated by :class:`SimDataCollector` and should
         not be created directly by (or even accessed) client modeling code.
@@ -290,7 +290,7 @@ class TimeWeightedAggregate(object):
 @apidoc
 class SimDataCollector(object):
     """
-    SimDataCollectors collect numeric data (including :class:`.SimTime` data)
+    SimDataCollectors collect numeric data (including :class:`~.simtime.SimTime` data)
     during a simulation run. SimDataCollector works in tandem with
     :class:`Dataset`; SimDataCollector instances each have an associated
     dataset instance, which, coupled with a datasink object, are used to
@@ -439,7 +439,7 @@ class SimUnweightedDataCollector(SimDataCollector):
                                  associated with this collector. Must be unique
                                  within the element.
         datasetValueType (type): The (Python) type of the data being collected.
-                                 Generally `int`, `float` or :class:`SimTime`
+                                 Generally `int`, `float` or :class:`~.simtime.SimTime`
     """
     # TODO should be no default values
     def __init__(self, element=None, datasetName=None, datasetValueType=None):
@@ -458,7 +458,7 @@ class SimTimeWeightedDataCollector(SimDataCollector):
                                  associated with this collector. Must be unique
                                  within the element.
         datasetValueType (type): The (Python) type of the data being collected.
-                                 Generally `int`, `float` or :class:`SimTime`
+                                 Generally `int`, `float` or :class:`~.simtime.SimTime`
     """
     def __init__(self, element=None, datasetName=None, datasetValueType=None):
         super().__init__(element, datasetName, datasetValueType, True, TimeWeightedAggregate())

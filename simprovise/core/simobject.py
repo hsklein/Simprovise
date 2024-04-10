@@ -150,7 +150,7 @@ class SimTransientObject(SimLocatableObject):
         locations) the location is its own entry point. Non-leaf locations
         must explcitly designate one of their child locations as their entry
         point - otherwise, any attempt to move to that non-leaf location will
-        raise a :class:`SimError`
+        raise a :class:`~.simexception.SimError`
 
         Args:
             toLocation (SimLocation): location to move to

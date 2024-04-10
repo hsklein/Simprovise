@@ -33,7 +33,7 @@ if generating_docs:
 
         * msgID: A unique sequence number identifier for the message
         * msgType: One of the :class:`SimMsgType` strings 
-        * sendTime: A :class:`SimTime` representing the
+        * sendTime: A :class:`~.simtime.SimTime` representing the
                 simulated time the message was sent
         * sender: The sending :class:`SimAgent`
         * receiver: The recipient :class:`SimAgent`
@@ -42,7 +42,7 @@ if generating_docs:
         * msgData: One or more data items/objects, based on message type
 
         SimMessages are created only by :class:`SimAgent` objects, via methods
-        :meth:`.sendMessage` and :meth:`.sendResponse`. Client code should
+        :meth:`.send_message` and :meth:`.send_response`. Client code should
         always use one of those methods (directly or indirectly) to send
         messages.
         
@@ -78,6 +78,12 @@ class SimAgent(object):
     process messages, both synchronously and asynchronously. SimAgents
     (and the instances of classes derived from SimAgent) are the only objects
     that send messages, and are the only objects allowed to receive  them.
+    
+    SimAgent is a base class for almost all of the modeling classes.
+    Modeling code should never instantiate A SimAgent directly, and
+    probably will never need to subclass it directly; more typically,
+    the modeler will subclass SimAgent subclasses such as
+    :class:`~.resource.SimResource` or :class:`~.process.SimProcess`.
 
     """
     def __init__(self):
@@ -116,17 +122,21 @@ class SimAgent(object):
         delegated to one of the agent's message handler based on the
         :class:`.SimMsgType` of the response.
 
-        Args:
-            toAgent (SimAgent):   Agent which is the target/recipient of the
-                                  message
-            msgType (SimMsgType): Message type
-            msgData:              Message content, form of which varies by
-                                  message type.
+        
+        :param toAgent: Agent which is the target/recipient of the message
+        :type toAgent: :class:`SimAgent`
+       
+        :param msgType: The message type
+        :type msgType:  :class:`SimMsgType`
+       
+        :param msgData: Message content
+        :type msgData:  Varies by message type
 
-        Returns:
-             tuple (pair): The message created and sent by this call and a list
-             of any response messages sent immediately by the message recipient
-             (which may be empty, if the recipient did not immediately respond)
+         :return:       The message created and sent by this call and a list
+                        of any response messages sent immediately by the message
+                        recipient (which may be empty, if the recipient did not
+                        immediately respond)
+        :rtype:         tuple (sent message, list of response messages)
              
         """
         assert toAgent, "Null toAgent (recipient) argument to sendMessage()"
@@ -172,12 +182,15 @@ class SimAgent(object):
         Send a specified message (responseMsg) in response to a received
         (originating) message. The response is sent to the originating
         message's sender.
-
-        Args:
-            originatingMsg (SimMessage): The message being responded to.
-            msgType (SimMsgType):        Message type of the response message
-            msgData:                     Message content of the response message,
-                                         form of which varies by message type.
+        
+        :param originatingMsg: The message being responded to
+        :type originatingMsg:  :class:`SimMessage`
+       
+        :param msgType:        The message type
+        :type msgType:         :class:`SimMsgType`
+       
+        :param msgData:        Message content
+        :type msgData:         Varies by message type
                                          
         """
         assert originatingMsg, "Null originatingMsg argument to sendResponse()"
@@ -248,11 +261,12 @@ class SimAgent(object):
         If there is an existing handler for the specified message type, it
         will be replaced by the more recently registered handler - there is
         not, at this time, any notion of handler chains.
-
-        Args:
-            msgType (SimMsgType): message type of messages to be processed
-                                  by this handler
-            handler (function):   Handler function
+       
+        :param msgType: The message type to be processed by this handler
+        :type msgType:  :class:`SimMsgType`
+       
+        :param handler: Handler function
+        :type handler:  function
             
         """
         assert msgType, "null message type passed to registerHandler()"
@@ -270,11 +284,12 @@ class SimAgent(object):
         Used to prioritize queued messages of a specific type. Note that
         prioritization can be dynamic - i.e., the priority of a message can
         change over time as (simulated) circumstances change.
-
-        Args:
-            msgType (SimMsgType): Type of messages prioritized by the passed
-                                  function
-            func (function):      Priority function as described above
+       
+        :param msgType: Type of messages prioritized by the passed function
+        :type msgType:  :class:`SimMsgType`
+       
+        :param func:    Priority function as described above
+        :type func:     function
             
         """
         assert msgType, "null message type passed to registerPriorityFunc()"
@@ -285,7 +300,14 @@ class SimAgent(object):
         """
         Returns the registered priority function for the specified message
         type (or None if nothing is registered for that type)
+       
+        :param msgType: The message type for which we are getting the
+                        registered priority function.
+        :type msgType:  :class:`SimMsgType`
         
+         :return:       The priority function associated with msgType
+        :rtype:         func
+         
         """
         if msgType in self._msgPriorityFunc:
             return self._msgPriorityFunc[msgType]
@@ -302,14 +324,14 @@ class SimAgent(object):
 
         If there are NO queue messages of the specified type, returns None.
 
-        Args:
-            msgType (SimMsgType): The type of message desired
+        :param msgType: The type of message desired
+        :type msgType: :class:`SimMsgType`
 
-        Returns:
-            SimMessage: The queued message of type msgType with the highest
-                        priority (or the oldest message, if no priority
-                        function has been registered for msgType) (or None
+         :return:       The queued message of type msgType with the highest
+                        priority, or the oldest message, if no priority
+                        function has been registered for msgType. (or None
                         if there are no queued messages of type msgType)
+         :rtype:        :class:`SimMessage`
                         
         """
         msgs = [msg for msg in self.msgQueue if msg.msgType == msgType]
@@ -324,7 +346,14 @@ class SimAgent(object):
         """
         Return the priority of a passed message - if there is a priority
         function registered for that message's type. If not, return None.
-        
+         
+        :param msg:       The message whose priority is being queried
+        :type SimMessage: :class:`SimMessage`
+
+        :return:          The priority of msg, or None if no priority
+                          function is registered for msg's message type.
+        :rtype:           int or None
+       
         """
         if msg.msgType in self._msgPriorityFunc:
             return self._msgPriorityFunc[msg.msgType](msg)

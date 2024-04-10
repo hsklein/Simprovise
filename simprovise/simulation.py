@@ -70,12 +70,12 @@ class Simulation(object):
                
         :param warmupLength: The length of the simulation warmup period,
                              in simulated time. Defaults to zero
-        :type warmupLength:  :class:`SimTime`
+        :type warmupLength:  :class:`~.simtime.SimTime`
         
         :param batchLength:  The length of each simulation batch, in
                              simulated time. Raises if not set or not greater
                              than zero.
-        :type batchLength:   :class:`SimTime`
+        :type batchLength:   :class:`~.simtime.SimTime`
         
         :param nBatches:     Then number of batches to simulate. Raises if
                              not greater than zero
@@ -130,12 +130,12 @@ class Simulation(object):
         
         :param warmupLength: The length of the simulation warmup period,
                              in simulated time. Defaults to zero
-        :type warmupLength:  :class:`SimTime`
+        :type warmupLength:  :class:`~.simtime.SimTime`
         
         :param batchLength:  The length of each simulation batch, in
                              simulated time. Raises if not set or not greater
                              than zero.
-        :type batchLength:   :class:`SimTime`
+        :type batchLength:   :class:`~.simtime.SimTime`
         
         :param nBatches:     Then number of batches to simulate. Raises if
                              not greater than zero
@@ -195,12 +195,12 @@ class Simulation(object):
         
         :param warmupLength: The length of the simulation warmup period,
                              in simulated time. Defaults to zero
-        :type warmupLength:  :class:`SimTime`
+        :type warmupLength:  :class:`~.simtime.SimTime`
         
         :param batchLength:  The length of each simulation batch, in
                              simulated time. Raises if not set or not greater
                              than zero.
-        :type batchLength:   :class:`SimTime`
+        :type batchLength:   :class:`~.simtime.SimTime`
         
         :param nBatches:     Then number of batches to simulate. Raises if
                              not greater than zero

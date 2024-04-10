@@ -206,10 +206,10 @@ class SimDistribution(object):
 
     In many (if not most) cases, these methods are being used to generate
     time values (class :class:`~.simtime.SimTime`) - e.g., we need a generator for
-    interarrival times. If any of the arguments passed to
-    ``SimDistribution.number_generator()`` are :class:`~.simtime.SimTime`
-    instances, the resulting generator will also return SimTime instances
-    (in the units of the first SimTime argument) The generator takes care
+    interarrival times. If any of the arguments passed to 
+    :meth:`number_generator` are :class:`~.simtime.SimTime` instances, the
+    resulting generator will also return :class:`~.simtime.SimTime` instances
+    (in the units of the first SimTime argument). The generator takes care
     of unit conversion - i.e., it is OK to pass SimTime arguments with 
     ifferent time units. For example, the following returns a generator
     yielding SimTime values uniformly distributed between 30 and 120 seconds:
@@ -334,7 +334,7 @@ class SimDistribution(object):
         Args:
             mean:           The mean value of the desired exponentially
                             distributed sample. May be either numeric or a
-                            :class:`SimTime` instance
+                            :class:`~.simtime.SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
@@ -355,10 +355,10 @@ class SimDistribution(object):
 
         Args:
             a:              The low bound of the desired uniformly distributed
-                            sample. May be either numeric or a :class:`SimTime`
+                            sample. May be either numeric or a :class:`~.simtime.SimTime`
                             instance
             b:              The high bound of the desired uniformly distributed
-                            sample. May be either numeric or a :class:`SimTime`
+                            sample. May be either numeric or a :class:`~.simtime.SimTime`
                             instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
@@ -377,11 +377,11 @@ class SimDistribution(object):
 
         Args:
             low:            The low bound of the desired triangular distribution.
-                            May be either numeric or a :class:`SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
             high:           The high bound of the desired triangular distribution.
-                            May be either numeric or a :class:`SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
             mode:           The mode of the desired triangular distribution.
-                            May be either numeric or a :class:`SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
        """
@@ -406,9 +406,9 @@ class SimDistribution(object):
 
         Args:
             mu:             The mean value of the desired gaussian distribution.
-                            May be either numeric or a :class:`SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
             sigma:          The std deviation of the desired gaussian distribution.
-                            May be either numeric or a :class:`SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
@@ -435,9 +435,9 @@ class SimDistribution(object):
 
         Args:
             alpha:          The scale parameter of the desired weibull distribution.
-                            May be either numeric or a :class:`SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
             beta:           The shape paramter of the desired triangular distribution.
-                            May be either numeric or a :class:`SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
@@ -455,7 +455,7 @@ class SimDistribution(object):
 
         Args:
             alpha:          The shape parameter of the desired pareto distribution.
-                            May be either numeric or a :class:`SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
@@ -471,9 +471,9 @@ class SimDistribution(object):
 
         Args:
             mu:             The location parameter of the desired lognormal distribution.
-                            May be either numeric or a :class:`SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
             sigma:          The scale parameter of the desired lognormal distribution.
-                            May be either numeric or a :class:`SimTime` instance,
+                            May be either numeric or a :class:`~.simtime.SimTime` instance,
                             but must be greater than zero
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
@@ -493,10 +493,10 @@ class SimDistribution(object):
 
         Args:
             alpha:          Shape parameter of the desired beta distribution.
-                            May be either numeric or a :class:`SimTime` instance.
+                            May be either numeric or a :class:`~.simtime.SimTime` instance.
                             Must be greater than zero
             beta:           Shape parameter of the desired beta distribution.
-                            May be either numeric or a :class:`SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
                             Must be greater than zero
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]
@@ -519,10 +519,10 @@ class SimDistribution(object):
 
         Args:
             alpha:          Alpha parameter of the desired gamma distribution.
-                            May be either numeric or a :class:`.SimTime` instance.
+                            May be either numeric or a :class:`~.simtime.SimTime` instance.
                             Must be greater than zero
             beta:           Beta parameter of the desired gamma distribution.
-                            May be either numeric or a :class:`.SimTime` instance
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
                             Must be greater than zero
             rnStream (int): Identifies the random stream to sample from.
                             Should be in range [1 - :meth:`nRandomNumberStreams`]

@@ -169,13 +169,13 @@ class SimEntitySource(SimLocation):
         1. An entity generator, each iteration of which yields a new entity
            (and its SimProcess)
         2. An interarrival time generator, each iteration of which yields the
-           time (:class:`SimTime`) until the next work item is generated
+           time (:class:`~.simtime.SimTime`) until the next work item is generated
 
         Args:
             entityGenerator:       A generator that yields :class:`.SimEntity`
                                    (or objects derived from ``SimEntity``)
             interarrivalGenerator: A generator that yields interarrival times
-                                   (class :class:`SimTime`)
+                                   (class :class:`~.simtime.SimTime`)
         """
         # As with addEntityGenerator(), we cannot actually create the
         # SimEntityGenerationEvent here, since this method may be called before

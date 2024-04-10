@@ -30,8 +30,8 @@ class SimTime(object):
     A simulated time or interval, in seconds, minutes or hours.
 
     Args:
-        value (scalar or :class:`.SimTime`)
-        units: Time unit if value is not a :class:`SimTime`
+        value (scalar or :class:`~.simtime.SimTime`)
+        units: Time unit if value is not a :class:`~.simtime.SimTime`
         
     """
     __slots__ = ('_value', '_units')

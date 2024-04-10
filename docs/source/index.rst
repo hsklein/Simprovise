@@ -13,7 +13,7 @@ for model execution and output analysis.
 	Simprovise is under active development.
 
 .. toctree::
-   :maxdepth: 2
+   :maxdepth: 4
    :caption: Contents:
 
    introduction

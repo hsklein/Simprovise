@@ -145,7 +145,7 @@ class SimModel(object):
     def get_static_object(self, elementid):
         """
         Returns the registered :class:`SimStaticObject` with the passed
-        element ID; raises a :class:`SimError` if not found.
+        element ID; raises a :class:`~.simexception.SimError` if not found.
         
         :param elementid: The element ID of the requested static object
         :return: The specified static object

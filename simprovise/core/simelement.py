@@ -22,28 +22,24 @@ class SimElement(object):
     """
     SimElement is base class for objects that are elements in the 
     simulation model. These elements include static simulation objects -
-    :class:`Locations <SimLocation>`, :class:`Resources <SimResource>`,
-    :class:`Entity Sources <SimEntitySource>` and
-    :class:`Entity Sinks <SimEntitySink>` (and their subclasses), as well as
-    :class:`SimProcessElements <SimProcessElement>` and
-    :class:`SimEntityElements <SimEntityElement>`, which are static proxies for
-    transient process and entity objects.
+    :class:`Locations <.location.SimLocation>`,
+    :class:`Resources <.resource.SimResource>`,
+    :class:`Entity Sources <.entitysource.SimEntitySource>` and
+    :class:`Entity Sinks <.entitysink.SimEntitySink>` (and their subclasses),
+    as well as :class:`SimProcessElements <.process.SimProcessElement>` and
+    :class:`SimEntityElements <.entity.SimEntityElement>`, which are static
+    proxies for transient process and entity objects.
     
-    SimElements exist for the lifetime of the simulation, and should be 
-    registered with the :class:`SimModel` singleton. The cleanest solution would 
-    be to do that registration in SimElement.__init__, but registration requires 
-    the fixed, unique ID (element_id) for the element, which is based on data in 
-    derived classes. We rely on :class:`SimClassElement` and
-    :class:`SimStaticObject` to register new instances in their confirm
-    via a call to :meth:`_register`
+    SimElements exist for the lifetime of the simulation, and are 
+    registered on initialization with the :class:`~.model.SimModel` singleton.
     
-    SimElements are the base unit for data collected during a simulation.
-    SimElement maintains the collection of :class:`datasets <Dataset>`
+    SimElements are the base unit for data collected during a simulation. Each
+    SimElement maintains a collection of :class:`datasets <.datacollector.Dataset>`
     associated with the element, and provides methods/properties to define
     and access them.
     
     SimElement is basically an abstract base class, but we don't
-    define it as such since it is a mixin class for SimStaticObject,
+    define it as such since it is also a mixin class for SimStaticObject,
     and we'd rather not deal with metaclass conflicts.
     """
     # Since this is a mixin class for SimStaticObject, we don't define an
@@ -57,8 +53,10 @@ class SimElement(object):
     def element_id(self):
         """
         Basically an abstract property implemented by subclasses.
-        :return: A globally unique identifier for the element
-        :rtype: String
+        :return: A globally unique identifier for the element.
+        
+        :rtype: str
+        
         """
         pass
     

@@ -2,8 +2,15 @@
 simprovise.core package
 =======================
 
-Core Modeling Constructs and Base Classes
-=========================================
+.. toctree::
+   :maxdepth: 2
+
+The ``core`` package includes the basic classes required to define a simulation model
+as well as the event processing framework that lies at the heart of any discrete 
+event simulator.
+
+This references focuses on classes that are used - either directly or through inheritance -
+to build and define simulation models.
 
 Agent and Message Classes
 -------------------------
