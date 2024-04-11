@@ -34,12 +34,9 @@ class SimEntitySource(SimLocation):
     Args:
         name (str):                Name of the source, must be unique within the
                                    source's location (locationObj)
-        locationObj (SimLocation): Location object to which this source belongs.
+        parentlocation (SimLocation): Location object to which this source belongs.
                                    If ``None`` this source is assigned to the
                                    Root location
-        animationObj:              ``None`` if the simulation is not animated
-        **properties:              Keyword dictionary for additional property
-                                   values to be set (if any).
     """
     # TODO should this be a pseudo-SimLocation, a-la SimEntitySink? The case is
     # not as compelling here, since there is a theoretical possibility that
