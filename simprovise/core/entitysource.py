@@ -46,16 +46,13 @@ class SimEntitySource(SimLocation):
     # entitys can hang around the source before being moved.
 
     # If we do choose to make this a pseudo-location (inherit from
-    # SimAnimatableObject instead of SimLocation), we'll have to implement both
+    # SimStaticObject instead of SimLocation), we'll have to implement both
     # onEnter() and onExit().
 
-    __slots__ = ('__generatorDefs', '__generatorDefsAreEditable',
-                 '__generatorPairs')
+    __slots__ = ('__generatorPairs')
 
     def __init__(self, name, parentlocation=None):
         super().__init__(name, parentlocation)
-        self.__generatorDefs = []
-        self.__generatorDefsAreEditable = True
         self.__generatorPairs = []
 
     @property
