@@ -1,3 +1,10 @@
+#===============================================================================
+# MODULE simclock_test
+#
+# Copyright (C) 2024 Howard Klein - All Rights Reserved
+#
+# Unit tests for class SimClock
+#===============================================================================
 from simprovise.core import *
 
 import unittest
@@ -34,7 +41,6 @@ class simclockTests( unittest.TestCase ):
     def testAdvance4( self ):
         "Test: advanceTo() with integer parameter raises simexception.Error"
         self.assertRaises( simexception.SimError, SimClock.advance_to, 5  )
-
 
     def testClockProtect1( self ):
         "Test: Return value of now() is not a reference to the clock"

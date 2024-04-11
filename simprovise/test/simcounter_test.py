@@ -1,3 +1,10 @@
+#===============================================================================
+# MODULE simcounter_test
+#
+# Copyright (C) 2024 Howard Klein - All Rights Reserved
+#
+# Unit tests for SimCounter class
+#===============================================================================
 from simprovise.core import *
 import unittest
 import sys
@@ -16,7 +23,7 @@ class MockProcess(object):
         self.waiting = False
 
 class MockElement(object):
-    def registerDataset(self, dset):
+    def register_dataset(self, dset):
         pass
 
 

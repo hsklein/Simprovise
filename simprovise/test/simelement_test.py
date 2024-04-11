@@ -1,8 +1,16 @@
+#===============================================================================
+# MODULE simcounter_test
+#
+# Copyright (C) 2024 Howard Klein - All Rights Reserved
+#
+# TODO these tests are all to be removed - create new tests for
+# SimProcess/EntityElement classes. Need SimModel tests as well, possibly
+# in its own module
+#
+# Unit tests for SimCounter class
+#===============================================================================
 import os
 from simprovise.core import *
-from simprovise.configuration import *
-from Simalytix.Animation import *
-from simprovise.configuration.simelement import SimElementDefinition
 import unittest
 
 class MockEntity(SimEntity):
@@ -22,75 +30,8 @@ class SimElementDefinitionGraphicFileTests(unittest.TestCase):
                                           graphicFile=url)
         self.assertEqual(elementDef.graphicFile, url)
 
-    def testremoteURL1(self):
-        "Test: SimElementDefinition with remote URL"
-        url = "//www.example.com//test.svg"
-        elementDef = SimElementDefinition(SimLocation,
-                                          animationClass=SimAnimatedStaticObject,
-                                          graphicFile=url)
-        self.assertEqual(elementDef.graphicFile, url)
 
-    def testremoteURL2(self):
-        "Test: SimElementDefinition with remote http URL"
-        url = "http://www.example.com//test.svg"
-        elementDef = SimElementDefinition(SimLocation,
-                                          animationClass=SimAnimatedStaticObject,
-                                          graphicFile=url)
-        self.assertEqual(elementDef.graphicFile, url)
-
-    def testInvalidFileURL(self):
-        "Test: SimElementDefinition with invalid file URL (netloc instead of path)"
-        url = "file://test.svg"
-        expr = lambda: SimElementDefinition(SimLocation,
-                                            animationClass=SimAnimatedStaticObject,
-                                            graphicFile=url)
-        self.assertRaises(SimError, expr)
-
-    def testInvalidHttpURL1(self):
-        "Test: SimElementDefinition with invalid http URL (no netloc)"
-        url = "http:///test.svg"
-        expr = lambda: SimElementDefinition(SimLocation,
-                                            animationClass=SimAnimatedStaticObject,
-                                            graphicFile=url)
-        self.assertRaises(SimError, expr)
-
-    def testInvalidHttpURL2(self):
-        "Test: SimElementDefinition with invalid http URL (no path)"
-        url = "http://www.example.com"
-        expr = lambda: SimElementDefinition(SimLocation,
-                                            animationClass=SimAnimatedStaticObject,
-                                            graphicFile=url)
-        self.assertRaises(SimError, expr)
-
-    def testInvalidAbsoluteFile(self):
-        "Test: SimElementDefinition with a non-existent absolute file path"
-        thisdir = os.path.dirname(os.path.abspath(__file__))
-        badabsfile = os.path.join(thisdir, "INVALID_DUMMY.svg")
-        expr = lambda: SimElementDefinition(SimLocation,
-                                            animationClass=SimAnimatedStaticObject,
-                                            graphicFile=badabsfile)
-        self.assertRaises(SimError, expr)
-
-    def testInvalidRelativeFile(self):
-        "Test: SimElementDefinition with a non-existent relative file path"
-        badfile = "INVALID_DUMMY.svg"
-        expr = lambda: SimElementDefinition(SimLocation,
-                                            animationClass=SimAnimatedStaticObject,
-                                            graphicFile=badfile)
-        self.assertRaises(SimError, expr)
-
-    def testRelativeFile(self):
-        "Test: SimElementDefinition with relative graphic file and locally defined element class"
-        file = "empty.svg"
-        thisdir = os.path.dirname(os.path.abspath(__file__))
-        absfile = os.path.join(thisdir, file)
-        url = SimUtility.abspathToFileURL(absfile)
-        elementDef = SimElementDefinition(MockLocation,
-                                          animationClass=SimAnimatedStaticObject,
-                                          graphicFile=file)
-        self.assertEqual(elementDef.graphicFile, url)
-
-    def testAbsoluteFile(self):
+   def testAbsoluteFile(self):
         "Test: SimElementDefinition with absolute graphic file"
         file = "empty.svg"
         thisdir = os.path.dirname(os.path.abspath(__file__))

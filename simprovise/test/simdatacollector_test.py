@@ -1,3 +1,10 @@
+#===============================================================================
+# MODULE simdataacollector_test
+#
+# Copyright (C) 2024 Howard Klein - All Rights Reserved
+#
+# Unit tests for SimDataCollector and the aggregate classes
+#===============================================================================
 from simprovise.core import *
 import unittest
 

@@ -1,3 +1,10 @@
+#===============================================================================
+# MODULE simlocation_test
+#
+# Copyright (C) 2024 Howard Klein - All Rights Reserved
+#
+# Unit tests for SimLocation and SimTransientObject classes
+#===============================================================================
 from simprovise.core import *
 from simprovise.core.simobject import SimTransientObject
 from simprovise.core.location import SimStaticObject
