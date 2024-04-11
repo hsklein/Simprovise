@@ -25,7 +25,6 @@ _ROOT_LOCATION_NAME = "Root"
 logger = SimLogging.get_logger(__name__)
 
 
-
 @apidoc
 class SimStaticObject(SimLocatableObject, SimElement):
     """
@@ -74,6 +73,10 @@ class SimStaticObject(SimLocatableObject, SimElement):
         logger.info("Registering static object %s ...", self.element_id)
         SimStaticObject.elements[self.element_id] = self
         
+        # Add the new static object to the parent location's collection of
+        # children
+        parentLocation._add_child(self)
+        
     @property
     def datasets(self):      
         """
@@ -105,8 +108,7 @@ class SimStaticObject(SimLocatableObject, SimElement):
             return self.element_name
         else:
             return "".join((self.parent_location.element_id, '.', self.element_name))
-        
-    
+           
     @property
     def element_class(self):
         
@@ -197,7 +199,8 @@ class SimLocation(SimStaticObject):
      """
     # TODO locations should be static objects?  Confirm that?
     __slots__ = ('_hasChildren', '_counter', '_entryDataCollector', '_timeDataCollector',
-                 '_entryPointID', '_entrypointLocation', '_residents')
+                 '_entryPointID', '_entrypointLocation', '_childStaticObjs',
+                 '_residents')
     
     _rootlocation = None
     
@@ -237,6 +240,7 @@ class SimLocation(SimStaticObject):
                                                               _ENTRIES_DATASET_NAME,
                                                               int)
         self._timeDataCollector = SimUnweightedDataCollector(self, "Time", SimTime)
+        self._childStaticObjs = []
         self._residents = []
         
         if entrypointname is None:
@@ -260,6 +264,30 @@ class SimLocation(SimStaticObject):
             self.parent_location._hasChildren = True
             
         self._initialize_parent_entrypoints()
+        
+    def _add_child(self, staticobj):      
+        """
+        Add the passed static child object to this location's list of
+        children. Raises if:
+        - the passed object is not a SimStaticObject
+        - the passed object's parent is not this location
+        - the passed object has already been added via a previous call
+        """
+        if not isinstance(staticobj, SimStaticObject):
+            msg = "Attempt to add non-static child object {0} to location {1}"
+            raise SimError(_LOCATION_ERROR_NAME, msg, staticobj, self.element_id)
+        
+        if staticobj.parent_location is not self:
+            msg = "Static object {0} parent is not location {1}"
+            raise SimError(_LOCATION_ERROR_NAME, msg, staticobj.element_id,
+                           self.element_id)
+        
+        if staticobj in self._childStaticObjs:
+            msg = "Static object {0} is already a child of location {1}"
+            raise SimError(_LOCATION_ERROR_NAME, msg, staticobj.element_id,
+                           self.element_id)
+        
+        self._childStaticObjs.append(staticobj)
             
     def _initialize_parent_entrypoints(self):
         """
@@ -302,11 +330,48 @@ class SimLocation(SimStaticObject):
         return False
 
     @property
-    def has_children(self):
+    def residents(self):
         """
-        Returns True if this location has a child location
+        A generator that yields the :class:`entities <.entity.SimEntity>`
+        currently residing in this location. Note that resident entries are 
+        pair tuples (entity, entrytime), so this extracts the first entry
+        in each pair.
         """
-        return self._hasChildren
+        return (pair[0] for pair in self._residents)
+        #for pair in self._residents:
+        #    yield pair[0]
+
+    @property
+    def has_child_locations(self):
+        """
+        Returns True if this location has at least one child location
+        """
+        childlocs = (obj for obj in self._childStaticObjs if obj.islocation)
+        return bool(next(childlocs, None))
+    
+    def descendants(self, cls=None):
+        """
+        A generator that yields all descendant static objects of this
+        location that are of/derived from a passed class (which must be
+        a subclass of SimStaticObject). By default, that class is
+        SimLocation.        
+        """
+        if cls is None:
+            cls = SimLocation
+            
+        if not issubclass(cls, SimStaticObject):
+            msg = "class {0} passed to SimLocation {1} descendants() is not a subclass of SimStaticObject"
+            raise SimError(_LOCATION_ERROR_NAME, msg, cls, self.element_id)
+        
+        cls_children = (obj for obj in self._childStaticObjs if isinstance(obj, cls))
+        loc_children = (obj for obj in self._childStaticObjs if obj.islocation)
+        
+        for obj in cls_children:
+            yield obj
+            
+        for location in loc_children:
+            yield from location.descendants(cls)
+        
     
     def is_ancestor_of(self, staticObj):
         """
@@ -315,8 +380,18 @@ class SimLocation(SimStaticObject):
         return self in staticObj.ancestor_locations
 
 
-    def __getitem__(self, index):
-        return self._residents[index][0]
+    #def __getitem__(self, index):
+        #"""
+        #"""
+        #return self._residents[index][0]
+    
+    def __contains__(self, obj):       
+        """
+        """
+        if issubclass(obj.__class__, SimStaticObject):
+            return obj in self.descendants(SimStaticObject)
+        else:
+            return obj in self.residents
 
     @property
     def entry_point_id(self):
@@ -349,7 +424,7 @@ class SimLocation(SimStaticObject):
         Returns:
             SimLocation: entry point location for this SimLocation
         """
-        if not self.has_children:
+        if not self.has_child_locations:
             # Leaf locations are always their own entry points
             return self
         
@@ -370,9 +445,9 @@ class SimLocation(SimStaticObject):
         return self._counter.value
 
     @apidocskip
-    def index(self, x, j=None, k=None):
+    def index(self, obj, j=None, k=None):
         """
-        Implements sequence index() method
+        Implements sequence index() method on the _residents member
         """
         if j is None:
             j = 0
@@ -380,7 +455,7 @@ class SimLocation(SimStaticObject):
             k = len(self._residents)
 
         for i in range(j, k):
-            if x == self[i]:
+            if obj is self._residents[i][0]:
                 return i
         raise ValueError # not found
 
@@ -444,7 +519,8 @@ class SimLocation(SimStaticObject):
         """
         if not exitingObj in self:
             msg = "Attempt to exit object ({0}) from a location ({1}) that it does not reside in"
-            raise SimError("SimLocationInvalidExit", msg, str(exitingObj), str(self))
+            raise SimError("SimLocationInvalidExit", msg, str(exitingObj),
+                           self.element_id)
 
         # As one might expect, onExit processing order is reversed from
         # onEnter().  When exiting, class-specific functionality is invoked
@@ -470,6 +546,7 @@ class SimLocation(SimStaticObject):
             if not parentLoc.is_ancestor_of(nextLocation):
                 parentLoc.on_exit(exitingObj, nextLocation)
 
+
 @apidoc
 class SimRootLocation(object):
     """
@@ -485,7 +562,9 @@ class SimRootLocation(object):
     """
     def __init__(self):
         """
+        The root does maintain a list of child static objects
         """
+        self._childStaticObjs = []
        
     @property
     def element_name(self):
@@ -551,6 +630,30 @@ class SimRootLocation(object):
         onEnter/onExit are no-ops for the root location
         """
         pass
+        
+    def _add_child(self, staticobj):      
+        """
+        Add the passed static child object to the root's list of
+        children. Raises if:
+        - the passed object is not a SimStaticObject
+        - the passed object's parent is not this location
+        - the passed object has already been added via a previous call
+        
+        Slight variation of SimLocation implementation
+        """
+        if not isinstance(staticobj, SimStaticObject):
+            msg = "Attempt to add non-static child object {0} to root location"
+            raise SimError(_LOCATION_ERROR_NAME, msg, staticobj)
+        
+        if staticobj.parent_location is not self:
+            msg = "Static object {0} parent is not the root location"
+            raise SimError(_LOCATION_ERROR_NAME, msg, staticobj.element_id)
+        
+        if staticobj in self._childStaticObjs:
+            msg = "Static object {0} is already a child of root location"
+            raise SimError(_LOCATION_ERROR_NAME, msg, staticobj.element_id)
+        
+        self._childStaticObjs.append(staticobj)
 
 
 @apidoc
@@ -587,6 +690,10 @@ if __name__ == '__main__':
     
         def on_exit_impl(self, exitingObj):
             print(exitingObj, "leaving location", self.element_id)
+            
+    class MockLocation2(MockLocation):      
+        """
+        """
 
 
     class MockLocatable(SimTransientObject):
@@ -597,15 +704,23 @@ if __name__ == '__main__':
     parentLoc1 = MockLocation("parent", None, "child1")
     parentLoc2 = MockLocation("parent2", None)
     childLoc1 = MockLocation("child1", parentLoc1)
-    childLoc2 = MockLocation("child2", parentLoc1)
+    childLoc2 = MockLocation2("child2", parentLoc1)
 
     print("parent1 ID", parentLoc1.element_id)
     print("parent1 is SimElement", issubclass(parentLoc1.__class__, SimElement))
     print("parent2 ID", parentLoc2.element_id)
     print("childLoc1 ID", childLoc1.element_id)
-    print("childLoc2 ID", childLoc2.element_id)
+    print("MockLocatable ID", childLoc2.element_id)
 
     print("Parent1entry point:", parentLoc1.entry_point.element_id)
+    
+    print("===== parentLoc1 location descendants ======")
+    for d in parentLoc1.descendants():
+        print(d.element_id)
+        
+    print("===== parentLoc1 MockLocation2 descendants ======")
+    for d in parentLoc1.descendants(MockLocation2):
+        print(d.element_id)
     
     for a in childLoc1.ancestor_locations:
         print("childLoc1 ancestor: ", a.element_id)
