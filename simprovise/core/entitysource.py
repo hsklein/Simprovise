@@ -58,15 +58,6 @@ class SimEntitySource(SimLocation):
         self.__generatorDefsAreEditable = True
         self.__generatorPairs = []
 
-    #@classmethod
-    #@apidocskip
-    #def allowsChildren(cls):
-        #"""
-        #Override to indicate that instances of this class do not support the
-        #assignment of child static objects (even though this is a SimLocation).
-        #"""
-        #return False
-
     @property
     @apidocskip
     def generatorDefinitions(self):
