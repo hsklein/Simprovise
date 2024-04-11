@@ -55,15 +55,6 @@ class SimEntitySource(SimLocation):
         super().__init__(name, parentlocation)
         self.__generatorPairs = []
 
-    @property
-    @apidocskip
-    def generatorDefinitions(self):
-        """
-        Returns the list of current generator definitions, all of type
-        SourceGeneratorDef.
-        """
-        return self.__generatorDefs
-
     @apidocskip
     def final_initialize(self):
         """
