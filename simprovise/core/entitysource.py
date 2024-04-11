@@ -17,7 +17,11 @@ from simprovise.core.utility import SimUtility
 from simprovise.core.apidoc import apidoc, apidocskip
 from simprovise.core.simevent import SimEvent
 from simprovise.core.utility import SimUtility
+from simprovise.core import SimLogging, SimError
 
+logger = SimLogging.get_logger(__name__)
+
+_ERROR_NAME = "SimEntitySourceError"
 
 @apidoc
 class SimEntitySource(SimLocation):
@@ -181,6 +185,14 @@ class SimEntitySource(SimLocation):
         # SimEntityGenerationEvent here, since this method may be called before
         # the simulation's random number streams have been initialized.
         self.__generatorPairs.append((entityGenerator, interarrivalGenerator))
+        
+    def _add_child(self, staticobj):      
+        """
+        SimEntitySources should not have child static objects.
+        Raise an error on the attempt.
+        """
+        msg = "Attempting to add child static object {0} to SimEntitySource {1}"
+        raise SimError(_ERROR_NAME, msg, self.element_id, staticobj.element_id)
 
 
 class SimEntityGenerationEvent(SimEvent):
