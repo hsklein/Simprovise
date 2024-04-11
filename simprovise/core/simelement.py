@@ -5,9 +5,7 @@
 #
 # Defines the SimElement and SimClassElement classes.
 #===============================================================================
-from simprovise.core import (SimClock, SimTime,
-                             SimError, SimCounter, SimUnweightedDataCollector,
-                             SimLogging)
+from simprovise.core import SimError, SimLogging
 from simprovise.core.apidoc import apidoc, apidocskip
 
 # This constant is accessed by other methods
@@ -71,14 +69,22 @@ class SimElement(object):
         """
         pass
     
+    @staticmethod
+    def get_full_class_name(cls):
+        """
+        Returns the fully-qualified (module + class) name of the passed
+        class. Convenience method for code that needs to obtain a
+        specific Entity or Process Element from the SimModel.
+        """
+        return cls.__module__ + '.' + cls.__qualname__        
+    
     @property
     def full_class_name(self):
         """
         Returns the fully-qualified (module + class) name of the
         element_class.
         """
-        cls = self.element_class
-        return cls.__module__ + '.' + cls.__qualname__
+        return SimElement.get_full_class_name(self.element_class)
         
     @property
     def datasets(self):      
