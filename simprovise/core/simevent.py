@@ -124,6 +124,7 @@ class SimEvent(metaclass=ABCMeta):
         The extra layer of delegation is preserved in case we want to do
         some generic housekeeping around the event.
         """
+        logger.debug("processing event %s at time %s", self, SimClock.now())
         self.process_impl()
 
     @property
@@ -173,7 +174,10 @@ class EventProcessor(object):
                 entry_finder.pop(next_event)
                 assert next_event.time == next_event_time, "entry time and event time do not match!"
                 SimClock.advance_to(next_event_time)
-                next_event.process_impl()
+                # We call process(), which provides debug logging before invoking
+                # process_impl(). TODO Monitor performance impact
+                next_event.process()
+                #next_event.process_impl()
                 next(processCount)
 
         # if we run out of events before until time, advance the clock
