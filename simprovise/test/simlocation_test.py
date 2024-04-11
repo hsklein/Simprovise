@@ -1,17 +1,18 @@
 from simprovise.core import *
+from simprovise.core.simobject import SimTransientObject
+from simprovise.core.location import SimStaticObject
 import unittest
 
 class TestLocation(SimLocation):
-    def __init__(self, name, locationObj=None, animationObj=None, 
-                 entryPointName=None):
-        super().__init__(name, locationObj, animationObj, entryPointName)
+    def __init__(self, name, locationObj=None, entryPointName=None):
+        super().__init__(name, locationObj, entryPointName)
         self.enterCount = 0
         self.exitCount = 0
         
-    def onEnterImpl(self, enteringObj): 
+    def on_enter_impl(self, enteringObj): 
         self.enterCount += 1
         
-    def onExitImpl(self, exitingObj): 
+    def on_exit_impl(self, exitingObj): 
         self.exitCount += 1
         
 class TestTransient(SimTransientObject):
@@ -22,22 +23,12 @@ class TestTransient(SimTransientObject):
 class MockNamedObject(object):
     def __init__(self, name):
         self.name = name
-        
-class MockAnimationObject(object):
-    def __init__(self, name):
-        self.name = name
-        self.position = (100,100)
-        self.simulationObject = None
-    def addToAnimation(self, atTime):
-        pass  
     
 def reinitialize():
     SimDataCollector.reinitialize()
     SimClock.initialize()
-    #SimAnimatableObject.setAnimating(False)
-    
-
-
+    # Hack to allow recreation of static objects for each test case
+    SimStaticObject.elements = {}
 
    
 class SimEmptyLocationTests(unittest.TestCase):
@@ -46,16 +37,16 @@ class SimEmptyLocationTests(unittest.TestCase):
     """
     def setUp(self):
         reinitialize()
-        rootLoc = SimRootLocation()
+        rootLoc = SimLocation.root_location()
         self.root = rootLoc
         
         # variation 1: parent/child where child is the entry point for the parent
-        self.parentLoc = TestLocation("Parent", rootLoc, None, "Child")
+        self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.childLoc = TestLocation("Child", self.parentLoc)
         
         # variation 2: parent/child where parent specifies a non-existent child as 
         # entry point
-        self.parentLoc2 = TestLocation("Parent2", rootLoc, None, "NonExistent")
+        self.parentLoc2 = TestLocation("Parent2", rootLoc, "NonExistent")
         self.childLoc2 = TestLocation("Child2", self.parentLoc2)
         
         # variation 3: parent/child where the root does not specify an entry point
@@ -68,7 +59,7 @@ class SimEmptyLocationTests(unittest.TestCase):
         
     def testParentElementID2(self):
         "Test: parent elementID is same as parent elementName"
-        self.assertEqual(self.parentLoc.element_id, self.parentLoc.elementName)
+        self.assertEqual(self.parentLoc.element_id, self.parentLoc.element_name)
         
     def testChildElementID1(self):
         "Test: child elementID is specified <parent name>.<child name>"
@@ -76,11 +67,11 @@ class SimEmptyLocationTests(unittest.TestCase):
         
     def testChildElementID2(self):
         "Test: child elementID is NOT same as child elementName"
-        self.assertNotEqual(self.childLoc.element_id, self.childLoc.elementName)
+        self.assertNotEqual(self.childLoc.element_id, self.childLoc.element_name)
 
     def testParentParent(self):
         "Test: parent's parent is root" 
-        self.assertIs(self.parentLoc.parent, self.root)
+        self.assertIs(self.parentLoc.parent_location, self.root)
 
     def testParentLocation(self):
         "Test: parent's location is root" 
@@ -100,11 +91,11 @@ class SimEmptyLocationTests(unittest.TestCase):
 
     def testIsAncestorOf(self):
         "Test: parent location is ancestor of child" 
-        self.assertTrue(self.parentLoc.isAncestorOf(self.childLoc))
+        self.assertTrue(self.parentLoc.is_ancestor_of(self.childLoc))
 
     def testChildParent(self):
         "Test: parent location is parent of child" 
-        self.assertIs(self.childLoc.parent, self.parentLoc)
+        self.assertIs(self.childLoc.parent_location, self.parentLoc)
 
     def testParentEntryPoint(self):
         "Test: parent location entry point is the child location" 
@@ -115,21 +106,21 @@ class SimEmptyLocationTests(unittest.TestCase):
         self.assertIs(self.childLoc.entry_point, self.childLoc)
 
     def testParent2EntryPoint(self):
-        "Test: parent location 2 entry point is None (as entry point name is invalid)" 
-        self.assertIsNone(self.parentLoc2.entry_point)
+        "Test: parent location 2 entry point raises an error (as entry point name is invalid)" 
+        self.assertRaises(SimError, lambda: self.parentLoc2.entry_point)
 
     def testParent3EntryPoint(self):
-        "Test: parent location 3 entry point is None (as entry point name is not set)" 
-        self.assertIsNone(self.parentLoc3.entry_point)
+        "Test: parent location 3 with a child and no entry point raises an error" 
+        self.assertRaises(SimError, lambda: self.parentLoc3.entry_point)
          
     def testDuplicateAddRaises(self):
         "Test: re-adding the child location to the parent raises an error"
-        self.assertRaises(SimError, lambda: self.parentLoc.addChild(self.childLoc))
+        self.assertRaises(SimError, lambda: self.parentLoc._add_child(self.childLoc))
         
     def testAddNotStaticChildRaises(self):
-        "Test: addChild() with a non-static animatable object raises and error"
+        "Test: addChild() with a non-static object raises and error"
         testObj = TestTransient("test", self.parentLoc)
-        self.assertRaises(SimError, lambda: self.parentLoc.addChild(testObj))
+        self.assertRaises(SimError, lambda: self.parentLoc._add_child(testObj))
         
                        
 class SimParentLocationEntryTests(unittest.TestCase):
@@ -139,7 +130,7 @@ class SimParentLocationEntryTests(unittest.TestCase):
         rootLoc = SimRootLocation()
         self.root = rootLoc
 
-        self.parentLoc = TestLocation("Parent", rootLoc, None, "Child")
+        self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]
@@ -152,7 +143,7 @@ class SimParentLocationEntryTests(unittest.TestCase):
         self.assertEqual(self.parentLoc.entries, 5)
 
     def testParentEnter2(self):
-        "Test: add five entries to parent location, Test class entercount"
+        "Test: add five entries to parent location, Test class enterCount"
         for i in range(5):
             self.parentLoc.on_enter(self.testObj[i])
         self.assertEqual(self.parentLoc.enterCount, 5)
@@ -174,6 +165,12 @@ class SimParentLocationEntryTests(unittest.TestCase):
         for i in range(5):
             self.parentLoc.on_enter(self.testObj[i])
         self.assertEqual(self.parentLoc.current_population, 5)
+
+    def testParentEnterResidentCount(self):
+        "Test: add five entries to parent location, Test location resident count"
+        for i in range(5):
+            self.parentLoc.on_enter(self.testObj[i])
+        self.assertEqual(len(list(self.parentLoc.residents)), 5)
 
     def testParentDuplicateEnter(self):
         "Test: duplicate entry to parent location raises SimError"
@@ -205,7 +202,7 @@ class SimParentLocationExitTests(unittest.TestCase):
         rootLoc = SimRootLocation()
         self.root = rootLoc
         
-        self.parentLoc = TestLocation("Parent", rootLoc, None, "Child")
+        self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]
@@ -231,6 +228,10 @@ class SimParentLocationExitTests(unittest.TestCase):
     def testParentExit3(self):
         "Test current population property"
         self.assertEqual(self.parentLoc.current_population, 1)
+
+    def testParentExit4(self):
+        "Test current residents length"
+        self.assertEqual(len(list(self.parentLoc.residents)), 1)
       
     def testParentExitIn(self):
         "Test 'in' for object still in location after exits"
@@ -263,7 +264,7 @@ class SimChildLocationEntryTests1(unittest.TestCase):
         rootLoc = SimRootLocation()
         self.root = rootLoc
     
-        self.parentLoc = TestLocation("Parent", rootLoc, None, "Child")
+        self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]
@@ -280,20 +281,28 @@ class SimChildLocationEntryTests1(unittest.TestCase):
         "Test: child location enterCount = 1"
         self.assertEqual(self.childLoc.enterCount, 1)
 
+    def testChildResidentCount(self):
+        "Test: child location residents count = 1"
+        self.assertEqual(len(list(self.childLoc.residents)), 1)
+
     def testParentEntries(self):
         "Test: parent location entries = 2"
         self.assertEqual(self.parentLoc.entries, 2)
+
+    def testParentResidentCount(self):
+        "Test: parent location residents count = 2"
+        self.assertEqual(len(list(self.parentLoc.residents)), 2)
 
     def testChildEnterCount(self):
         "Test: parent location enterCount = 2"
         self.assertEqual(self.parentLoc.enterCount, 2)
 
     def testChildExits(self):
-        "Test: child location exits = 1"
+        "Test: child location exits = 0"
         self.assertEqual(self.childLoc.exits, 0)
 
     def testParentExits(self):
-        "Test: parent location exits = 2"
+        "Test: parent location exits = 0"
         self.assertEqual(self.parentLoc.exits, 0)
 
     def testChildPopulation(self):
@@ -301,7 +310,7 @@ class SimChildLocationEntryTests1(unittest.TestCase):
         self.assertEqual(self.childLoc.current_population, 1)
 
     def testParentPopulation(self):
-        "Test: parent location currentPopulation = 1"
+        "Test: parent location currentPopulation = 2"
         self.assertEqual(self.parentLoc.current_population, 2)
 
     def test1IsInChild(self):
@@ -333,7 +342,7 @@ class SimChildLocationEntryTests2(unittest.TestCase):
         rootLoc = SimRootLocation()
         self.root = rootLoc
     
-        self.parentLoc = TestLocation("Parent", rootLoc, None, "Child")
+        self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]
@@ -360,6 +369,10 @@ class SimChildLocationEntryTests2(unittest.TestCase):
         "Test: parent location enterCount = 2"
         self.assertEqual(self.parentLoc.enterCount, 2)
 
+    def testParentResidentCount(self):
+        "Test: parent location residents count = 2"
+        self.assertEqual(len(list(self.parentLoc.residents)), 2)
+
     def testChildExits(self):
         "Test: child location exits = 0"
         self.assertEqual(self.childLoc.exits, 0)
@@ -373,7 +386,7 @@ class SimChildLocationEntryTests2(unittest.TestCase):
         self.assertEqual(self.childLoc.current_population, 2)
 
     def testParentPopulation(self):
-        "Test: parent location currentPopulation = 1"
+        "Test: parent location currentPopulation = 2"
         self.assertEqual(self.parentLoc.current_population, 2)
 
     def test1IsInChild(self):
@@ -414,7 +427,7 @@ class SimChildLocationExitTests1(unittest.TestCase):
         rootLoc = SimRootLocation()
         self.root = rootLoc
     
-        self.parentLoc = TestLocation("Parent", rootLoc, None, "Child")
+        self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.childLoc2 = TestLocation("Child2", self.parentLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
@@ -538,7 +551,7 @@ class SimStaticLocatableBaseTests(unittest.TestCase):
         rootLoc = SimRootLocation()
         self.root = rootLoc
     
-        self.parentLoc = TestLocation("Parent", rootLoc, None, "Child")
+        self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
         self.staticTestObj = SimStaticObject("FixedTest", self.parentLoc)
                       
@@ -571,7 +584,7 @@ class SimLocatableBaseTests(unittest.TestCase):
         self.root = rootLoc
     
         self.parentLoc = TestLocation("Parent", rootLoc, None)
-        self.childLoc = TestLocation("Child", self.parentLoc, None, "InvalidEntryPt")
+        self.childLoc = TestLocation("Child", self.parentLoc, "InvalidEntryPt")
         self.grandchildLoc = TestLocation("GrandChild", self.childLoc)
         self.entryLoc = TestLocation("EntryLoc", rootLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
@@ -584,10 +597,6 @@ class SimLocatableBaseTests(unittest.TestCase):
         "Test: non-static test object location property"
         self.assertIs(self.testObj[0].location, self.entryLoc)
         
-    def testIsStatic(self):
-        "Test: non-static test object isStatic property"
-        self.assertFalse(self.testObj[0].isStatic)
-        
     def testEntryLocEntries(self):
         "Test: entryLoc entries is 5"
         self.assertEqual(self.entryLoc.entries, 5)
@@ -595,6 +604,10 @@ class SimLocatableBaseTests(unittest.TestCase):
     def testEntryLocPopulation(self):
         "Test: entryLoc current population is 5"
         self.assertEqual(self.entryLoc.current_population, 5)
+
+    def testEntryLocResidents(self):
+        "Test: entryLoc has 5 residents"
+        self.assertEqual(len(list(self.entryLoc.residents)), 5)
         
     def testParentEntries(self):
         "Test: parent entries is 0"
@@ -603,6 +616,10 @@ class SimLocatableBaseTests(unittest.TestCase):
     def testParentPopulation(self):
         "Test: parent current population is 0"
         self.assertEqual(self.parentLoc.current_population, 0)
+        
+    def testParentResidents(self):
+        "Test: parentLoc has 5 residents"
+        self.assertEqual(len(list(self.parentLoc.residents)), 0)
         
     def testMoveToTransientRaises(self):
         "Test: moving a locatable object to a transient (non-fixed) locatable raises an error"
@@ -654,7 +671,7 @@ class SimLocatableMoveTests(unittest.TestCase):
         self.root = rootLoc
     
         self.entryLoc = TestLocation("EntryLoc", rootLoc)
-        self.parentLoc = TestLocation("Parent", rootLoc, None, "RootEntryPoint")
+        self.parentLoc = TestLocation("Parent", rootLoc, "RootEntryPoint")
         self.parentEntryPoint = TestLocation("RootEntryPoint", self.parentLoc)
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.childLoc2 = TestLocation("Child2", self.parentLoc)
@@ -819,70 +836,7 @@ class SimLocatableMoveTests(unittest.TestCase):
     def testExitToLocExits(self):
         "Test: exit-to location exits = 0"
         self.assertEqual(self.exitToLoc.exits, 0)        
-        
-    def testParentMeanPopulation(self):
-        "Test: parent location meanPopulation = 4"
-        self.assertEqual(self.parentLoc.meanPopulation, 4)
-        
-    def testParentEntryPointMeanPopulation(self):
-        "Test: parent entry point location meanPopulation = 1.5"
-        self.assertEqual(self.parentEntryPoint.meanPopulation, 1.5)
-        
-    def testChildMeanPopulation(self):
-        "Test: child location meanPopulation = 2"
-        self.assertEqual(self.childLoc.meanPopulation, 2)
-        
-    def testChild2MeanPopulation(self):
-        "Test: child2 location meanPopulation = 0.5"
-        self.assertEqual(self.childLoc2.meanPopulation, 0.5)
-        
-    def testExitToLocMeanPopulation(self):
-        "Test: exit-to location meanPopulation = 1"
-        self.assertEqual(self.exitToLoc.meanPopulation, 1)
-        
-    def testParentMaxPopulation(self):
-        "Test: parent location maxPopulation = 5"
-        self.assertEqual(self.parentLoc.maxPopulation, 5)
-        
-    def testParentEntryPointMaxPopulation(self):
-        "Test: parent entry point location maxPopulation = 2"
-        self.assertEqual(self.parentEntryPoint.maxPopulation, 2)
-        
-    def testChildMaxPopulation(self):
-        """
-        Test: child location maxPopulation = 4 (obj1 moves in 
-        at time 2 before others move out)
-        """
-        self.assertEqual(self.childLoc.maxPopulation, 4)
-        
-    def testChild2MaxPopulation(self):
-        "Test: child2 location maxPopulation = 1"
-        self.assertEqual(self.childLoc2.maxPopulation, 1)
-        
-    def testExitToLocMaxPopulation(self):
-        "Test: exit-to location maxPopulation = 2"
-        self.assertEqual(self.exitToLoc.maxPopulation, 2)
-
-    def testParentMeanTimeInResidence(self):
-        "Test: parent location meanTimeInResidence = 2"
-        self.assertEqual(self.parentLoc.meanTimeInResidence, SimTime(2))
-        
-    def testParentEntryPointMeanTimeInResidence(self):
-        "Test: parent entry point location meanTimeInResidence = 2"
-        self.assertEqual(self.parentEntryPoint.meanTimeInResidence, SimTime(2))
-        
-    def testChildMeanTimeInResidence(self):
-        "Test: child location meanTimeInResidence = 2"
-        self.assertEqual(self.childLoc.meanTimeInResidence, SimTime(2))
-        
-    def testChild2MeanTimeInResidence(self):
-        "Test: child2 location meanTimeInResidence is None"
-        self.assertEqual(self.childLoc2.meanTimeInResidence, None)
-        
-    def testExitToLocMeanTimeInResidence(self):
-        "Test: exit-to location meanTimeInResidence is None"
-        self.assertEqual(self.exitToLoc.meanTimeInResidence, None)
-
+    
                
 class SimLocationEntryPointTests1(unittest.TestCase):
     """
@@ -897,8 +851,8 @@ class SimLocationEntryPointTests1(unittest.TestCase):
         self.root = rootLoc
     
         self.entryLoc = TestLocation("EntryLoc", rootLoc)
-        self.parentLoc = TestLocation("Parent", rootLoc, None, "Child.GC")
-        self.childLoc = TestLocation("Child", self.parentLoc, None, "GC")
+        self.parentLoc = TestLocation("Parent", rootLoc, "Child.GC")
+        self.childLoc = TestLocation("Child", self.parentLoc, "GC")
         self.grandchildLoc = TestLocation("GC", self.childLoc)
     
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]
@@ -941,8 +895,8 @@ class SimLocationEntryPointTests2(unittest.TestCase):
         self.root = rootLoc
     
         self.entryLoc = TestLocation("EntryLoc", rootLoc)
-        self.parentLoc = TestLocation("Parent", rootLoc, None, "Child")
-        self.childLoc = TestLocation("Child", self.parentLoc, None, "GC")
+        self.parentLoc = TestLocation("Parent", rootLoc, "Child")
+        self.childLoc = TestLocation("Child", self.parentLoc, "GC")
         self.grandchildLoc = TestLocation("GC", self.childLoc)
     
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]

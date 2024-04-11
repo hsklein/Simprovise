@@ -18,6 +18,7 @@ from simprovise.core.simobject import SimLocatableObject
 from simprovise.core.simelement import SimElement
 from simprovise.core.apidoc import apidoc, apidocskip
 
+_STATICOBJ_ERROR_NAME = "SimStaticObjectError"
 _LOCATION_ERROR_NAME = "SimLocationError"
 _ENTRIES_DATASET_NAME = simelement.ENTRIES_DATASET_NAME
 _ROOT_LOCATION_NAME = "Root"
@@ -68,7 +69,7 @@ class SimStaticObject(SimLocatableObject, SimElement):
         # Add the new static object to the static object elements dictionary
         if self.element_id in SimStaticObject.elements:
             msg = "Static object with element ID {0} is already registered"
-            raise SimError(_SIMELEMENT_ERROR_NAME, msg, self.element_id)
+            raise SimError(_STATICOBJ_ERROR_NAME, msg, self.element_id)
         
         logger.info("Registering static object %s ...", self.element_id)
         SimStaticObject.elements[self.element_id] = self
@@ -241,7 +242,7 @@ class SimLocation(SimStaticObject):
                                                               int)
         self._timeDataCollector = SimUnweightedDataCollector(self, "Time", SimTime)
         self._childStaticObjs = []
-        self._residents = []
+        self._residents = []  # TODO make this a set?
         
         if entrypointname is None:
             # No entry point name.
@@ -340,6 +341,21 @@ class SimLocation(SimStaticObject):
         return (pair[0] for pair in self._residents)
         #for pair in self._residents:
         #    yield pair[0]
+
+    @property
+    def entries(self):
+        "The number of objects that have entered the location"
+        return self._entryDataCollector.entries()
+
+    @property
+    def exits(self):
+        "The number of objects that have exited the location"
+        return self._timeDataCollector.entries()
+
+    @property
+    def currentPopulation(self):
+        "The number of objects currently resident at the location"
+        return self._counter.value
 
     @property
     def has_child_locations(self):
