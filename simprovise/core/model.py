@@ -11,6 +11,7 @@ import sys, os
 from simprovise.core import SimError, SimLogging, SimEntity, SimProcess
 from simprovise.core.location import SimStaticObject
 from simprovise.core.utility import SimUtility
+from simprovise.core.simelement import SimElement
 
 logger = SimLogging.get_logger(__name__)
 
@@ -154,11 +155,55 @@ class SimModel(object):
         if elementid in SimStaticObject.elements:
             return SimStaticObject.elements[elementid]
         else:
-            msg = "get_static_object({0}): element id not found"
+            msg = "get_static_object({0}): element ID not found"
             raise SimError(_ERROR_NAME, msg, elementid)
-            
-            
+    
+    def get_entity_element(self, entity_cls):
+        """
+        Returns the registered :class:`~.entity.SimEntityElement` for the 
+        passed entity class; raises a :class:`~.simexception.SimError` if
+        not found, or the passed parameter is not a SimEntity subclass.
         
+        :param entity_cls: The entity class corresponding to the requested
+                           :class:`~.entity.SimEntityElement`
+        :return:           The specified static entity element
+        :rtype:            :class:`~.entity.SimEntityElement`
+        """
+        if not issubclass(entity_cls, SimEntity):
+            msg = "get_entity_element({0}): parameter is either not a class or not a subclass of SimEntity"
+            raise SimError(_ERROR_NAME, msg, entity_cls)
+            
+        elementid = SimElement.get_full_class_name(entity_cls)
+        
+        if elementid in SimEntity.elements:
+            return SimEntity.elements[elementid]
+        else:
+            msg = "get_entity_element({0}): element ID not found"
+            raise SimError(_ERROR_NAME, msg, elementid)
+    
+    def get_process_element(self, process_cls):
+        """
+        Returns the registered :class:`~.process.SimProcessElement` for the 
+        passed process class; raises a :class:`~.simexception.SimError` if
+        not found, or the passed parameter is not a SimProcess subclass.
+        
+        :param process_cls: The process class corresponding to the requested
+                            :class:`~.process.SimProcessElement`
+        :return:            The specified process element
+        :rtype:             :class:`~.process.SimProcessElement`
+        """
+        if not issubclass(process_cls, SimProcess):
+            msg = "get_process_element({0}): parameter is either not a class or not a subclass of SimProcess"
+            raise SimError(_ERROR_NAME, msg, process_cls)
+            
+        elementid = SimElement.get_full_class_name(process_cls)
+        
+        if elementid in SimProcess.elements:
+            return SimProcess.elements[elementid]
+        else:
+            msg = "get_process_element({0}): element ID not found"
+            raise SimError(_ERROR_NAME, msg, elementid)
+                 
         
 logger.info("Creating SimModel singleton in module: %s", __name__)
 SimModel._theModel = SimModel()    
