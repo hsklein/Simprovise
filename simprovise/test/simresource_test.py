@@ -1,6 +1,7 @@
 import unittest
 import simprovise.core
 from simprovise.core import *
+from simprovise.core.agent import SimAgent
 
 #print(globals().keys())
 #print(locals().keys())
@@ -427,7 +428,7 @@ class SimpleResourceBasicAcquireTests(unittest.TestCase):
     "Tests basic (no running simulation required) SimpleResource class acquire() functionality"
     def setUp(self):
         SimClock.initialize();
-       MockEntity.initializeElement("MockEntity")
+        MockEntity.initializeElement("MockEntity")
         self.process = MockProcess()
         self.process.executing(True)
         self.location = MockLocation()

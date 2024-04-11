@@ -1,3 +1,10 @@
+#===============================================================================
+# MODULE simtime_test
+#
+# Copyright (C) 2024 Howard Klein - All Rights Reserved
+#
+# Unit tests for SimTime class
+#===============================================================================
 from simprovise.core import *
 
 import unittest

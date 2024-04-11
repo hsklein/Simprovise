@@ -1,3 +1,10 @@
+#===============================================================================
+# MODULE simeventtest
+#
+# Copyright (C) 2024 Howard Klein - All Rights Reserved
+#
+# Unit tests for the SimEvent and EventProcessor classes
+#===============================================================================
 from simprovise.core import simevent, simtime, SimClock, SimTime
 import unittest
 import copy
