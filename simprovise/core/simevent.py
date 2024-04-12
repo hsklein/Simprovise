@@ -1,7 +1,7 @@
 #===============================================================================
 # MODULE simevent
 #
-# Copyright (C) 2014-2016 Howard Klein - All Rights Reserved
+# Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
 # Defines the SimEvent and EventProcessor classes.
 #
