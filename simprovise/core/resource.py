@@ -550,9 +550,12 @@ class SimResource(SimStaticObject):
 
         self._currentTxnAssignments = {}
         if assignmentAgent is not None:
-            self.assignment_agent = assignmentAgent
+            self._assignmentAgent = assignmentAgent
+        elif isinstance(self, SimAgent):
+            self._assignmentAgent = self
         else:
-            self.assignment_agent = self
+            logger.debug("Resource %s initialized with no assignment agent",
+                         self.element_id)
 
     @property
     def capacity(self):
@@ -565,6 +568,27 @@ class SimResource(SimStaticObject):
 
         """
         return self._utilCounter.capacity
+    
+    @property
+    def assignment_agent(self):
+        """
+        Return the resource's assignment agent. Once the simulation starts,
+        This should never be None.
+        
+        :return:    The resource's assignment agent
+        :rtype:     :class:`~.agent.SimAgent` or None
+        
+        """
+        return self._assignmentAgent
+    
+    def set_assignment_agent(self, assignmentAgent):
+        """
+        Set the resource's assignment agent.
+        
+        :param assignmentAgent: Agent responsible for managing this resource's assignments
+        :type assignmentAgent:  :class:`~.agent.SimAgent`
+        """
+        self._assignmentAgent = assignmentAgent
 
     def assign_to(self, txn, number=1):
         """
@@ -825,7 +849,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
             raise SimError(_POOL_ERROR, errorMsg, resource.element_id)
 
         self._resources.append(resource)
-        resource.assignment_agent = self
+        resource.set_assignment_agent(self)
 
     def poolsize(self, rsrcClass=None):
         """
