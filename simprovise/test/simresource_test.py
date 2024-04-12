@@ -14,12 +14,35 @@ from simprovise.core.location import SimStaticObject
 #print(globals().keys())
 #print(locals().keys())
             
-def reinitialize():
-    SimDataCollector.reinitialize()
-    SimClock.initialize()
-    MockProcess.resumedProcess = None
-    # Hack to allow recreation of static objects for each test case
-    SimStaticObject.elements = {}
+
+class RATestCaseBase(unittest.TestCase):
+    """
+    TestCase base class providing common setup
+    """
+    def setUp(self):
+        SimDataCollector.reinitialize()
+        SimClock.initialize()
+        MockProcess.resumedProcess = None
+        # Hack to allow recreation of static objects for each test case
+        SimStaticObject.elements = {}
+        
+        self.location = MockLocation()
+        self.source = MockSource()
+        self.entities = []
+        self.processes = []
+        for i in range(5):
+            process = MockProcess()
+            process.executing(True)
+            entity = MockEntity(self.source, process)
+            self.processes.append(process)
+            self.entities.append(entity)           
+        
+        self.process = self.processes[0]
+        self.process1 = self.processes[1]
+        self.process2 = self.processes[2]
+        self.process3 = self.processes[3]
+        self.process4 = self.processes[4]
+    
         
 class MockSource(SimEntitySource):
     def __init__(self, parentlocation=None):
@@ -162,13 +185,8 @@ class TestResource(SimSimpleResource):
     """
                 
 
-class ResourceAssignmentTests(unittest.TestCase):
+class ResourceAssignmentTests(RATestCaseBase):
     "Tests ResourceAssignments"
-    def setUp(self):
-        reinitialize()
-        self.process = MockProcess()
-        self.location = MockLocation()
-        self.process.executing(True)
     
     def testInvalidAssignmentResources(self):
         "Test: Attempt to create a ResourceAssignment with an empty resource sequence raises an error"
@@ -212,13 +230,10 @@ class ResourceAssignmentTests(unittest.TestCase):
         ra = SimResourceAssignment(self.process, rsrc1, (rsrc1,rsrc2))
         self.assertRaises(SimError, lambda: ra.resource)
 
-class ResourceAssignmentSubtractTests(unittest.TestCase):
+class ResourceAssignmentSubtractTests(RATestCaseBase):
     "Tests ResourceAssignment subtract and subtractAll methods"
     def setUp(self):
-        reinitialize()
-        self.process = MockProcess()
-        self.process.executing(True)
-        self.location = MockLocation()
+        super().setUp()
         self.rsrc = SimSimpleResource("TestResource1", self.location, capacity=2)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location)
@@ -259,13 +274,10 @@ class ResourceAssignmentSubtractTests(unittest.TestCase):
         self.assertRaises(SimError, lambda: self.ra.subtract((self.rsrc,)))                          
 
 
-class ResourceAssignmentContainsTests(unittest.TestCase):
+class ResourceAssignmentContainsTests(RATestCaseBase):
     "Tests ResourceAssignment subtract and subtractAll methods"
     def setUp(self):
-        reinitialize()
-        self.process = MockProcess()
-        self.process.executing(True)
-        self.location = MockLocation()
+        super().setUp()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location, capacity=1)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location)
@@ -326,13 +338,10 @@ class ResourceAssignmentContainsTests(unittest.TestCase):
         self.assertFalse(ra.contains((self.rsrc1, self.rsrc1)))
           
         
-class SimpleResourcePropertyTests(unittest.TestCase):
+class SimpleResourcePropertyTests(RATestCaseBase):
     "Tests SimpleResource class properties"
     def setUp(self):
-        reinitialize()
-        self.process = MockProcess()
-        self.process.executing(True)
-        self.location = MockLocation()
+        super().setUp()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location, capacity=3)
@@ -408,13 +417,10 @@ class SimpleResourcePropertyTests(unittest.TestCase):
         self.assertEqual(assignments, set((assignment1, assignment2)))
    
         
-class SimpleResourceBasicAcquireTests(unittest.TestCase):
+class SimpleResourceBasicAcquireTests(RATestCaseBase):
     "Tests basic (no running simulation required) SimpleResource class acquire() functionality"
     def setUp(self):
-        reinitialize()
-        self.process = MockProcess()
-        self.process.executing(True)
-        self.location = MockLocation()
+        super().setUp()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location, capacity=3)
@@ -458,14 +464,11 @@ class SimpleResourceBasicAcquireTests(unittest.TestCase):
 
         
         
-class SimpleResourceBasicReleaseTests(unittest.TestCase):
+class SimpleResourceBasicReleaseTests(RATestCaseBase):
     "Tests basic (no running simulation required) SimpleResource class release() functionality"
     def setUp(self):
-        reinitialize()
+        super().setUp()
         MockProcessAgent.assignedAgents.clear()
-        self.process = MockProcess()
-        self.process.executing(True)
-        self.location = MockLocation()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location, capacity=3)
@@ -558,7 +561,7 @@ class SimpleResourceBasicReleaseTests(unittest.TestCase):
         self.assertRaises(SimError, lambda:  self.process.release(ra, self.rsrc2))
         
         
-class SimpleResourceAcquireQueueingTests(unittest.TestCase):
+class SimpleResourceAcquireQueueingTests(RATestCaseBase):
     """
     Tests SimpleResource class acquisition from multiple processes, including
     queued (unfulfilled) acquisition requests. Uses the MockProcessAgent to
@@ -570,14 +573,13 @@ class SimpleResourceAcquireQueueingTests(unittest.TestCase):
     1,3,5,4,2.
     """
     def setUp(self):
-        reinitialize()
+        super().setUp()
         MockProcessAgent.initialize()
         self.process1 = MockProcessAgent(2)
         self.process2 = MockProcessAgent(3)
         self.process3 = MockProcessAgent(1)
         self.process4 = MockProcessAgent(2)
         self.process5 = MockProcessAgent(1)
-        self.location = MockLocation()
         self.rsrc = SimSimpleResource("TestResource1", self.location)
              
     def testAccquire1(self):
@@ -684,16 +686,12 @@ class SimpleResourceAcquireQueueingTests(unittest.TestCase):
         self.assertEqual(MockProcessAgent.pids(), [1,3,5])
 
 
-class BasicResourcePoolTests(unittest.TestCase):
+class BasicResourcePoolTests(RATestCaseBase):
     """
     Tests basic usage of a resource pool, without any simulated queueing
     """
     def setUp(self):
-        reinitialize()
-        # Set up executing processes
-        self.process1 = MockProcess(True) 
-        self.process2 = MockProcess(True)
-        self.location = MockLocation()
+        super().setUp()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = TestResource("TestResource3", self.location, capacity=2)
@@ -847,16 +845,12 @@ class BasicResourcePoolTests(unittest.TestCase):
 
 
 
-class BasicResourcePoolReleaseTests(unittest.TestCase):
+class BasicResourcePoolReleaseTests(RATestCaseBase):
     """
     Tests basic usage of a resource pool, without any simulated queueing
     """
     def setUp(self):
-        reinitialize()
-        # Set up executing processes
-        self.process1 = MockProcess(True) 
-        self.process2 = MockProcess(True)
-        self.location = MockLocation()
+        super().setUp()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = TestResource("TestResource3", self.location, capacity=2)
@@ -932,7 +926,7 @@ class BasicResourcePoolReleaseTests(unittest.TestCase):
         self.assertEqual(set(self.pool.current_transactions()), set(expected))
 
 
-class ResourcePoolQueueingTests(unittest.TestCase):
+class ResourcePoolQueueingTests(RATestCaseBase):
     """
     Tests SimResourcePool resource acquisition from multiple processes,
     including queued (unfulfilled) acquisition requests. Uses the
@@ -943,14 +937,13 @@ class ResourcePoolQueueingTests(unittest.TestCase):
     order, they should end up in the following order: 1,3,5,4,2.
     """
     def setUp(self):
-        reinitialize()
+        super().setUp()
         MockProcessAgent.initialize()
         self.process1 = MockProcessAgent(2)
         self.process2 = MockProcessAgent(3)
         self.process3 = MockProcessAgent(1)
         self.process4 = MockProcessAgent(2)
         self.process5 = MockProcessAgent(1)
-        self.location = MockLocation()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location, capacity=2)

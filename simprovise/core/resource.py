@@ -355,7 +355,7 @@ class ResourceAssignmentAgentMixin(object):
         """
         # Extract the message data.
         txn, numRequested, resource = requestMsg.msgData
-
+        
         assert numRequested > 0, "number of resources requested not greater than zero"
         assert isinstance(resource, SimResource), "Resource request data does not specify an instance of class SimResource"
 
@@ -758,12 +758,13 @@ class SimSimpleResource(ResourceAssignmentAgentMixin, SimResource):
                                     the resource's location
         locationObj (SimLocation):  Location object to which resource belongs.
                                     If None resource is assigned to Root location
-        animationObj:               None if the simulation is not animated
         capacity (int > 0):         Capacity of resource, or number of
                                     subresources. Defaults to 1.
     """
-    def __init__(self, name, locationObj=None, animationObj=None, capacity=1):
-        super().__init__(name, locationObj, animationObj, capacity, self)
+    def __init__(self, name, initialLocation=None, parentLocation=None,
+                 capacity=1, moveable=True):
+        super().__init__(name, initialLocation, parentLocation, capacity,
+                             self, moveable)
         self._capacity = capacity
 
     @property
@@ -824,7 +825,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
             raise SimError(_POOL_ERROR, errorMsg, resource.element_id)
 
         self._resources.append(resource)
-        resource.assignmentAgent = self
+        resource.assignment_agent = self
 
     def poolsize(self, rsrcClass=None):
         """
@@ -911,7 +912,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
                            self.poolsize(rsrcClass), rsrcClass.__name__)
 
 
-    def assign_from_request(self, requestMsg):
+    def _assign_from_request(self, requestMsg):
         """
         Overridden method that will, if possible, create and return
         a resource assignment that meets the passed resource request.
