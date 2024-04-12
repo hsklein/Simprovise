@@ -45,7 +45,7 @@ class mm1Process(SimProcess):
         entity.move_to(queue)
         resourceAssignment = self.acquire(server)
         entity.move_to(serverLocation)
-        self.waitFor(self.serviceTime)
+        self.wait_for(self.serviceTime)
         self.release(resourceAssignment)
         entity.move_to(sink)
 

@@ -774,18 +774,6 @@ class SimSimpleResource(ResourceAssignmentAgentMixin, SimResource):
         """
         return self._capacity
 
-    @capacity.setter
-    def capacity(self, newValue):
-        """
-        Capacity can only be set in design mode, since we currently do not support
-        dynamically raising or reducing capacity during a simulation run.
-        """
-        self.raiseIfNotInDesignMode("Resource capacity can only be modified at design time")
-        self._capacity = int(newValue)
-        if self._capacity <= 0:
-            msg = "Resource capacity must be > 0"
-            raise SimError("Invalid Resource Operation", msg)
-
 
 @apidoc
 class SimResourceAssignmentAgent(ResourceAssignmentAgentMixin, SimAgent):
@@ -831,7 +819,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
             errorMsg = "Cannot add resource {0} to the pool; it is already there"
             raise SimError(_POOL_ERROR, errorMsg, resource.element_id)
 
-        elif resource.assignmentAgent and resource.assignmentAgent != resource:
+        elif resource.assignment_agent and resource.assignment_agent != resource:
             errorMsg = "Cannot add resource {0} to the pool; it is already managed by another pool or assignment agent"
             raise SimError(_POOL_ERROR, errorMsg, resource.element_id)
 

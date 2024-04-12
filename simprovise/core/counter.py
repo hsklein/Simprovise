@@ -233,7 +233,7 @@ class SimCounter(object):
             logger.debug('%s: increment by %d : waiting. current value: %d waiting transaction count: %d',
                          self, amount, self.__value,
                          len(self.__waitingTransactions))
-            txn.waitUntilNotified()
+            txn.wait_until_notified()
 
     def decrement(self, amount=1):
         """

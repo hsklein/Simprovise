@@ -1,15 +1,33 @@
+#===============================================================================
+# MODULE simresource_test
+#
+# Copyright (C) 2024 Howard Klein - All Rights Reserved
+#
+# Unit tests for SimResource and related classes
+#===============================================================================
 import unittest
 import simprovise.core
 from simprovise.core import *
-from simprovise.core.agent import SimAgent
+from simprovise.core.agent import SimAgent, SimMsgType
+from simprovise.core.location import SimStaticObject
 
 #print(globals().keys())
 #print(locals().keys())
+            
+def reinitialize():
+    SimDataCollector.reinitialize()
+    SimClock.initialize()
+    MockProcess.resumedProcess = None
+    # Hack to allow recreation of static objects for each test case
+    SimStaticObject.elements = {}
+        
+class MockSource(SimEntitySource):
+    def __init__(self, parentlocation=None):
+        super().__init__("MockSource", parentlocation)
 
 class MockEntity(SimEntity):
-    def __init__(self, process):
-        super().__init__(SimRootLocation(), process)
- 
+    ""
+  
 class MockProcess(SimProcess):
     resumedProcess = None
     def __init__(self, executing=False):
@@ -17,7 +35,7 @@ class MockProcess(SimProcess):
         self.waiting = False
         if executing:
             self.executing(True)
-        mockEntity = MockEntity(self)
+        #mockEntity = MockEntity(self)
         
     def waitForResponse(self, msg):
         self.waitUntilNotified()
@@ -137,19 +155,17 @@ class MockProcessAgent(SimAgent):
        
 class MockLocation(SimLocation):
     def __init__(self):
-        super().__init__("MockLocation", SimRootLocation())
+        super().__init__("MockLocation")
         
 class TestResource(SimSimpleResource):
-    """
-    
+    """    
     """
                 
 
 class ResourceAssignmentTests(unittest.TestCase):
     "Tests ResourceAssignments"
     def setUp(self):
-        SimClock.initialize();
-        MockEntity.initializeElement("MockEntity")
+        reinitialize()
         self.process = MockProcess()
         self.location = MockLocation()
         self.process.executing(True)
@@ -158,35 +174,6 @@ class ResourceAssignmentTests(unittest.TestCase):
         "Test: Attempt to create a ResourceAssignment with an empty resource sequence raises an error"
         rsrc = SimSimpleResource("TestResource", self.location, capacity=1)
         self.assertRaises(SimError, lambda: SimResourceAssignment(self.process, rsrc, []))
-    
-    def testInvalidCapacityAssignment1(self):
-        "Test: Attempt to set the resource capacity property while not in design mode"
-        rsrc = SimSimpleResource("TestResource", self.location, capacity=1)
-        def setcap(): rsrc.capacity = 1
-        self.assertRaises(SimError, lambda: setcap())
-    
-    def testInvalidCapacityAssignment2(self):
-        "Test: Attempt to set the resource capacity property while in design mode, but with an invalid (non-integer) value"
-        rsrc = SimSimpleResource("TestResource", self.location, capacity=1)
-        rsrc.setInDesignMode(True)
-        def setcap(): rsrc.capacity = "a"
-        self.assertRaises(ValueError, lambda: setcap())
-    
-    def testInvalidCapacityAssignment3(self):
-        "Test: Attempt to set the resource capacity property while in design mode, but with an invalid integer value"
-        rsrc = SimSimpleResource("TestResource", self.location, capacity=1)
-        rsrc.setInDesignMode(True)
-        def setcap(): rsrc.capacity = 0
-        self.assertRaises(SimError, lambda: setcap())
-    
-    def testValidCapacityAssignment(self):
-        "Test: Ensure that we can set the resource capacity property when in design mode"
-        rsrc = SimSimpleResource("TestResource", self.location, capacity=1)
-        def setcap(): 
-            rsrc.capacity = 3
-            return rsrc.capacity
-        rsrc.setInDesignMode(True)
-        self.assertEqual(setcap(), 3)
         
     def testCountProperty(self):
         "Test:  ResourceAssignment count property returns length of resource list supplied to constructor"
@@ -228,8 +215,7 @@ class ResourceAssignmentTests(unittest.TestCase):
 class ResourceAssignmentSubtractTests(unittest.TestCase):
     "Tests ResourceAssignment subtract and subtractAll methods"
     def setUp(self):
-        SimClock.initialize();
-        MockEntity.initializeElement("MockEntity")
+        reinitialize()
         self.process = MockProcess()
         self.process.executing(True)
         self.location = MockLocation()
@@ -276,8 +262,7 @@ class ResourceAssignmentSubtractTests(unittest.TestCase):
 class ResourceAssignmentContainsTests(unittest.TestCase):
     "Tests ResourceAssignment subtract and subtractAll methods"
     def setUp(self):
-        SimClock.initialize();
-        MockEntity.initializeElement("MockEntity")
+        reinitialize()
         self.process = MockProcess()
         self.process.executing(True)
         self.location = MockLocation()
@@ -344,8 +329,7 @@ class ResourceAssignmentContainsTests(unittest.TestCase):
 class SimpleResourcePropertyTests(unittest.TestCase):
     "Tests SimpleResource class properties"
     def setUp(self):
-        SimClock.initialize();
-        MockEntity.initializeElement("MockEntity")
+        reinitialize()
         self.process = MockProcess()
         self.process.executing(True)
         self.location = MockLocation()
@@ -427,8 +411,7 @@ class SimpleResourcePropertyTests(unittest.TestCase):
 class SimpleResourceBasicAcquireTests(unittest.TestCase):
     "Tests basic (no running simulation required) SimpleResource class acquire() functionality"
     def setUp(self):
-        SimClock.initialize();
-        MockEntity.initializeElement("MockEntity")
+        reinitialize()
         self.process = MockProcess()
         self.process.executing(True)
         self.location = MockLocation()
@@ -478,8 +461,7 @@ class SimpleResourceBasicAcquireTests(unittest.TestCase):
 class SimpleResourceBasicReleaseTests(unittest.TestCase):
     "Tests basic (no running simulation required) SimpleResource class release() functionality"
     def setUp(self):
-        SimClock.initialize();
-        MockEntity.initializeElement("MockEntity")
+        reinitialize()
         MockProcessAgent.assignedAgents.clear()
         self.process = MockProcess()
         self.process.executing(True)
@@ -588,8 +570,7 @@ class SimpleResourceAcquireQueueingTests(unittest.TestCase):
     1,3,5,4,2.
     """
     def setUp(self):
-        SimClock.initialize();
-        MockEntity.initializeElement("MockEntity")
+        reinitialize()
         MockProcessAgent.initialize()
         self.process1 = MockProcessAgent(2)
         self.process2 = MockProcessAgent(3)
@@ -708,8 +689,7 @@ class BasicResourcePoolTests(unittest.TestCase):
     Tests basic usage of a resource pool, without any simulated queueing
     """
     def setUp(self):
-        SimClock.initialize();
-        MockEntity.initializeElement("MockEntity")
+        reinitialize()
         # Set up executing processes
         self.process1 = MockProcess(True) 
         self.process2 = MockProcess(True)
@@ -803,67 +783,67 @@ class BasicResourcePoolTests(unittest.TestCase):
              
     def testacquire1(self):
         "Test: Acquire one of any resource from the pool - should be the first"
-        ra = self.process1.acquireFrom(self.pool, SimResource)
+        ra = self.process1.acquire_from(self.pool, SimResource)
         self.assertEqual(ra.resource, self.rsrc1)
              
     def testacquire2(self):
         "Test: Acquire three of any resource from the pool, followed by 2"
-        self.process1.acquireFrom(self.pool, SimResource, 3)
-        ra = self.process1.acquireFrom(self.pool, SimResource, 2)
+        self.process1.acquire_from(self.pool, SimResource, 3)
+        ra = self.process1.acquire_from(self.pool, SimResource, 2)
         expected = (self.rsrc3, self.rsrc3)
         self.assertEqual(ra.resources, expected)
              
     def testacquire3(self):
         "Test: Acquire all seven resources in the pool"
-        ra = self.process1.acquireFrom(self.pool, SimResource, 7)
+        ra = self.process1.acquire_from(self.pool, SimResource, 7)
         self.assertEqual(len(ra.resources), 7)
              
     def testacquire4(self):
         "Test: Acquire a TestResource"
-        ra = self.process1.acquireFrom(self.pool, TestResource, 1)
+        ra = self.process1.acquire_from(self.pool, TestResource, 1)
         expected = (self.rsrc3,)
         self.assertEqual(ra.resources, expected)
              
     def testavailable2(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - available "
-        self.process1.acquireFrom(self.pool, SimResource, 3)
-        self.process2.acquireFrom(self.pool, SimResource, 2)
+        self.process1.acquire_from(self.pool, SimResource, 3)
+        self.process2.acquire_from(self.pool, SimResource, 2)
         self.assertEqual(self.pool.available(), 2)
              
     def testavailable3(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - available TestResources "
-        self.process1.acquireFrom(self.pool, SimResource, 3)
-        self.process2.acquireFrom(self.pool, SimResource, 2)
+        self.process1.acquire_from(self.pool, SimResource, 3)
+        self.process2.acquire_from(self.pool, SimResource, 2)
         self.assertEqual(self.pool.available(TestResource), 0)
              
     def testavailableresources32(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - availableResources "
-        self.process1.acquireFrom(self.pool, SimResource, 3)
-        self.process2.acquireFrom(self.pool, SimResource, 2)
+        self.process1.acquire_from(self.pool, SimResource, 3)
+        self.process2.acquire_from(self.pool, SimResource, 2)
         self.assertEqual(self.pool.available_resources(), [self.rsrc4])
              
     def testcurrentAssignments32(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - currentAssignments "
-        ra1 = self.process1.acquireFrom(self.pool, SimResource, 3)
-        ra2 = self.process2.acquireFrom(self.pool, SimResource, 2)
+        ra1 = self.process1.acquire_from(self.pool, SimResource, 3)
+        ra2 = self.process2.acquire_from(self.pool, SimResource, 2)
         self.assertEqual(set(self.pool.current_assignments()), set([ra1, ra2]))
              
     def testcurrentTransactions32(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - currentTransactions "
-        ra1 = self.process1.acquireFrom(self.pool, SimResource, 3)
-        ra2 = self.process2.acquireFrom(self.pool, SimResource, 2)
+        ra1 = self.process1.acquire_from(self.pool, SimResource, 3)
+        ra2 = self.process2.acquire_from(self.pool, SimResource, 2)
         expected = (self.process1, self.process2)
         self.assertEqual(set(self.pool.current_transactions()), set(expected))
              
     def testacquiremorethanpoolsize1(self):
         "Test: Acquire 8 of any resource (bigger than the pool) raises "
         self.assertRaises(SimError, 
-                          lambda: self.process1.acquireFrom(self.pool, SimResource, 8))
+                          lambda: self.process1.acquire_from(self.pool, SimResource, 8))
              
     def testacquiremorethanpoolsize2(self):
         "Test: Acquire 3 of TestResource (bigger than the pool) raises "
         self.assertRaises(SimError, 
-                          lambda: self.process1.acquireFrom(self.pool, TestResource, 3))
+                          lambda: self.process1.acquire_from(self.pool, TestResource, 3))
 
 
 
@@ -872,8 +852,7 @@ class BasicResourcePoolReleaseTests(unittest.TestCase):
     Tests basic usage of a resource pool, without any simulated queueing
     """
     def setUp(self):
-        SimClock.initialize();
-        MockEntity.initializeElement("MockEntity")
+        reinitialize()
         # Set up executing processes
         self.process1 = MockProcess(True) 
         self.process2 = MockProcess(True)
@@ -883,8 +862,8 @@ class BasicResourcePoolReleaseTests(unittest.TestCase):
         self.rsrc3 = TestResource("TestResource3", self.location, capacity=2)
         self.rsrc4 = SimSimpleResource("TestResource4", self.location, capacity=2)
         self.pool = SimResourcePool(self.rsrc1, self.rsrc2, self.rsrc3, self.rsrc4)
-        self.ra1 = self.process1.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.ra2 = self.process2.acquireFrom(self.pool, TestResource, 1)
+        self.ra1 = self.process1.acquire_from(self.pool, SimSimpleResource, 2)
+        self.ra2 = self.process2.acquire_from(self.pool, TestResource, 1)
                           
     def testavailable1(self):
         "Test: Total available is 6 following release of assignment 1"
@@ -964,8 +943,7 @@ class ResourcePoolQueueingTests(unittest.TestCase):
     order, they should end up in the following order: 1,3,5,4,2.
     """
     def setUp(self):
-        SimClock.initialize();
-        MockEntity.initializeElement("MockEntity")
+        reinitialize()
         MockProcessAgent.initialize()
         self.process1 = MockProcessAgent(2)
         self.process2 = MockProcessAgent(3)

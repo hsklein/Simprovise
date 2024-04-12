@@ -20,7 +20,7 @@ class MockProcess(SimProcess):
     processStarts = []
     def run(self):
         MockProcess.processStarts.append(SimClock.now())
-        self.waitFor(MockProcess.processTime)
+        self.wait_for(MockProcess.processTime)
         
         
 class MockSource(SimEntitySource):

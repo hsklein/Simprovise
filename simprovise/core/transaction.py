@@ -97,7 +97,7 @@ class SimTransactionInterruptEvent(SimEvent):
             if resumeEvent:
                 resumeEvent.deregister()
                 self.transaction.resumeEvent = None
-            self.transaction.wakeupAndInterrupt(self.reason)
+            self.transaction.wakeup_and_interrupt(self.reason)
 
     def __str__(self):
         return super().__str__() + \
@@ -142,7 +142,7 @@ class SimTransaction(object):
         return self._agent
 
     @property
-    def isExecuting(self):
+    def is_executing(self):
         """
         Returns True if the transaction (process or task) is currently
         executing, False otherwise.
@@ -162,7 +162,7 @@ class SimTransaction(object):
 
     @property
     @apidocskip
-    def elementCounter(self):
+    def element_counter(self):
         """
         If the transaction class is a simulation element - i.e., the class has
         an element attribute - return that element's counter attribute.
@@ -176,7 +176,7 @@ class SimTransaction(object):
 
     @property
     @apidocskip
-    def elementEntryCounter(self):
+    def element_entry_counter(self):
         """
         If the transaction class is a simulation element - i.e., the class has
         an element attribute - return that element's counter attribute.
@@ -190,7 +190,7 @@ class SimTransaction(object):
 
     @property
     @apidocskip
-    def elementDataCollector(self):
+    def element_data_collector(self):
         """
         If the transaction class is a simulation element - i.e., the class has
         an element attribute - return that element's time data collector.
@@ -223,12 +223,12 @@ class SimTransaction(object):
         # As of now, at least, transaction instances are NOT re-entrant
         # The general intent is for a transaction object to execute once over the course of it's lifetime
         # At a minimum, we'll ensure that execute() is not called on an instance that is already executing
-        assert not self.isExecuting, "Attempt to re-execute an already-executing transaction"
+        assert not self.is_executing, "Attempt to re-execute an already-executing transaction"
         self._executing = True
 
-        inTransactionCounter = self.elementCounter
-        entryCounter = self.elementEntryCounter
-        timeDataCollector = self.elementDataCollector
+        inTransactionCounter = self.element_counter
+        entryCounter = self.element_entry_counter
+        timeDataCollector = self.element_data_collector
 
         self.increment(inTransactionCounter)
         self.increment(entryCounter)
@@ -271,7 +271,7 @@ class SimTransaction(object):
         self._greenlet.switch()
 
     @apidocskip
-    def wakeupAndInterrupt(self, reason):
+    def wakeup_and_interrupt(self, reason):
         """
         Interrupt a waiting transaction - i.e., wake it prematurely by
         restarting it and throwing a SimInterruptException with the passed
@@ -284,7 +284,7 @@ class SimTransaction(object):
         self._greenlet.throw(SimInterruptException(reason))
 
     @apidocskip
-    def waitUntilNotified(self):
+    def wait_until_notified(self):
         """
         Wait indefinitely, until woken up via a Resume event.
         Generally not to be invoked directly by client modeling code.
@@ -323,7 +323,7 @@ class SimTransaction(object):
         Args:
             reason (str): Reason for interrupt, e.g. 'preemption'
         """
-        assert self.isExecuting, "Cannot interrupt a non-executing transaction"
+        assert self.is_executing, "Cannot interrupt a non-executing transaction"
         assert self._greenlet != greenlet.getcurrent(), "Transaction interrupted from itself (or its own greenlet)"
 
         # Now schedule the interrupt event
@@ -333,7 +333,7 @@ class SimTransaction(object):
 
     # methods used by run()
 
-    def waitForResponse(self, msg):
+    def wait_for_response(self, msg):
         """
         Blocks until a response (to the passed message) is  received, returning
         that response message.  The agent will continue to handle other messages
@@ -367,14 +367,14 @@ class SimTransaction(object):
 
             savedInterceptHandler = self.agent.interceptHandler
             self.agent.interceptHandler = resumeOnResponse
-            self.waitUntilNotified()
+            self.wait_until_notified()
         finally:
             self.agent.interceptHandler = savedInterceptHandler
 
         assert response, "Null response returned from waitForResponse()" + str(self._greenlet)
         return response
 
-    def waitFor(self, amount):
+    def wait_for(self, amount):
         """
         Wait (pause transaction execution) for a fixed amount of simulated time.
 
@@ -441,9 +441,9 @@ class SimTransaction(object):
         # agent (which may or may not be the resource itself)
         assignmentAgent = resource.assignment_agent
         msgData = (self, numrequested, resource)
-        return self._acquireImpl(assignmentAgent, msgData)
+        return self._acquire_impl(assignmentAgent, msgData)
 
-    def acquireFrom(self, agent, rsrcClass, numrequested=1):
+    def acquire_from(self, agent, rsrcClass, numrequested=1):
         """
         Acquire a resource (or resources) of a specified class that is
         managed by a specified assignment agent, returning a
@@ -468,15 +468,15 @@ class SimTransaction(object):
             raise SimError(_ACQUIRE_ERROR, errorMsg, numrequested)
 
         msgData = (self, numrequested, rsrcClass)
-        return self._acquireImpl(agent, msgData)
+        return self._acquire_impl(agent, msgData)
 
-    def _acquireImpl(self, assignmentAgent, msgData):
+    def _acquire_impl(self, assignmentAgent, msgData):
         """
         Implements the bulk of the resource acquisition that is common to both
-        acquire() and acquireFrom()
+        acquire() and acquire_from()
         """
         assert self.agent, "Transaction calling acquire() has no agent"
-        assert self.isExecuting, "Resources can only be acquired by executing transactions"
+        assert self.is_executing, "Resources can only be acquired by executing transactions"
 
         msgType = SimMsgType.RSRC_REQUEST
         msg, responses = self.agent.send_message(assignmentAgent,
@@ -491,7 +491,7 @@ class SimTransaction(object):
             # If the assignment agent did not respond immediately (presumably
             # because the requested resource is not available), wait for a
             # response.
-            response = self.waitForResponse(msg)
+            response = self.wait_for_response(msg)
             assert response, "No response from waitForRespoonse"
             assert response.msgType == SimMsgType.RSRC_ASSIGNMENT, "Response to Resource request was not a resource assignment"
 
@@ -526,7 +526,7 @@ class SimTransaction(object):
                            all resources in rsrcAssignment.
         """
         assert self.agent, "Transaction calling release() has no agent"
-        assert self.isExecuting, "Resources can only be released by executing transactions"
+        assert self.is_executing, "Resources can only be released by executing transactions"
         assert rsrcAssignment, "Null assignment passed to release()"
         assert rsrcAssignment.assignment_agent, "Resource assignment has no agent"
         assert rsrcAssignment.transaction == self, "Resource assignment transaction is not this transaction"
