@@ -35,6 +35,16 @@ class SimEntity(SimTransientObject):
     
     elements = {}
     
+    @staticmethod
+    def _init_baseclass():
+        """
+        Put the base SimEntity class in the elements dictionary if it's
+        empty
+        """
+        if not SimEntity.elements:
+            e = SimEntityElement(SimEntity) 
+            SimEntity.elements[e.element_id] = e
+    
     def __init_subclass__(cls, **kwargs):      
         """
         Register all subclasses of SimEntity by wrapping them in a
@@ -49,9 +59,8 @@ class SimEntity(SimTransientObject):
         super().__init_subclass__(**kwargs)
         
         # make sure the base SimEntity class is in the elements dictionary
-        if not cls.elements:
-            e = SimEntityElement(SimEntity) 
-            cls.elements[e.element_id] = e
+        # This should have been done on import (see below)
+        SimEntity._init_baseclass()
             
         # Add a process element to the SimProcess elements dictionary
         e = SimEntityElement(cls) 
@@ -94,24 +103,17 @@ class SimEntity(SimTransientObject):
         self.__process = process
         self.__createTime = SimClock.now()
         self.__destroyTime = None
-        
-        def get_element(cls):
-            "Helper method for getting an Entity or Process SimElement"
-            try:
-                return cls.element
-            except AttributeError:
-                return None
-                
-        
+               
         # Determine the entity's corresponding SimEntityElement, if any
-        self.__element = get_element(self.__class__)
+        self.__element = self.__class__.element
+        assert  self.__element, "entity class has no element"
+        print(self.__class__, self.element)
 
         # link the entity to it's process and process element, if any
         process.entity = self
         
-        # increment the work-in-process counter if we have an element
-        if self.element:
-            self.element.counter.increment()
+        # increment the element's work-in-process counter 
+        self.element.counter.increment()
             
     @apidocskip
     def destroy(self):
@@ -149,12 +151,10 @@ class SimEntity(SimTransientObject):
     @property
     def element(self):
         """
-        Returns the SimEntityElement associated with this entity's class,
-        if any. It may be the element for a base class
+        Returns the SimEntityElement associated with this entity's class.
 
-        :return: The SimEntityElement associated with this entity's class,
-                 or None 
-        :rtype:  :class:`SimEntityElement` or None
+        :return: The SimEntityElement associated with this entity's class.
+        :rtype:  :class:`SimEntityElement`
         """
         return self.__element
 
@@ -230,13 +230,18 @@ class SimEntityElement(SimClassElement):
         self.counter = SimCounter(self, "Work-In-Process")
         self.timeDataCollector = SimUnweightedDataCollector(self, "Process-Time", SimTime)
 
+# __init_subclass__ won't be called if no SimEntity base classes are imported,
+# so we can't rely on __init_subclass__'s call to _init_baseclass(). So we'll do
+# it here.
+SimEntity._init_baseclass()
+
 if __name__ == '__main__':
     
     class MockEntity(SimEntity):
         """
         """
         
-    for e in SimEntity.elements:
-        print(e.element_id)
+    for e in SimEntity.elements.values():
+        print(e.element_id, e.element_class, e.element_class.element)
 
         
