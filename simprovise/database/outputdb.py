@@ -1250,6 +1250,9 @@ class SimSummaryData(object):
     def __init__(self, outputDb, run, elementID, batch=None):
         """
         """
+        assert outputDb, "Null Output DB supplied to SimSummaryData"
+        assert run > 0, "invalid (non-positive) run supplied to SimSummaryData"
+        
         self.__resultDict = {}
         if batch is None:
             batch = outputDb.last_batch(run)

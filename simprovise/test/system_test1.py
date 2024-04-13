@@ -32,12 +32,13 @@ class ReplicatorTests(unittest.TestCase):
     def setUpClass(cls):
         """
         """
+        print("========== setUpClass ===========")
         # Hack to allow recreation of static objects for each test case
         SimStaticObject.elements = {}
         
-        model = SimModel.load_model_from_script(TEST_MODELSCRIPT1_PATH)
+        cls.model = SimModel.load_model_from_script(TEST_MODELSCRIPT1_PATH)
         
-        replication = SimReplication(model, 1, cls._warmupLength,
+        replication = SimReplication(cls.model, 1, cls._warmupLength,
                                      cls._batchLength, cls._nBatches)
         replication.execute()       
                 
@@ -46,14 +47,21 @@ class ReplicatorTests(unittest.TestCase):
 
     @classmethod
     def tearDownClass(cls):
+        print("========== tearDownClass ===========")
         cls.dbMgr.close_output_database(delete=True)
+        
+    def setUp(self):
+        """
+        """
+        self.model = self.__class__.model
+        self.dbMgr = self.__class__.dbMgr
 
     @property
-    def model(self):
+    def modelx(self):
         return self.__class__.model
 
     @property
-    def dbMgr(self):
+    def dbMgrx(self):
         return self.__class__.dbMgr
 
     @property
@@ -123,7 +131,7 @@ class ReplicatorTests(unittest.TestCase):
 
     def test_lastbatch2(self):
         "Test that last batch for (non-existent) run 2 is 0"
-        self.assertEqual(self.dbMgr.database.lastBatch(2), 0)
+        self.assertEqual(self.dbMgr.database.last_batch(2), 0)
 
         #===========================================================================
         # Resource1, Resource2 Utilization Dataset Tests
@@ -593,15 +601,15 @@ class ReplicatorTests(unittest.TestCase):
         self.assertEqual(minMaxCurrent, (0, 2, 1))
 
 
-class SimulationTests(ReplicatorTests):
-    """
-    """
-    @classmethod
-    def setUpClass(cls):
-        warmupLength = SimTime(40)
-        batchLength = SimTime(300)
-        nBatches = 2
-        modelscript = TEST_MODELSCRIPT1_PATH
+#class SimulationTests(ReplicatorTests):
+    #"""
+    #"""
+    #@classmethod
+    #def setUpClass(cls):
+        #warmupLength = SimTime(40)
+        #batchLength = SimTime(300)
+        #nBatches = 2
+        #modelscript = TEST_MODELSCRIPT1_PATH
         #cls.simResult = Simulation.execute_script(modelscript, warmupLength,
         #                                         batchLength, nBatches)
         #cls.dbMgr = cls.simResult.dbMgr

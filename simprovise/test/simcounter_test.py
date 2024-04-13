@@ -14,7 +14,7 @@ class MockProcess(object):
     def __init__(self):
         self.waiting = False
 
-    def waitUntilNotified(self):
+    def wait_until_notified(self):
         self.waitStart = SimClock.now()
         self.waiting = True
 
