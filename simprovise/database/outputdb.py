@@ -657,7 +657,7 @@ class SimOutputDatabase(object):
         result = self.runQueryForSingleRow(sqlstr, elementID)
         return result[0]
 
-    def getDataset(self, elementID, datasetName):
+    def get_dataset(self, elementID, datasetName):
         """
         Return the dataset for a specified elementID and dataset name.
         Raises an error if not found.
