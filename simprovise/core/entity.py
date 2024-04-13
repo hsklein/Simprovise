@@ -107,7 +107,6 @@ class SimEntity(SimTransientObject):
         # Determine the entity's corresponding SimEntityElement, if any
         self.__element = self.__class__.element
         assert  self.__element, "entity class has no element"
-        print(self.__class__, self.element)
 
         # link the entity to it's process and process element, if any
         process.entity = self
