@@ -36,21 +36,26 @@ class SimStaticObject(SimLocatableObject, SimElement):
     Static objects are created before simulation starts and exist for the
     entire simulation run.
     
-    Static objects are assigned to a location at creation, and maintain that
-    assignment for the entire simulation.  They may move within their assigned
-    location, but the value returned by the location property does not change.
+    Static objects are assigned to a parent location at creation, and maintain
+    that assignment for the entire simulation.  They may move within their
+    assigned parent location, but the value returned by the parent_location
+    property does not change.
 
-    Static objects have a static/element ID, which reflects the static object
+    Static objects have an element ID, which reflects the static object
     location hierarchy - e.g. "Parent.Child.GrandChild"
     """
     __slots__ = ('_name', '_parentlocation', '_datasets')
     
     elements = {}
 
-    def __init__(self, elementName, initialLocation=None, parentLocation=None, 
+    def __init__(self, elementName, parentLocation=None, initialLocation=None,  
                  moveable=False):
+        if parentLocation is None:
+            parentLocation = SimLocation.root_location()
+            
         if initialLocation is None:
-            initialLocation = SimLocation.root_location()
+            initialLocation = parentLocation
+            
         super().__init__(initialLocation, moveable)
         self._datasets = []
          
@@ -58,8 +63,6 @@ class SimStaticObject(SimLocatableObject, SimElement):
         assert len(elementName.strip()), "Static Object element name not be blank or empty"
         assert elementName.find('.') == -1, "Static Object element name cannot contain '.'"
         
-        if parentLocation is None:
-            parentLocation = SimLocation.root_location()
         
         # TODO confirm initialLocation is either the parent location or a
         # sublocation of the parent location

@@ -492,13 +492,13 @@ class SimResource(SimStaticObject):
                             must be unique within it's location
     :type name:             str
 
-    :param initialLocation: Initial location object for the resource.
-                            If None, will default to parent location.
-    :type initialLocation:  :class:`~.location.SimLocation` or None
-
     :param parentLocation: Location object to which resource belongs.
                            If None defaults to Root location
     :type parentLocation:  :class:`~.location.SimLocation` or None
+
+    :param initialLocation: Initial location object for the resource.
+                            If None, will default to parent location.
+    :type initialLocation:  :class:`~.location.SimLocation` or None
 
     :param capacity:       Capacity of resource, or number of subresources.
                            Defaults to 1. Must be > 0. 
@@ -529,11 +529,11 @@ class SimResource(SimStaticObject):
     __slots__ = ('__processtimeDataCollector', '_capacity', '_utilCounter',
                  '_currentTxnAssignments', 'assignmentAgent')
 
-    def __init__(self, name, initialLocation=None, parentLocation=None,
+    def __init__(self, name, parentLocation=None, initialLocation=None, 
                  capacity=1, assignmentAgent=None, moveable=True):
         """
         """       
-        super().__init__(name, initialLocation, parentLocation, moveable)
+        super().__init__(name, parentLocation, initialLocation, moveable)
         
         if not isinstance(capacity, int) or capacity <= 0: 
             msg = "Resource {0} assigned invalid capacity of {1}: must be a positive integer"
@@ -785,9 +785,9 @@ class SimSimpleResource(ResourceAssignmentAgentMixin, SimResource):
         capacity (int > 0):         Capacity of resource, or number of
                                     subresources. Defaults to 1.
     """
-    def __init__(self, name, initialLocation=None, parentLocation=None,
+    def __init__(self, name, parentLocation=None, initialLocation=None, 
                  capacity=1, moveable=True):
-        super().__init__(name, initialLocation, parentLocation, capacity,
+        super().__init__(name, parentLocation, initialLocation, capacity,
                              self, moveable)
         self._capacity = capacity
 
