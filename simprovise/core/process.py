@@ -23,7 +23,8 @@ class SimProcess(SimTransaction):
     SimProcess is a subclass of SimTransaction, where entities are the agents.
     As such it is the base class for all simulation processes.
     """
-    __slots__ = ('__executing', '__entity', '__resourceAssignments')
+    __slots__ = ('__executing', '__entity', '__element',
+                 '__resourceAssignments')
     
     elements = {}
     
@@ -81,7 +82,19 @@ class SimProcess(SimTransaction):
         super().__init__(None)
         self.__executing = False
         self.__entity = None
+        self.__element = self.__class__.element
+        assert self.__element, "No element exists for process class"
         self.__resourceAssignments = []
+
+    @property
+    def element(self):
+        """
+        Returns the SimProcessElement associated with this process's class.
+
+        :return: The SimProcessElement associated with this entity's class.
+        :rtype:  :class:`SimProcessElement`
+        """
+        return self.__element
 
     @property
     def entity(self):
@@ -153,6 +166,6 @@ if __name__ == '__main__':
         """
         """
   
-    for e in SimProcess.elements:
+    for e in SimProcess.elements.values():
         print(e.element_id)
 
