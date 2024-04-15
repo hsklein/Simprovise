@@ -86,7 +86,7 @@ class SimDbDatasink(object):
         simulation run.
         """
         self.__dbConnection = database.connection
-        self.__datasetID = database.getDatasetID(dataset)
+        self.__datasetID = database.get_dataset_id(dataset)
         self.__run = runNumber
         self.__batch = None
         self.__valuesAreSimTime = (dataset.valuetype is SimTime)
@@ -668,7 +668,7 @@ class SimOutputDatabase(object):
         raise SimError(_ERROR_NAME, "Dataset ({0}, {1}) not found",
                        elementID, datasetName)
 
-    def getDatasetID(self, dataset):
+    def get_dataset_id(self, dataset):
         """
         Get the ID number of a dataset.
         Note that this ID may change from one database to another - even if
@@ -783,7 +783,7 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         # database dataset row for each model dataset
         for dset in self.__model.datasets:
             try:
-                self.getDatasetID(dset)
+                self.get_dataset_id(dset)
             except SimError as e:
                 logger.error(e)
                 msg = "Failure initializing existing output database {0} for model {1}; datasets do not match"
@@ -997,7 +997,7 @@ class SimOutputHistogramData(object):
         self.values = None
         self.nbins = 10
         self.weights = None
-        datasetID = outputDb.getDatasetID(dataset)
+        datasetID = outputDb.get_dataset_id(dataset)
 
         if dataset.istimeweighted:
             self.get_time_weighted_data(datasetID, run, batch, outputDb)
@@ -1089,7 +1089,7 @@ class SimTimeSeriesData(object):
         self.yvalues = None
         self.accumulatedmean = None
         self.meantimevalues = None
-        datasetID = outputDb.getDatasetID(dataset)
+        datasetID = outputDb.get_dataset_id(dataset)
 
         if dataset.name == _ENTRIES_DATASET_NAME:
             self.get_cumulative_count_data(outputDb, datasetID, run, batch)
@@ -1349,7 +1349,7 @@ class SimPercentileData(object):
         datasets) is a performance optimization.  Execution time for
         non-time-weighted is reduced by better than 80%.
         """
-        datasetid = self.outputDb.getDatasetID(dataset)
+        datasetid = self.outputDb.get_dataset_id(dataset)
         if dataset.istimeweighted:
             batchStartTm, batchEndTm = outputDb.batch_time_bounds(run, batch)
             sqlstr = """
