@@ -5,6 +5,7 @@ from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
                             SimCounter, SimSimpleResource, SimQueue)
 
 from simprovise.simulation import Simulation
+    
 #from simprovise.configuration import simelement, SimElement
 #from simprovise.runcontrol import SimReplicator, SimReplicationParameters
 
@@ -17,21 +18,22 @@ meanInterarrivalTime = SimTime(12)
 
 #Simulation.initialize()
 
-warmupLength = SimTime(500)
-batchLength = SimTime(1000)
+warmupLength = SimTime(1000)
+batchLength = SimTime(10000)
+serverCapacity = 1
 
 #Simulation.model().simulationWarmup = warmupLength
 #Simulation.model().simulationBatchLength = batchLength
 #Simulation.model().simulationBatchCount = 1
 
 queue = SimQueue("Queue")
-server = SimSimpleResource("Server", capacity=1)
+server = SimSimpleResource("Server", capacity=serverCapacity)
 serverLocation = SimLocation("ServerLocation")
 source = SimEntitySource("Source")
 sink = SimEntitySink("Sink")
 
 stimeGenerator = SimDistribution.number_generator(SimDistribution.exponential,
-                                                 meanServiceTime, 2)
+                                                 meanServiceTime, 1)
 
 class mm1Process(SimProcess):
     """
@@ -50,7 +52,7 @@ class mm1Process(SimProcess):
         entity.move_to(sink)
 
 source.add_entity_generator(SimEntity, mm1Process, SimDistribution.exponential,
-                          meanInterarrivalTime, 1)
+                          meanInterarrivalTime, 2)
 
 
 if __name__ == '__main__':
@@ -62,6 +64,7 @@ if __name__ == '__main__':
     with Simulation.execute(warmupLength, batchLength, 3,
                             outputpath=None, overwrite=False) as simResult:
         simResult.print_summary()
+        
         
     #with Simulation.executeScript(__file__, warmupLength, batchLength, 3) as simResult:
     #    simResult.printSummary()

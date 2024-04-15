@@ -837,8 +837,8 @@ class SimSample(object):
 if __name__ == '__main__':
     import logging
     
-    warmupLength = SimTime(500)
-    batchLength = SimTime(1000)
+    warmupLength = SimTime(1000)
+    batchLength = SimTime(10000)
     #batchLength = SimTime(0)
     scriptpath = "models\\mm1.py"
     multi_replication = True
@@ -848,7 +848,7 @@ if __name__ == '__main__':
     
     if not multi_replication:
         print("Running a single replication...")
-        with Simulation.execute_script(scriptpath, warmupLength, batchLength, 10) as simResult:
+        with Simulation.execute_script(scriptpath, warmupLength, batchLength, 2) as simResult:
             simResult.print_summary(rangetype='total')
     else:   
         print("Running 10 replications...")
