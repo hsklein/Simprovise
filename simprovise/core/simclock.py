@@ -51,7 +51,7 @@ class SimClock(object):
         Returns:
             SimTime: the current simulated clock time
         """
-        return SimClock._currentTime.makeCopy()
+        return SimClock._currentTime.make_copy()
 
     @staticmethod
     @apidocskip

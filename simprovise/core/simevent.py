@@ -69,7 +69,7 @@ class SimEvent(metaclass=ABCMeta):
     def __init__(self, tm):
         assert isinstance(tm, SimTime), 'SimEvent constructor parameter ' + str(tm) + ' is not a SimTime'
         assert tm >= SimClock.now(), 'SimEvent constructor parameter ' + str(tm) + ' is less than current time:' + str(SimClock.now())
-        self._time = tm.makeCopy()
+        self._time = tm.make_copy()
         self._sequencenum = -1
 
     def register(self):

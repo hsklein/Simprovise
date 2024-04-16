@@ -609,7 +609,7 @@ class SimDistribution(object):
                     timeUnits = a.units
                     return a.value
                 else:
-                    return a.toUnits(timeUnits).value
+                    return a.to_units(timeUnits).value
             else:
                 return a
 

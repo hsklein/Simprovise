@@ -607,7 +607,7 @@ def _value_to_string(value, numwidth, showunits=True):
     returned result string has the same length regardless of value type.
     """
     numvalue = value.value if isinstance(value, SimTime) else value
-    unitsvalue = value.unitsString() if isinstance(value, SimTime) else ''
+    unitsvalue = value.units_string() if isinstance(value, SimTime) else ''
 
     if type(numvalue) is int:
         formatspec = '{:{w}d}'
@@ -642,7 +642,7 @@ def _range_to_string(values, numwidth, showunits=True):
     typefmts = [typefmt(value) for value in values]
 
     if showunits and isinstance(values[0], SimTime):
-        units = ' ' + values[0].unitsString()
+        units = ' ' + values[0].units_string()
     else:
         units = ''
 

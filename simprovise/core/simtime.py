@@ -33,6 +33,13 @@ class SimTime(object):
         value (scalar or :class:`~.simtime.SimTime`)
         units: Time unit if value is not a :class:`~.simtime.SimTime`
         
+    TODO: dimensionless time through configuration
+          toScalar() that outputs either seconds or dimensionless value,
+          depending on configuration. Use in datacollector and outputdb,
+          including various *Stats* classes
+          Think about output displays (when not dimensionless) - a configured
+          default output unit?
+        
     """
     __slots__ = ('_value', '_units')
 
@@ -53,10 +60,10 @@ class SimTime(object):
             raise SimError('InvalidSimTimeValue', str(value) + ' is an invalid value type: ' + str(type(value)))
 
     def __str__(self):
-        repString = str(self._value) + ' ' + self.unitsString()
+        repString = str(self._value) + ' ' + self.units_string()
         return repString
 
-    def unitsString(self):
+    def units_string(self):
         """
         Returns a string representation of the instance's units (singular or
         plural, depending on value)
@@ -84,11 +91,11 @@ class SimTime(object):
         """
         return self._units
 
-    def makeCopy(self):
+    def make_copy(self):
         "Make a copy of a time object - cheaper than using the copy module"
         return SimTime(self._value, self._units)
 
-    def toUnits(self, tounits):
+    def to_units(self, tounits):
         """
         Returns a new SimTime instance of the specified time units
         """
@@ -99,17 +106,17 @@ class SimTime(object):
             msg = "Invalid units constant ({0}) passed to SimTime.toUnits()"
             raise SimError(_ERROR_NAME, msg, tounits)
 
-    def toSeconds(self):
+    def to_seconds(self):
         "Returns a new SimTime instance, in seconds"
-        return self.toUnits(SECONDS)
+        return self.to_units(SECONDS)
 
-    def toMinutes(self):
+    def to_minutes(self):
         "Returns a new SimTime instance, in minutes"
-        return self.toUnits(MINUTES)
+        return self.to_units(MINUTES)
 
-    def toHours(self):
+    def to_hours(self):
         "Returns a new SimTime instance, in hours"
-        return self.toUnits(HOURS)
+        return self.to_units(HOURS)
 
     def seconds(self):
         "Returns the time in seconds - a scalar, not a SimTime"
@@ -122,7 +129,7 @@ class SimTime(object):
     # Internal helper function used by math operators to convert 'other' interval to same
     # units as self.  If other is NOT a SimTime, we assume the same units as self
     # and just return other (which had better be or convert to a number)
-    def _convertedOtherValue(self, other):
+    def _converted_other_value(self, other):
         if isinstance(other, self.__class__):
             conversionFactor = 60**(other._units - self._units)
             return other._value * conversionFactor
@@ -130,29 +137,29 @@ class SimTime(object):
             return other
 
     def __add__(self, other):
-        return SimTime(self._value + self._convertedOtherValue(other), self._units)
+        return SimTime(self._value + self._converted_other_value(other), self._units)
 
     def __radd__(self, other):
-        return SimTime(self._value + self._convertedOtherValue(other), self._units)
+        return SimTime(self._value + self._converted_other_value(other), self._units)
 
     def __sub__(self, other):
-        return SimTime(self._value - self._convertedOtherValue(other), self._units)
+        return SimTime(self._value - self._converted_other_value(other), self._units)
 
     def __iadd__(self, other):
-        self._value += self._convertedOtherValue(other)
+        self._value += self._converted_other_value(other)
         return self
 
     def __truediv__(self, other):
-        return SimTime(float(self._value) / self._convertedOtherValue(other), self._units)
+        return SimTime(float(self._value) / self._converted_other_value(other), self._units)
 
     def __rtruediv__(self, other):
-        return SimTime(self._convertedOtherValue(other) / float(self._value), self._units)
+        return SimTime(self._converted_other_value(other) / float(self._value), self._units)
 
     def __mul__(self, other):
-        return SimTime(self._value * self._convertedOtherValue(other), self._units)
+        return SimTime(self._value * self._converted_other_value(other), self._units)
 
     def __rmul__(self, other):
-        return SimTime(self._value * self._convertedOtherValue(other), self._units)
+        return SimTime(self._value * self._converted_other_value(other), self._units)
 
     def _compare(self, other):
         if other == 0:
@@ -161,7 +168,7 @@ class SimTime(object):
         if not isinstance(other, self.__class__):
             raise SimError('InvalidSimTimeCompare', 'Cannot compare time interval to ' + str(other))
 
-        otherValue = self._convertedOtherValue(other)
+        otherValue = self._converted_other_value(other)
         diff = self._value - otherValue
         return diff
 

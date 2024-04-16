@@ -1112,7 +1112,7 @@ class SimTimeSeriesData(object):
             return minTime, maxTime
         else:
             # If the window is larger than the maximum timestamp, return zero
-            convertedWindowSize = self.windowSize.toUnits(self.dataset.timeunit)
+            convertedWindowSize = self.windowSize.to_units(self.dataset.timeunit)
             return max(maxTime - convertedWindowSize.value, minTime), maxTime
 
     def get_timeweighted_data(self, outputDb, datasetid, run, batch):
@@ -1161,7 +1161,7 @@ class SimTimeSeriesData(object):
         """
         minTime, maxTime = self.outputDb.batch_time_bounds(run, batch)
         if self.windowSize:
-            convertedWindowSize = self.windowSize.toUnits(self.dataset.timeunit).value
+            convertedWindowSize = self.windowSize.to_units(self.dataset.timeunit).value
         else:
             convertedWindowSize = maxTime - minTime
         movingAvgWindowSize = convertedWindowSize * self.movingAvgWindowPct

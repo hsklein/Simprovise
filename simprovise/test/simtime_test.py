@@ -41,43 +41,43 @@ class SimTimeTests(unittest.TestCase):
 
     def testConvert1(self):
         "Test:  120 seconds converted to minutes, units is MINUTES"
-        self.assertEqual(self.ti_120secs.toUnits(simtime.MINUTES).units, simtime.MINUTES)
+        self.assertEqual(self.ti_120secs.to_units(simtime.MINUTES).units, simtime.MINUTES)
 
     def testConvert2(self):
         "Test:  120 seconds converted to minutes, value is 2"
-        self.assertEqual(self.ti_120secs.toUnits(simtime.MINUTES).value, 2)
+        self.assertEqual(self.ti_120secs.to_units(simtime.MINUTES).value, 2)
 
     def testConvert3(self):
         "Test:  1 hour converted to minutes, units is MINUTES"
-        self.assertEqual(self.ti_1hr.toUnits(simtime.MINUTES).units, simtime.MINUTES)
+        self.assertEqual(self.ti_1hr.to_units(simtime.MINUTES).units, simtime.MINUTES)
 
     def testConvert4(self):
         "Test: 1 hour converted to minutes, value is 60"
-        self.assertEqual(self.ti_1hr.toUnits(simtime.MINUTES).value, 60)
+        self.assertEqual(self.ti_1hr.to_units(simtime.MINUTES).value, 60)
 
     def testConvert5(self):
         "Test: 1 hour converted to seconds, value is 3600"
-        self.assertEqual(self.ti_1hr.toUnits(simtime.SECONDS).value, 3600)
+        self.assertEqual(self.ti_1hr.to_units(simtime.SECONDS).value, 3600)
 
     def testConvert6(self):
         "Test: conversion to invalid units raises an error"
-        self.assertRaises(SimError, lambda: self.ti_1hr.toUnits(5))
+        self.assertRaises(SimError, lambda: self.ti_1hr.to_units(5))
 
     def testConvert7(self):
         "Test: toSeconds() conversion"
-        self.assertEqual(self.ti_1hr.toSeconds().value, 3600)
+        self.assertEqual(self.ti_1hr.to_seconds().value, 3600)
 
     def testConvert8(self):
         "Test: toMinutes() conversion"
-        self.assertEqual(self.ti_1hr.toMinutes().value, 60)
+        self.assertEqual(self.ti_1hr.to_minutes().value, 60)
 
     def testConvert9(self):
         "Test: toHours() conversion"
-        self.assertEqual(self.ti_3600secs.toHours().value, 1)
+        self.assertEqual(self.ti_3600secs.to_hours().value, 1)
 
     def testConvert10(self):
         "Test: toHours() conversion, units"
-        self.assertEqual(self.ti_3600secs.toHours().units, simtime.HOURS)
+        self.assertEqual(self.ti_3600secs.to_hours().units, simtime.HOURS)
 
     def testAdd1(self):
         "Test: 30 seconds + 120 seconds = 150 seconds"
