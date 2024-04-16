@@ -49,7 +49,7 @@ class Dataset(object):
         self.__name = name
         self.__valueType = valueType
         self.__isTimeWeighted = isTimeWeighted
-        self.__timeUnit = simtime.base_unit()
+        self.__timeUnit = None
         self.__isCollectingData = True
         self.__batchNumber = None
         self.__datasink = NullDataSink()
@@ -100,7 +100,12 @@ class Dataset(object):
         changed after the dataset was created, which we want to avoid.
         (It might be recoverable if we haven't put any data values in yet,
         but better safe than sorry.)
+        
+        We lazily initialize, to allow models to 
         """
+        if self.__timeUnit is None:
+            self.__timeUnit = simtime.base_unit()
+            
         assert self.__timeUnit == simtime.base_unit(), "Base Time Unit modified after dataset and owning object created"
         return self.__timeUnit
 

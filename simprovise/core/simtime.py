@@ -41,26 +41,10 @@ def set_base_unit(unit):
     Set the base unit for the model (SECONDS, MINUTES, HOURS) or None if
     simulated time for the model is dimensionless.
     
-    This method exists primarily for the benefit of unit test code.
-    While it should in theory work if called before the model starts executing,
-    in practice, it currently will always raise an exception because:
-    
-    1) We set Dataset time units to the base unit when the Dataset is created
-    2) In order to be extra careful, an assertion fails if the base unit is
-       changed after the Dataset is created - the values ultimately written
-       are scalars (without time unit), so we're just being extra careful to
-       be sure that we don't accidentally change the implicit unit in midstream
-    3) Because the core module currently imports SimEntity in __init__.py,
-       A SimEntityElement gets created as soon as any core module is imported,
-       and has it's dataset time unit set to the default specified in the
-       simtime module, before there is any opportunity for client code to call
-       simtime.set_base_unit()
-    4) The assertion on that SimEntityElement dataset.time_unit then fails
-    
-    Absent any fix to this, base_unit should be set via environment variable
+    TODO base_unit should probably be set tablevia environment variable
     and/or configuration file upon first call to base_unit()
     
-    Regardless, changing the base_unit must be done carefully. Changing from a
+    Regardless, changing the base_unit in code must be done carefully. Changing from a
     dimensioned base time unit (seconds, minutes or hours) to a dimension
     less setting is particularly fraught, since we cannot convert a SimTime
     object from one to the other.
