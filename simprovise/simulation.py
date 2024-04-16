@@ -855,6 +855,7 @@ if __name__ == '__main__':
     #batchLength = SimTime(0)
     scriptpath = "models\\mm1.py"
     multi_replication = True
+    nruns = 50
     
     SimLogging.set_level(logging.WARN)
     SimLogging.set_level(logging.INFO, 'simprovise.core.process')
@@ -864,9 +865,9 @@ if __name__ == '__main__':
         with Simulation.execute_script(scriptpath, warmupLength, batchLength, 2) as simResult:
             simResult.print_summary(rangetype='total')
     else:   
-        print("Running 10 replications...")
+        print("Running", nruns, "replications...")
         with Simulation.replicate(scriptpath, warmupLength, batchLength, 1,
-                                  fromRun=1, toRun=20,
+                                  fromRun=1, toRun=nruns,
                                   outputpath=None, overwrite=False) as simResult:
             simResult.print_summary(rangetype='iqr')
                 
