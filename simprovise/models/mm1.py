@@ -1,5 +1,8 @@
 import sys
 from simprovise.core import simtime, SimTime
+#simtime.set_base_unit(simtime.MINUTES)
+
+
 from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
                             SimProcess, SimDistribution, SimLocation,
                             SimCounter, SimSimpleResource, SimQueue)
@@ -13,6 +16,7 @@ from simprovise.models.queuing_theory_calc import theory_results
 from simprovise.models.testprocess import TestProcess
 #from Simalytix.RunControl import SimReplication
 #from Simalytix.Database import SimDatabaseManager, SimSummaryData
+
 
 serverCapacity = 4
 meanServiceTime = SimTime(8 * serverCapacity)
@@ -70,5 +74,5 @@ if __name__ == '__main__':
     #Simulation.replicate(__file__, warmupLength, batchLength, 1, 1, 1)
     #print("Replications complete.")
     
-    theory_results(meanInterarrivalTime.seconds(), meanServiceTime.seconds(),
+    theory_results(meanInterarrivalTime.to_scalar(), meanServiceTime.to_scalar(),
                    serverCapacity)

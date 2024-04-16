@@ -85,5 +85,5 @@ if __name__ == '__main__':
     meanInterarrivalTime = SimTime(12)
     nservers = 2
     
-    theoryResults(meanInterarrivalTime.seconds(), meanServiceTime.seconds(),
+    theoryResults(meanInterarrivalTime.to_scalar(), meanServiceTime.to_scalar(),
                   nservers)

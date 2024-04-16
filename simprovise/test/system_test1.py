@@ -341,55 +341,55 @@ class ReplicatorTests(unittest.TestCase):
         "Test WorkLocation1 mean time during warmup is 12.666 seconds"
         elementID = "WorkLocation1"
         dsetname = "Time"
-        self.assertAlmostEqual(self.summaryDsetData(elementID, dsetname, 1, 0).mean.seconds(), 12.666, 2)
+        self.assertAlmostEqual(self.summaryDsetData(elementID, dsetname, 1, 0).mean.to_scalar(), 12.666, 2)
 
     def testWorkLocation1MeanTime1(self):
         "Test WorkLocation1 mean time during batch 1 is 12.666 seconds"
         elementID = "WorkLocation1"
         dsetname = "Time"
-        self.assertAlmostEqual(self.summaryDsetData(elementID, dsetname, 1, 1).mean.seconds(), 12.666, 2)
+        self.assertAlmostEqual(self.summaryDsetData(elementID, dsetname, 1, 1).mean.to_scalar(), 12.666, 2)
 
     def testWorkLocation1MeanTime2(self):
         "Test WorkLocation1 mean time during batch 2 is 12.666 seconds"
         elementID = "WorkLocation1"
         dsetname = "Time"
-        self.assertAlmostEqual(self.summaryDsetData(elementID, dsetname, 1, 2).mean.seconds(), 12.666, 2)
+        self.assertAlmostEqual(self.summaryDsetData(elementID, dsetname, 1, 2).mean.to_scalar(), 12.666, 2)
 
     def testWorkLocation1MinTime0(self):
         "Test WorkLocation1 minimum time during warmup is 8 seconds"
         elementID = "WorkLocation1"
         dsetname = "Time"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 0).min.seconds(), 8)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 0).min.to_scalar(), 8)
 
     def testWorkLocation1MinTime1(self):
         "Test WorkLocation1 minimum time during batch 1 is 8 seconds"
         elementID = "WorkLocation1"
         dsetname = "Time"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).min.seconds(), 8)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).min.to_scalar(), 8)
 
     def testWorkLocation1MinTime2(self):
         "Test WorkLocation1 minimum time during batch 2 is 8 seconds"
         elementID = "WorkLocation1"
         dsetname = "Time"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 2).min.seconds(), 8)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 2).min.to_scalar(), 8)
 
     def testWorkLocation1MaxTime0(self):
         "Test WorkLocation1 maximum time during warmup is 16 seconds"
         elementID = "WorkLocation1"
         dsetname = "Time"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 0).max.seconds(), 16)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 0).max.to_scalar(), 16)
 
     def testWorkLocation1MaxTime1(self):
         "Test WorkLocation1 maximum time during batch 1 is 16 seconds"
         elementID = "WorkLocation1"
         dsetname = "Time"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).max.seconds(), 16)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).max.to_scalar(), 16)
 
     def testWorkLocation1MaxTime2(self):
         "Test WorkLocation1 maximum time during batch 2 is 16 seconds"
         elementID = "WorkLocation1"
         dsetname = "Time"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 2).max.seconds(), 16)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 2).max.to_scalar(), 16)
 
     #===========================================================================
     # WorkLocation2 Population Dataset Tests
@@ -463,37 +463,37 @@ class ReplicatorTests(unittest.TestCase):
         "Test WorkLocation2 mean time during batch 1 is 24.533 seconds"
         elementID = "WorkLocation2"
         dsetname = "Time"
-        self.assertAlmostEqual(self.summaryDsetData(elementID, dsetname, 1, 1).mean.seconds(), 24.533, 2)
+        self.assertAlmostEqual(self.summaryDsetData(elementID, dsetname, 1, 1).mean.to_scalar(), 24.533, 2)
 
     def testWorkLocation2MeanTime2(self):
         "Test WorkLocation2 mean time during batch 2 is 24.666 seconds"
         elementID = "WorkLocation2"
         dsetname = "Time"
-        self.assertAlmostEqual(self.summaryDsetData(elementID, dsetname, 1, 2).mean.seconds(), 24.666, 2)
+        self.assertAlmostEqual(self.summaryDsetData(elementID, dsetname, 1, 2).mean.to_scalar(), 24.666, 2)
 
     def testWorkLocation2MinTime1(self):
         "Test WorkLocation2 minimum time during batch 1 is 20 seconds"
         elementID = "WorkLocation2"
         dsetname = "Time"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).min.seconds(), 20)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).min.to_scalar(), 20)
 
     def testWorkLocation2MinTime2(self):
         "Test WorkLocation2 minimum time during batch 2 is 20 seconds"
         elementID = "WorkLocation2"
         dsetname = "Time"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 2).min.seconds(), 20)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 2).min.to_scalar(), 20)
 
     def testWorkLocation2MaxTime1(self):
         "Test WorkLocation2 maximum time during batch 1 is 32 seconds"
         elementID = "WorkLocation2"
         dsetname = "Time"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).max.seconds(), 32)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 1).max.to_scalar(), 32)
 
     def testWorkLocation2MaxTime2(self):
         "Test WorkLocation2 maximum time during batch 2 is 32 seconds"
         elementID = "WorkLocation2"
         dsetname = "Time"
-        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 2).max.seconds(), 32)
+        self.assertEqual(self.summaryDsetData(elementID, dsetname, 1, 2).max.to_scalar(), 32)
 
     #===========================================================================
     # EntryQueue Dataset Tests
@@ -510,7 +510,7 @@ class ReplicatorTests(unittest.TestCase):
         elementID = "WorkLocation1.EntryQueue"
         dsetname = "Time"
         sdata = self.summaryDsetData(elementID, dsetname, 1)
-        meanMinMax = (sdata.mean.seconds(), sdata.min.seconds(), sdata.max.seconds())
+        meanMinMax = (sdata.mean.to_scalar(), sdata.min.to_scalar(), sdata.max.to_scalar())
         self.assertEqual(meanMinMax, (4, 4, 4))
 
     def testEntryQueuePopulation(self):
@@ -536,14 +536,14 @@ class ReplicatorTests(unittest.TestCase):
         elementID = "WorkLocation1.RsrcQueue"
         dsetname = "Time"
         sdata = self.summaryDsetData(elementID, dsetname, 1)
-        self.assertAlmostEqual(sdata.mean.seconds(), 0.6666, 3)
+        self.assertAlmostEqual(sdata.mean.to_scalar(), 0.6666, 3)
 
     def testRsrcQueue1TimeMinMax(self):
         "Test RsrcQueue min and max times during default batch are zero and two seconds"
         elementID = "WorkLocation1.RsrcQueue"
         dsetname = "Time"
         sdata = self.summaryDsetData(elementID, dsetname, 1)
-        minMax = (sdata.min.seconds(), sdata.max.seconds())
+        minMax = (sdata.min.to_scalar(), sdata.max.to_scalar())
         self.assertEqual(minMax, (0, 2))
 
     def testRsrcQueue1PopulationMean(self):
@@ -576,14 +576,14 @@ class ReplicatorTests(unittest.TestCase):
         elementID = "WorkLocation2.RsrcQueue"
         dsetname = "Time"
         sdata = self.summaryDsetData(elementID, dsetname, 1)
-        self.assertAlmostEqual(sdata.mean.seconds(), 6.6666, 3)
+        self.assertAlmostEqual(sdata.mean.to_scalar(), 6.6666, 3)
 
     def testRsrcQueue2TimeMinMax(self):
         "Test RsrcQueue 2 min and max times during default batch are zero and eighteen seconds"
         elementID = "WorkLocation2.RsrcQueue"
         dsetname = "Time"
         sdata = self.summaryDsetData(elementID, dsetname, 1)
-        minMax = (sdata.min.seconds(), sdata.max.seconds())
+        minMax = (sdata.min.to_scalar(), sdata.max.to_scalar())
         self.assertEqual(minMax, (0, 18))
 
     def testRsrcQueue2PopulationMean(self):

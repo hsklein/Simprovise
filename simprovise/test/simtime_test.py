@@ -182,10 +182,6 @@ class SimTimeTests(unittest.TestCase):
     def testCompare6b(self):
         "Test: integer value  == SimTime raises a simexception.Error"
         self.assertRaises(simexception.SimError, lambda: 30 == self.ti_30secs)
-
-    def testSeconds1(self):
-        "Test: 2min.seconds() == 120"
-        self.assertEqual(self.ti_2mins.seconds(), 120)
         
     def testHash1(self):
         "Test: 120 seconds and 2 minutes hash to same value"

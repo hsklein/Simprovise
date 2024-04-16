@@ -382,7 +382,8 @@ class SimTransaction(object):
             amount (SimTime): Length of wait. Though not recommended, amount
                               can also be specified as a positive integer, in
                               which case the wait length will be the amount in
-                              SimClock's default time unit (currently seconds).
+                              SimClock's default time unit (as defined by
+                              simtime.base_unit()).
         """
         # TODO add optional time unit parameter, to be used if amount is not
         # a SimTime instance and to make the wait length more explicit.

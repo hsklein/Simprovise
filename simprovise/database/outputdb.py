@@ -141,21 +141,18 @@ class SimDbDatasink(object):
         Insert a new dataset value into the output database (and perhaps
         committing that insertion to disk)
         """
-        rowVals = (self.dataset_id, self.run, self.batch, SimClock.now().seconds(), self._to_scalar(value))
+        rowVals = (self.dataset_id, self.run, self.batch, SimClock.now().to_scalar(), self._to_scalar(value))
         self.db_cursor.execute('insert into datasetvalue (dataset, run, batch, simtimestamp, value) values (?, ?, ?, ?, ?)',
                               rowVals)
         self.maybe_commit()
 
     def _to_scalar(self, value):
         """
-        If the dataset values are SimTime values, return the passed value in
-        seconds. Otherwise, just return the value.
-
-        TODO We may eventually choose the default unit to be configurable, on
-        either a per-model or per-dataset basis, at which point this method
-        should probably return the time in default units.
+        If the dataset values are SimTime values, return the passed value as a
+        scalar (the scalar value depending on simtime.base_unit). Otherwise,
+        just return the value.
         """
-        return value if not self.__valuesAreSimTime else value.seconds()
+        return value if not self.__valuesAreSimTime else value.to_scalar()
 
     def flush(self):
         """
@@ -201,7 +198,7 @@ class SimDbTimeSeriesDatasink(SimDbDatasink):
 
         TODO Currently works only if that timeunit is seconds
         """
-        return SimClock.now().seconds()
+        return SimClock.now().to_scalar()
 
     def _update_last_to_time(self, toTime):
         """

@@ -41,11 +41,29 @@ def set_base_unit(unit):
     Set the base unit for the model (SECONDS, MINUTES, HOURS) or None if
     simulated time for the model is dimensionless.
     
-    Note that this MUST be done before the model starts executing, and ideally
-    is done before any SimTime objects are created. Changing from a dimensioned
-    base time unit (seconds, minutes or hours) to a dimensionless setting
-    is particularly fraught, since we cannot convert a SimTime object from one
-    to the other.
+    This method exists primarily for the benefit of unit test code.
+    While it should in theory work if called before the model starts executing,
+    in practice, it currently will always raise an exception because:
+    
+    1) We set Dataset time units to the base unit when the Dataset is created
+    2) In order to be extra careful, an assertion fails if the base unit is
+       changed after the Dataset is created - the values ultimately written
+       are scalars (without time unit), so we're just being extra careful to
+       be sure that we don't accidentally change the implicit unit in midstream
+    3) Because the core module currently imports SimEntity in __init__.py,
+       A SimEntityElement gets created as soon as any core module is imported,
+       and has it's dataset time unit set to the default specified in the
+       simtime module, before there is any opportunity for client code to call
+       simtime.set_base_unit()
+    4) The assertion on that SimEntityElement dataset.time_unit then fails
+    
+    Absent any fix to this, base_unit should be set via environment variable
+    and/or configuration file upon first call to base_unit()
+    
+    Regardless, changing the base_unit must be done carefully. Changing from a
+    dimensioned base time unit (seconds, minutes or hours) to a dimension
+    less setting is particularly fraught, since we cannot convert a SimTime
+    object from one to the other.
     """
     global _base_unit
     if unit in _UNITS or unit is None:
@@ -174,11 +192,6 @@ class SimTime(object):
     def to_hours(self):
         "Returns a new SimTime instance, in hours"
         return self.to_units(HOURS)
-
-    def seconds(self):
-        "Returns the time in seconds - a scalar, not a SimTime"
-        conversionFactor = 60**(self._units - SECONDS)
-        return self._value * conversionFactor
     
     def to_scalar(self):
         if _base_unit is None:

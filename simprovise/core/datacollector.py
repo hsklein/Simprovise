@@ -49,7 +49,7 @@ class Dataset(object):
         self.__name = name
         self.__valueType = valueType
         self.__isTimeWeighted = isTimeWeighted
-        self.__timeUnit = simtime.SECONDS
+        self.__timeUnit = simtime.base_unit()
         self.__isCollectingData = True
         self.__batchNumber = None
         self.__datasink = NullDataSink()
@@ -95,19 +95,24 @@ class Dataset(object):
     @property
     def timeunit(self):
         """
-        dataset time unit
+        dataset time unit. This should always be the same as the model
+        base time unit; if it's not, that indicates that the base unit got
+        changed after the dataset was created, which we want to avoid.
+        (It might be recoverable if we haven't put any data values in yet,
+        but better safe than sorry.)
         """
+        assert self.__timeUnit == simtime.base_unit(), "Base Time Unit modified after dataset and owning object created"
         return self.__timeUnit
 
-    @timeunit.setter
-    def timeunit(self, val):
-        """
-        TODO For now, everything assumes seconds, so raise if it's something
-        else
-        """
-        if val is not SimTime.seconds:
-            raise SimError(_ERROR_NAME, "SimTime unit other than seconds not yet implemented")
-        self.__timeUnit = val
+    #@timeunit.setter
+    #def timeunit(self, val):
+        #"""
+        #TODO For now, everything assumes seconds, so raise if it's something
+        #else
+        #"""
+        #if val is not SimTime.seconds:
+            #raise SimError(_ERROR_NAME, "SimTime unit other than seconds not yet implemented")
+        #self.__timeUnit = val
 
     @property
     def datasink(self):
@@ -267,7 +272,7 @@ class TimeWeightedAggregate(object):
             self.__initialTime = now
         elif now > self.__currentTime:
             timeDiff = now - self.__currentTime
-            self.__sum += timeDiff.seconds() * self.__currentValue
+            self.__sum += timeDiff.to_scalar() * self.__currentValue
 
         self.__currentValue = other
         self.__currentTime = now
@@ -282,8 +287,8 @@ class TimeWeightedAggregate(object):
 
         #calculate and return time-weighted mean
         timeDiff = self.__currentTime - self.__initialTime
-        if timeDiff.seconds() > 0:
-            return float(self.__sum) / float(timeDiff.seconds())
+        if timeDiff > 0:
+            return float(self.__sum) / float(timeDiff.to_scalar())
         else:
             return None
 
