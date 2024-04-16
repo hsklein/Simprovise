@@ -26,7 +26,7 @@ except ImportError:
     from simprovise.runcontrol.mockqt import MockQObject as QObject
     from simprovise.runcontrol.mockqt import MockSignal as Signal
 
-from simprovise.core import SimDataCollector, SimClock, SimError
+from simprovise.core import SimDataCollector, SimClock, SimError, simrandom
 from simprovise.core import SimLogging, SimTime
 from simprovise.core.simevent import SimEvent
 
@@ -167,11 +167,21 @@ class SimReplicationParameters(object):
 
     def set_replication_range(self, startRunNumber, endRunNumber):
         """
-        Set the replication range
+        Set the replication range, after error checking
         """
+        minRunNumber = simrandom.min_run_number()
+        maxRunNumber = simrandom.max_run_number()
+        
+        if startRunNumber < minRunNumber or maxRunNumber < startRunNumber:
+            msg = "Replication start run ({0}) must be in range [{1}-{2}]"
+            raise SimError(_ERROR_NAME, msg, startRunNumber, minRunNumber, maxRunNumber)
+        if endRunNumber < minRunNumber or maxRunNumber < endRunNumber:
+            msg = "Replication end run ({0}) must be in range [{1}-{2}]"
+            raise SimError(_ERROR_NAME, msg, endRunNumber, minRunNumber, maxRunNumber)
         if startRunNumber > endRunNumber:
-            msg = "Replication start run ({0}) id greater than end run ({1})"
+            msg = "Replication start run ({0}) is greater than end run ({1})"
             raise SimError(_ERROR_NAME, msg, startRunNumber, endRunNumber)
+            
         self.__replicationRange = startRunNumber, endRunNumber
 
     def set_max_concurrent_replications(self, value):

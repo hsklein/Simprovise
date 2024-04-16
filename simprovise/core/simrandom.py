@@ -133,6 +133,29 @@ def _initialize_state_array_if_required():
     global _rng_state_array
     if _rng_state_array is None:
         _rng_state_array = _read_state_file()
+        
+def max_run_number():
+    """
+    The maximum run number supported by the initialized random number
+    generator as configured. (Or, to put it another way, the maximum number
+    of replications that can be executed)
+    
+    :rtype: int
+    """
+    _initialize_state_array_if_required() # read rng state array if necessary
+    # pylint thinks that state_array is an NpzFile (which doesn't have a shape)
+    # pylint: disable=E1101
+    nruns = _rng_state_array.shape[0]
+    return nruns
+
+def min_run_number():
+    """
+    The minimum run number supported by the initialized random number
+    generator- always 1
+    
+    :rtype: int
+    """
+    return 1
 
 @apidocskip
 def initialize(run_number=1):
