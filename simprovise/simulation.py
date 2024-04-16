@@ -561,7 +561,7 @@ class SimulationResult(object):
                    end=' ')
             if rangetype:
                 print(_value_to_string(dsetstats.means.mean, numwidth),
-                      _value_to_string(dsetstats.means.stdev, numwidth, False),
+                      _value_to_string(dsetstats.means.stderr, numwidth, False),
                       _range_to_string(rangeprop.fget(dsetstats.means), numwidth, False),
                       _value_to_string(dsetstats.pct25s.mean, numwidth),
                       _range_to_string(rangeprop.fget(dsetstats.pct25s), numwidth, False),
@@ -806,6 +806,19 @@ class SimSample(object):
             return None
 
     @property
+    def stderr(self):
+        """
+        Return the sample standard error of the mean, converted to SimTime
+        as required.
+        If n <= 1, returns None
+        """
+        if self.n > 1:
+            se =  np.std(self.values, ddof=1) / np.sqrt(self.n)
+            return self._convertSimTime(se) 
+        else:
+            return None
+
+    @property
     def iqr(self):
         """
         Return the sample interquartile range, converted to SimTimes as
@@ -853,7 +866,7 @@ if __name__ == '__main__':
     else:   
         print("Running 10 replications...")
         with Simulation.replicate(scriptpath, warmupLength, batchLength, 1,
-                                  fromRun=1, toRun=10,
+                                  fromRun=1, toRun=20,
                                   outputpath=None, overwrite=False) as simResult:
             simResult.print_summary(rangetype='iqr')
                 
