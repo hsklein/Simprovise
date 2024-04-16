@@ -52,7 +52,7 @@ def zero_customer_probability(lamb, mu, s):
     return p0
         
     
-def theoryResults(meanIATime, meanProcTime, nServers=1):
+def theory_results(meanIATime, meanProcTime, nServers=1):
     """
     Calculate expected (mean) queue time and length for an m/m/s queueing
     system (with s servers)

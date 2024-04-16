@@ -5,6 +5,7 @@ from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
                             SimCounter, SimSimpleResource, SimQueue)
 
 from simprovise.simulation import Simulation
+from simprovise.models.queuing_theory_calc import theory_results
     
 #from simprovise.configuration import simelement, SimElement
 #from simprovise.runcontrol import SimReplicator, SimReplicationParameters
@@ -13,14 +14,14 @@ from simprovise.models.testprocess import TestProcess
 #from Simalytix.RunControl import SimReplication
 #from Simalytix.Database import SimDatabaseManager, SimSummaryData
 
-meanServiceTime = SimTime(9)
-meanInterarrivalTime = SimTime(12)
+serverCapacity = 4
+meanServiceTime = SimTime(8 * serverCapacity)
+meanInterarrivalTime = SimTime(10)
 
 #Simulation.initialize()
 
 warmupLength = SimTime(1000)
 batchLength = SimTime(10000)
-serverCapacity = 1
 
 #Simulation.model().simulationWarmup = warmupLength
 #Simulation.model().simulationBatchLength = batchLength
@@ -57,18 +58,17 @@ source.add_entity_generator(SimEntity, mm1Process, SimDistribution.exponential,
 
 if __name__ == '__main__':
     print("================ main=================")
-    warmupLength = SimTime(500)
-    batchLength = SimTime(1000)
+    warmupLength = SimTime(4000)
+    batchLength = SimTime(20000)
     #bl = SimTime(1000)
     print("Running single execution...")
-    with Simulation.execute(warmupLength, batchLength, 3,
+    with Simulation.execute(warmupLength, batchLength, 2,
                             outputpath=None, overwrite=False) as simResult:
         simResult.print_summary()
-        
-        
-    #with Simulation.executeScript(__file__, warmupLength, batchLength, 3) as simResult:
-    #    simResult.printSummary()
 
     #print("Running replications...")
     #Simulation.replicate(__file__, warmupLength, batchLength, 1, 1, 1)
     #print("Replications complete.")
+    
+    theory_results(meanInterarrivalTime.seconds(), meanServiceTime.seconds(),
+                   serverCapacity)
