@@ -527,7 +527,7 @@ class SimReplicator(QObject):
 
         self.__status = _STATUS_IN_PROGRESS
         n = replicationParameters.max_concurrent_replications
-        pool = multiprocessing.Pool(processes=n)
+        pool = multiprocessing.Pool(processes=n, maxtasksperchild=1)
         self.__pool = pool
         firstRun, lastRun = replicationParameters.replication_range
         self.__nRuns = lastRun +1 - firstRun
