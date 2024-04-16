@@ -21,8 +21,38 @@ HOURS = 2
 
 _UNITS = (SECONDS, MINUTES, HOURS)
 _UNITNAMES = ('second', 'minute', 'hour')
+_base_unit = SECONDS
 
 _ERROR_NAME = "SimTime Error"
+
+def base_unit():   
+    """
+    Return the base time unit for the model (SECONDS, MINUTES, HOURS)
+    or None if simulated time for the model is dimensionless.
+    
+    This unit will be used for all database datasinks, and all simulated
+    time output data will be converted to this unit before being
+    written/stored by the output datasinks. 
+    """
+    return _base_unit
+
+def set_base_unit(unit):
+    """
+    Set the base unit for the model (SECONDS, MINUTES, HOURS) or None if
+    simulated time for the model is dimensionless.
+    
+    Note that this MUST be done before the model starts executing, and ideally
+    is done before any SimTime objects are created. Changing from a dimensioned
+    base time unit (seconds, minutes or hours) to a dimensionless setting
+    is particularly fraught, since we cannot convert a SimTime object from one
+    to the other.
+    """
+    global _base_unit
+    if unit in _UNITS or unit is None:
+        _base_unit = unit
+    else:
+        msg = "Invalid unit {0} passed to set_base_unit - must be SECONDS, MINUTES, HOURS or None"
+        raise SimError(_ERROR_NAME, msg, unit)
 
 @apidoc
 class SimTime(object):
@@ -42,23 +72,50 @@ class SimTime(object):
         
     """
     __slots__ = ('_value', '_units')
-
-    def __init__(self, value=0, units=SECONDS):
+    
+    def __init__(self, value=0, units=None):
         if isinstance(value, (int, float)):
-            if units in _UNITS:
+            # default units to the base unit if parameter not specified or None
+            # Of course if the base unit is None (dimensionless time), that's
+            # what we'll set.
+            if units is None:
+                units = _base_unit
+            if units in _UNITS or units is None:
                 self._units = units
             else:
                 # TODO Allow units as string
-                raise SimError('InvalidSimTimeUnit', 'Invalid time unit: ' + str(units))
+                msg = "Invalid SimTime time unit passed to initializer: {0}"
+                raise SimError(_ERROR_NAME, msg, units)
             self._value = value
         elif isinstance(value, SimTime):
+            # validate and raise if invalid
+            self._validate_units(value)                
             # pylint can't grok the idea that value is an int or SimTime
             # pylint: disable=E1101
             self._value = value._value
             self._units = value._units
         else:
-            raise SimError('InvalidSimTimeValue', str(value) + ' is an invalid value type: ' + str(type(value)))
-
+            msg = "SimTime time value ({0}) in an invalid type {1}"
+            raise SimError(_ERROR_NAME, msg, value, type(value))
+        
+    def _validate_units(self, simtime_obj):
+        """
+        Raise a SimError if a passed SimTime object has an invalid units member
+        value. That member value must be None if the base unit is None (dimensionless)
+        and a valid time unit (SECONDS, MINUTES or HOURS) otherwise.
+        """
+        units = simtime_obj.units
+        if _base_unit is None:
+            if units is not None:
+                msg = "Cannot user or set the units ({0}) for a SimTime when the base time unit is None (dimensionless)"
+                raise SimError(_ERROR_NAME, msg, units)
+            else:
+                return
+        
+        if not units in _UNITS:
+            msg = "Invalid SimTimee units ({0}) specified"
+            raise SimError(_ERROR_NAME, msg, units)
+ 
     def __str__(self):
         repString = str(self._value) + ' ' + self.units_string()
         return repString
@@ -68,14 +125,14 @@ class SimTime(object):
         Returns a string representation of the instance's units (singular or
         plural, depending on value)
         """
-        if self._value == 1:
+        if self._units is None:
+            return ''
+        elif self._units not in _UNITS:
+            return 'Invalid Units'
+        elif self._value == 1:
             return _UNITNAMES[self._units]
         else:
             return _UNITNAMES[self._units] + 's'
-
-
-    def getValue(self): return self._value
-    def getUnits(self): return self._units
 
     @property
     def value(self):
@@ -122,17 +179,28 @@ class SimTime(object):
         "Returns the time in seconds - a scalar, not a SimTime"
         conversionFactor = 60**(self._units - SECONDS)
         return self._value * conversionFactor
-
-    #value = property(getValue, None, None, "Time scalar value (without units) - read-only")
-    #units = property(getUnits, None, None, "Time units - read-only")
+    
+    def to_scalar(self):
+        if _base_unit is None:
+            assert self._units is None, "SimTime units set when base unit is None/Dimensionless"
+            return self._value
+        else:
+            conversionFactor = 60**(self._units - _base_unit)
+            return self._value * conversionFactor
+            
 
     # Internal helper function used by math operators to convert 'other' interval to same
     # units as self.  If other is NOT a SimTime, we assume the same units as self
     # and just return other (which had better be or convert to a number)
     def _converted_other_value(self, other):
         if isinstance(other, self.__class__):
-            conversionFactor = 60**(other._units - self._units)
-            return other._value * conversionFactor
+            self._validate_units(other)
+            self._validate_units(self)
+            if other._units is None:
+                return other._value
+            else:
+                conversionFactor = 60**(other._units - self._units)
+                return other._value * conversionFactor
         else:
             return other
 
@@ -163,10 +231,14 @@ class SimTime(object):
 
     def _compare(self, other):
         if other == 0:
+            # Validate this SimTime (mostly for a change to dimensionless base unit)
+            # before returning
+            self._validate_units(self)
             return self._value
 
-        if not isinstance(other, self.__class__):
-            raise SimError('InvalidSimTimeCompare', 'Cannot compare time interval to ' + str(other))
+        if _base_unit is not None and not isinstance(other, self.__class__):
+            msg = "Cannot compare time interval to ({0})"
+            raise SimError(_ERROR_NAME, msg, other)
 
         otherValue = self._converted_other_value(other)
         diff = self._value - otherValue
