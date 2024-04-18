@@ -32,7 +32,10 @@ def base_unit():
     
     This unit will be used for all database datasinks, and all simulated
     time output data will be converted to this unit before being
-    written/stored by the output datasinks. 
+    written/stored by the output datasinks.
+    
+    :return: The base time unit or None if dimensionless
+    :rtype:  simttime.SECONDS, simtime.MINUTES, simtime.HOURS or None
     """
     return _base_unit
 
@@ -48,6 +51,9 @@ def set_base_unit(unit):
     dimensioned base time unit (seconds, minutes or hours) to a dimension
     less setting is particularly fraught, since we cannot convert a SimTime
     object from one to the other.
+    
+    :param unit: simttime.SECONDS, simtime.MINUTES, simtime.HOURS or None
+    :type unit:  int (range 0-2)
     """
     global _base_unit
     if unit in _UNITS or unit is None:
@@ -59,19 +65,27 @@ def set_base_unit(unit):
 @apidoc
 class SimTime(object):
     """
-    A simulated time or interval, in seconds, minutes or hours.
+    A simulated time or interval; may be either dimensionless or in
+    seconds, minutes or hours.
+    
+    The class also supports SimTime object arithmetic - adding/subtracting
+    SimTime objects, multiplication/division of SimTime objects
+    by a scalar, adding/subtracting scalars to/from a SimTime object. (The
+    scalar is implicitly assumed to be in the units of the added-to
+    SimTime)
 
-    Args:
-        value (scalar or :class:`~.simtime.SimTime`)
-        units: Time unit if value is not a :class:`~.simtime.SimTime`
-        
-    TODO: dimensionless time through configuration
-          toScalar() that outputs either seconds or dimensionless value,
-          depending on configuration. Use in datacollector and outputdb,
-          including various *Stats* classes
-          Think about output displays (when not dimensionless) - a configured
-          default output unit?
-        
+    :param value: A numeric time length or another SimTime object
+    :type value:  Numeric scalar or :class:`~.simtime.SimTime`
+    
+    :param units: Time unit (simtime.SECONDS, simtime.MINUTES or
+                  simtime.HOURS) or None. If value is a
+                  :class:`~.simtime.SimTime`, this is ignored.
+                  If :func:`base_unit` is None (dimensionless), this
+                  must be None. If the base_unit is set,
+                  SECONDS/MINUTES/HOURS may be specified; with None
+                  it will default to the base_unit
+    :type units:  int (range 0-2) or None
+                
     """
     __slots__ = ('_value', '_units')
     
@@ -178,6 +192,11 @@ class SimTime(object):
         return self.to_units(HOURS)
     
     def to_scalar(self):
+        """
+        Returns the SimTime's scalar value, converted to :func:base_unit
+        e.g., if the base unit is SECONDS and this SimTime is 2 minutes,
+        (value 2, units MINUTES) to_scalar() returns 120
+        """
         if _base_unit is None:
             assert self._units is None, "SimTime units set when base unit is None/Dimensionless"
             return self._value
@@ -201,6 +220,8 @@ class SimTime(object):
         else:
             return other
 
+    # Methods below all support SimTime arithmetic
+    
     def __add__(self, other):
         return SimTime(self._value + self._converted_other_value(other), self._units)
 

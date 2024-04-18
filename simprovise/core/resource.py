@@ -104,9 +104,9 @@ class SimResourceAssignment(object):
         different resource instances, or if the assignment does not have any
         resources. (Clients should use the count property to check first)
 
-        Returns:
-            SimResource: The single SimResource instance included in this
-                         assignment
+        :return:  The single SimResource instance included in assignment
+        :rtype:   :class:`SimResource`
+        
         """
         if 1 < len(set(self._resources)):
             msg = "Attempt to access (singular) resource property on ResourceAssignment with multiple resources: {0}"
@@ -121,7 +121,7 @@ class SimResourceAssignment(object):
     @property
     def assign_time(self):
         """
-        The SimTime that this assignment was created/made.
+        The :class:`~.SimTime` that this assignment was created/made.
         """
         return self._assignTime
 
@@ -777,13 +777,29 @@ class SimSimpleResource(ResourceAssignmentAgentMixin, SimResource):
     By default, resource requests are fulfilled on a FIFO basis; that can be
     altered by registering a priority function for message type RSRC_REQUEST.
 
-    Args:
-        name (str):                 Name of the resource, must be unique within
-                                    the resource's location
-        locationObj (SimLocation):  Location object to which resource belongs.
-                                    If None resource is assigned to Root location
-        capacity (int > 0):         Capacity of resource, or number of
-                                    subresources. Defaults to 1.
+    :param name:            Name of the resource, must be unique within
+                            the resource's location
+    :type name:             str
+    
+    :param parentLocation:  Location object to which resource belongs.
+                            Defaults to the Root location (if None)
+    :type parentLocation:   :class:`~.location.SimLocation`
+
+    :param initialLocation: Location where the resource is initially
+                            located. May be the parent location or
+                            or a sub-location of the parent. Defaults to
+                            the parent location (if None)
+    :type initialLocation:  :class:`~.location.SimLocation`
+ 
+    :param capacity:        Capacity of resource, or number of
+                            subresources. Defaults to 1.
+    :type capacity:         int (> 0)
+ 
+    :param moveable:        If True, the resource can move within its
+                            parent location; if False, it is fixed to
+                            its initial location. Defaults to True.
+    :type moveable:         bool
+   
     """
     def __init__(self, name, parentLocation=None, initialLocation=None, 
                  capacity=1, moveable=True):
@@ -794,8 +810,11 @@ class SimSimpleResource(ResourceAssignmentAgentMixin, SimResource):
     @property
     def capacity(self):
         """
-        The size/capacity of the resource (number of subresoruces in this
-        resource) Default value is 1
+        
+        :return: The size/capacity of the resource (number of
+                 subresoruces in this resource)  
+        :rtype:  int (will be greater than zero)
+        
         """
         return self._capacity
 
@@ -818,9 +837,10 @@ class SimResourcePool(SimResourceAssignmentAgent):
     The pool class defines a set of convenience methods that facilitate
     the identification of pool resources and attributes by resource class.
 
-    Args:
-        resources (SimResource): One or more resources initially assigned to
-                                 pool, supplied as positional arguments
+    :param resources: One or more resources initially assigned to
+                      pool, supplied as positional arguments
+    :type resources:  :class:`SimResource`
+    
     """
     #TODO: currentAssignments(rsrcClass) method, maybe currentTransactions(rsrcClass)
     #TODO: think about optional pre-emption logic, either here and/or
@@ -836,9 +856,10 @@ class SimResourcePool(SimResourceAssignmentAgent):
         """
         Add a resource to the pool, making the pool it's assignment agent.
 
-        Args:
-            resource (SimResource): the resource to be added to the pool
-        """
+        :param resource: The resource to be added to the pool
+        :type resource:  :class:`SimResource`
+ 
+         """
         assert isinstance(resource, SimResource), "Attempt to add a non-resource to aSimResourcePool"
         if resource in self._resources:
             errorMsg = "Cannot add resource {0} to the pool; it is already there"

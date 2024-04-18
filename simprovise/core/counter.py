@@ -49,19 +49,24 @@ class SimCounter(object):
     both `element` and `name` are specified via initializer, that dataset
     will be created (and counter data collected) automatically.
 
-    Args:
-        element:          The data collection element object which owns the
-                          counter
-        name (str):       The name of the dataset containing counter values.
-                          Must be unique within the element.
-        capacity (int):   The capacity of the counter (> 0) or None if the
-                          capacity is infinite
-        normalize (bool): If True, the time-weighted data collector associated
-                          with this counter will collect values normalized into
-                          the range (0.0, 1.0) - i.e., the collected values will
-                          be the counter value divided by the counter capacity.
-                          If the capacity is infinite or one, normalize is
-                          ignored.
+    :param element:   The data collection element object which owns the counter
+    :type element:    :class:`~.simelement.SimElement`
+    
+    :param name:      The name of the dataset containing counter values.
+                      Dataset names must be unique within the element.
+    :type name:       str
+    
+    :param capacity:  The capacity of the counter (> 0) or None if the
+                      capacity is infinite
+    :type capacity:   int  > 0 or None
+    
+    :param normalize: If True, the time-weighted data collector associated
+                      with this counter will collect values normalized into
+                      the range (0.0, 1.0) - i.e., the collected values will
+                      be the counter value divided by the counter capacity. If 
+                      the capacity is infinite or one, normalize is ignored.
+    :type normalize:  bool
+                      
     """
     infinite = sys.maxsize
     __slots__ = ('__value', '__capacity', '__waitingTransactions',
@@ -188,20 +193,22 @@ class SimCounter(object):
         Increment the counter by a specified amount, which defaults to one.
         If the counter is of finite capacity, this method will block if the
         requested capacity is not available; for that reason, finite capacity
-        counters must be incremented using a :class:`SimTransaction`
-        (:class:`SimProcess`), specified via the txn argument, which will
+        counters must be incremented using a :class:`~.transaction.SimTransaction`
+        (:class:`~.process.SimProcess`), specified via the txn argument, which will
         get blocked if the requested capacity is not immediately available.
 
         Blocked increment() requests are fulfilled on a first come/first
         served basis.
 
-        Args:
-            txn (SimTransaction): The transaction/process incrementing the
-                                  counter. Required if the counter has finite
-                                  capacity
-            amount (int):         The amount to increment the counter by. Must
-                                  be in range (1-counter capacity). Defaults
-                                  to 1.
+
+        :param txn:    The transaction/process incrementing the counter.
+                       Required if the counter has finite capacity.
+        :type txn:     :class:`~.transaction.SimTransaction`
+ 
+        :param amount: The amount to increment the counter by. Must be in
+                       range (1-counter capacity). Defaults to 1.
+        :type amount:  int
+
         """
         #print("incrementing ", self, self.__datacollector.dataset.element_id)
         if type(amount) is not int:
@@ -240,11 +247,13 @@ class SimCounter(object):
         Decrement the counter by the specified amount (which defaults to one).
         This action never blocks.  If the decrement amount is greater than the
         counter's current value, the amount will be changed to that current
-        value - i.e., the counter will be decremented to zero.
+        value - i.e., the counter will be decremented to zero. Raises if the
+        amount is not a positive integer
+ 
+        :param amount: The amount to decrement the counter by. Must be a
+                       positive integer. Defaults to 1.
+        :type amount:  int
 
-        Args:
-            amount (int): The amount to decrement the counter by. Must be a
-                          positive integer.
         """
         if type(amount) is not int:
             errmsg = "Invalid Counter decrement: increment amount: {0} is not an integer"
