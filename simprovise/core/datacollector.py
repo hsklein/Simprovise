@@ -20,11 +20,12 @@ _ERROR_NAME = "Sim DataCollector Error"
 class Dataset(object):
     """
     Encapsulates a set of measurements (of a specific value) to be collected
-    by the simulation.  Includes the element (the simulation object - resource,
-    process or counter - being measured, the type of data being collected
-    (e.g. Queue size), and the DataSink object that these measurement values
-    should be directed into.  Also defines methods that tell the element to start
-    or stop collecting data.
+    by the simulation for a single simulation element
+    (:class:`~.element.SimElement`).  Includes the element (the simulation
+    object - resource, location, entity process, etc) - being measured,
+    the type of data being collected (e.g. Queue size), and the DataSink
+    object that these measurement values should be directed into.  Also
+    defines methods that tell the element to start or stop collecting data.
 
     Note:
 
@@ -33,6 +34,27 @@ class Dataset(object):
 
     See :class:`SimDataCollector` for a more complete description of
     interaction between data collectors, datasets and datasinks.
+    
+    :param element:        The data collection element for which data are
+                           to be collected.
+    :type element:         :class:`~.simelement.SimElement`
+    
+    :param name:           The name of the dataset. Dataset names must be
+                           unique within the element.
+    :type name:            str
+    
+    :param datacollector:  The capacity of the counter (> 0) or None if the
+                           capacity is infinite
+    :type datacollector:   :class:`~.datacollector.SimDatacollector`     
+    
+    :param valueType:      The Python numeric type of the data values
+                           collected
+    :type valueType:       Type
+   
+    :param isTimeWeighted: If True, the data values collected represent
+                           state and will be weighted by time in that state.                          
+    :type isTimeWeighted:  bool
+     
     """
     __slots__ = ('__element', '__dataCollector', '__name', '__valueType',
                  '__isTimeWeighted', '__isCollectingData', '__batchNumber',
@@ -108,16 +130,6 @@ class Dataset(object):
             
         assert self.__timeUnit == simtime.base_unit(), "Base Time Unit modified after dataset and owning object created"
         return self.__timeUnit
-
-    #@timeunit.setter
-    #def timeunit(self, val):
-        #"""
-        #TODO For now, everything assumes seconds, so raise if it's something
-        #else
-        #"""
-        #if val is not SimTime.seconds:
-            #raise SimError(_ERROR_NAME, "SimTime unit other than seconds not yet implemented")
-        #self.__timeUnit = val
 
     @property
     def datasink(self):
@@ -300,24 +312,33 @@ class TimeWeightedAggregate(object):
 @apidoc
 class SimDataCollector(object):
     """
-    SimDataCollectors collect numeric data (including :class:`~.simtime.SimTime` data)
-    during a simulation run. SimDataCollector works in tandem with
-    :class:`Dataset`; SimDataCollector instances each have an associated
-    dataset instance, which, coupled with a datasink object, are used to
-    collect, store and eventually process simulation output data.
+    SimDataCollectors collect numeric or state data (including
+    :class:`~.simtime.SimTime` data) during a simulation run.
+    SimDataCollector works in tandem with :class:`Dataset`; SimDataCollector
+    objects each have an associated dataset object, which, coupled with
+    a datasink object, are used to collect, store and eventually process 
+    simulation output data.n
 
     Essentially, the roles are as follows:
 
-      `SimDataCollector` provides the data collection interface to modeling
-      objects such as processes and resources.
+    - :class:`SimDataCollector` provides the data collection interface to
+      modeling elements (class :class:`~.element.SimElement`) such as
+      processes and resources.
 
-      `Datasets` encapsulate output metadata, while providing the interface to
-      the output data collection subsystem.
+    - :class`Dataset` objects encapsulate output metadata, while providing 
+      the interface to the output data collection subsystem.
+      
+    - Aggregate objects serve as an intermediary between data collectors
+      and datasinks. There is an unweighted aggregate used for non-state
+      datasets (e.g. process times) and a time weighted aggregate used
+      for datasets collecting system state values such as work-in-process.
 
-      `Datasinks` provide the implementation of the output data collection
+    - Datasink objects provide the implementation of the output data collection
       subsystem. Plugging in different datasink types allows us to use a
       different data store, vary the amount/type of data collected, or to turn
       off data collection entirely for datasets we are not interested in.
+      There are separate datasink classes for time-weighted and
+      unweighted data
 
     `SimDataCollector` is essentially an abstract base class; client code
     should instantiate one of its subclasses, either
@@ -394,7 +415,7 @@ class SimDataCollector(object):
 
     @property
     def name(self):
-        "The data collector's dataset name (if any)"
+        "The data collector's dataset name"
         return self.__dataset.name
 
     @apidocskip
@@ -439,17 +460,21 @@ class SimDataCollector(object):
 @apidoc
 class SimUnweightedDataCollector(SimDataCollector):
     """
-    SimDataCollector that collects unweighted (non-time-weighted) data.
-    Process time is a typical example of unweighted data.
+    A :class`SimDataCollector` that collects unweighted (non-time-weighted)
+    data. Process time is a typical example of unweighted data.
 
-    Args:
-        element:                 The data collection element object for which
-                                 this object is collecting data
-        datasetNamename (str):  The name of the  to-be-created dataset associated
-                                 associated with this collector. Must be unique
-                                 within the element.
-        datasetValueType (type): The (Python) type of the data being collected.
-                                 Generally `int`, `float` or :class:`~.simtime.SimTime`
+    :param element:         The data collection element object for which
+                            this object is collecting data
+    :type element:          :class:`~.simelement.SimElement`
+    
+    :param datasetNamename: The name of the  to-be-created dataset associated
+                            associated with this collector. Must be unique
+                            within the element.
+    :type datasetNamename:  `str`
+    
+    :param datasetValueType: The (Python) type of the data being collected.                                
+    :type datasetValueType:  `int`, `float` or :class:`~.simtime.SimTime`
+
     """
     # TODO should be no default values
     def __init__(self, element=None, datasetName=None, datasetValueType=None):
@@ -458,17 +483,23 @@ class SimUnweightedDataCollector(SimDataCollector):
 @apidoc
 class SimTimeWeightedDataCollector(SimDataCollector):
     """
-    SimDataCollector that collects time-weighted (time series) data, such as
-    location population, resource utilization or work-in-process.
+    A :class`SimDataCollector` that collects time-weighted (time series)
+    data, such as location population, resource utilization or
+    work-in-process.
 
-    Args:
-        element:                 The data collection element object for which
-                                 this object is collecting data
-        datasetNamename (str):  The name of the  to-be-created dataset associated
-                                 associated with this collector. Must be unique
-                                 within the element.
-        datasetValueType (type): The (Python) type of the data being collected.
-                                 Generally `int`, `float` or :class:`~.simtime.SimTime`
+    :param element:         The data collection element object for which
+                            this object is collecting data
+    :type element:          :class:`~.simelement.SimElement`
+    
+    :param datasetNamename: The name of the  to-be-created dataset associated
+                            associated with this collector. Must be unique
+                            within the element.
+    :type datasetNamename:  `str`
+    
+    :param datasetValueType: The (Python) type of the data being collected.                                
+    :type datasetValueType:  `int`, `float` or :class:`~.simtime.SimTime`
+                             TODO state values
+
     """
     def __init__(self, element=None, datasetName=None, datasetValueType=None):
         super().__init__(element, datasetName, datasetValueType, True, TimeWeightedAggregate())

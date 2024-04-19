@@ -20,15 +20,16 @@ _ERROR_NAME = "SimEntityError"
 @apidoc
 class SimEntity(SimTransientObject):
     """
-    A SimEntity is a (transient) unit of work as processed during the run of
-    a simulation model.
+    A SimEntity is a (transient) unit of work that flows through the
+    model during a simulation run. Customers, for example, are usually
+    represented as entities.
 
-    Args:
-        source (SimEntitySource): The source that created this entity
-        process (SimProcess):     The process that will be run on behalf of
-                                  this entity
-        properties:               Keyword arguments defining additional
-                                  SimEntity subclass properties, if any.
+    :param source:  The source that created this entity
+    :type source:   :class:`~.entitysource.SimEntitySource`
+     
+    :param process: The process that will be run on behalf of this entity
+    :type process:  :class:`~.process.SimProcess`
+
     """
     __slots__ = ('__source', '__process', '__element', '__processElement',
                  '__createTime', '__destroyTime')
@@ -79,19 +80,29 @@ class SimEntity(SimTransientObject):
         class's module is imported. This method will be called for each
         SimEntity-derived class IF AND ONLY IF the method is defined
         for that derived class; it will be called at the same time that
-        final_initialize() is called on all :class:`SimStaticObject`
+        final_initialize() is called on all :class:`~.simelement.SimElement`
         objects in the model - after all simulation elements are created,
         after the simulation clock, random number streams and event processor
         are created/initialized, but before the simulation execution actually
         starts.
+        
+        Every SimEntity-derived class that is imported into the model will
+        have a corresponding :class:`SimEntityElement` created and placed
+        into the model, regardless of whether or not any objects of that
+        SimEntity-derived class are created. The SimEntityElement will
+        call the corresponding :class:`SimEntity` class's final_initialize(),
+        if it is defined. If the method is not defined on a subclass,
+        final_initialize() will not be called. (The calling code makes sure
+        not to call any implementation inherited from a base class)
             
         While a no-op final_initialize() is defined for :class:`SimEntity`,
         It is not necessary to do so for subclasses that need no final
-        initialization processing. If the method is not defined on a subclass,
-        final_initialize() will not be called. (The calling code makes sure
-        not to call any implementation inherited from a base class)
+        initialization processing. 
         
-        Client code should not call this method.
+        Client code can implement final_initialize() on custom
+        SimEntity-derived classes, but should not call this method
+        directly.
+        
         """
         pass
             
@@ -129,64 +140,63 @@ class SimEntity(SimTransientObject):
     @property
     def source(self):
         """
-        The source that generated this entity.
+        
+        :return: The source that generated this entity.
+        :rtype:  :class:`~.entitysource.SimEntitySource`
 
-        Returns:
-            SimEntitySource: The source that generated this entity
         """
         return self.__source
 
     @property
     def process(self):
         """
-        The process that is to be (or is being) executed on behalf of this
-        entity.
-
-        Returns:
-            SimProcess: The entity's process
-        """
+        
+        :return: The process that is to be (or is being) executed on
+                 behalf of this :class:`SimEntity`.
+        :rtype:  :class:`~.process.SimProcess`
+        
+       """
         return self.__process
 
     @property
     def element(self):
         """
-        Returns the SimEntityElement associated with this entity's class.
-
         :return: The SimEntityElement associated with this entity's class.
         :rtype:  :class:`SimEntityElement`
+        
         """
         return self.__element
 
     @property
     def create_time(self):
         """
-       The simulated time when this entity was created.
-
-        Returns:
-             SimTime: The simulated time when this entity was created
+        
+        :return: The simulated time when this entity was created.
+        :rtype:  :class:`~.simtime.SimTime`
+        
         """
         return self.__createTime
 
     @property
     def destroy_time(self):
         """
-        The simulated time when this entity was destroyed (upon reaching its
-        SimEntitySink), or None if the entity is still in process
+        :return: The simulated time when this entity was destroyed (upon
+                 reaching its :class:`~.entitysink.SimEntitySink`), or
+                 None if the entity is still in process
+        :rtype:  :class:`~.simtime.SimTime`
 
-        Returns:
-            SimTime: The simulated time when this entity was destroyed
         """
         return self.__destroyTime
 
     @property
     def process_time(self):
         """
-        The simulated time that this entity has been (or was) in process; so
-        if the entity is still in-process, it is the simulated time since the
-        entity was created.
-
-        Returns:
-            SimTime: The entity's process time
+        
+        :return: The simulated time that this entity has been (or was)
+                 in process; if the entity is still in-process, it is the
+                 simulated time since the entity was created.
+        :rtype:  :class:`~.simtime.SimTime`
+       
         """
         if self.destroy_time:
             return self.destroy_time - self.create_time
@@ -198,16 +208,30 @@ class SimEntityElement(SimClassElement):
     SimEntityElement instances represent an entire entity class as an element
     for data collection purposes, since these data are aggregated by class,
     rather than individual entity instances. To put in another way, we create
-    one SimEntityElement instance for each :class:`SimEntity` subclass for which
-    we want to collect data. Modeling code should specify the SimProcess-derived
-    classes to create elements for by wrapping them via the
-    :func:`simelement` decorator. :class:`SimEntity` itself is wrapped by
-    default, since SimEntities may be instantiated directly. Analagous to
-    :class:`SimProcessElement`.
+    one SimEntityElement instance for each :class:`SimEntity` subclass in
+    the model. SimEntityElements are automatically created and registered
+    for class :class:`SimEntity`and every SimEntity-derived class imported
+    into the model; client code should not create SimEntityElement objects
+    directly; nor should client code subclass SimEntityElement.
+    
+    By default, SimEntityElements include a counter that collects
+    work-in-process data for the corresponding entity class as well
+    as a data collector collecting process time for entities of that
+    class; these data aare collected as "Work-In-Process" and
+    "Process-Time" datasets, respectively. Client code can, add
+    additional :class:`~.counter.SimCounter`s and/or
+    :class:`~.datacollector.SimDataCollector` objects to a
+    SimEntityElement if the collection of additional custom datasets
+    is desired.
+    
+    TODO define/illustrate how this is done
+    
+    Analagous to :class:`~.process.SimProcessElement`.
     
     :param entityclass: The :class:`SimEntity` class or subclass for
                         which this :class:`SimElement` is a proxy.
     :type entityclass:  Class (NOT an instance of the class)
+    
     """
     
     __slots__ = ('counter', 'timeDataCollector')
