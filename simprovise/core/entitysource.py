@@ -30,13 +30,12 @@ class SimEntitySource(SimLocation):
     during a simulation run, initialize them (primarily by also creating the
     :class:`.SimProcess` that will execute on their behalf), and start them
     on their way by initiating that process.
-
-    Args:
-        name (str):                Name of the source, must be unique within the
-                                   source's location (locationObj)
-        parentlocation (SimLocation): Location object to which this source belongs.
-                                   If ``None`` this source is assigned to the
-                                   Root location
+        
+    :param name: The name of the entity source. Must be unique across all
+                 sources and other :class:`~.location.SimStaticObject`
+                 objects assigned to the :class:`~.location.SimRootLocation`
+    :type name:  `str`
+        
     """
     # TODO should this be a pseudo-SimLocation, a-la SimEntitySink? The case is
     # not as compelling here, since there is a theoretical possibility that
@@ -48,8 +47,8 @@ class SimEntitySource(SimLocation):
 
     __slots__ = ('__generatorPairs')
 
-    def __init__(self, name, parentlocation=None):
-        super().__init__(name, parentlocation)
+    def __init__(self, name):
+        super().__init__(name)
         self.__generatorPairs = []
 
     @apidocskip

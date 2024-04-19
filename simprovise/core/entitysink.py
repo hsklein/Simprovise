@@ -17,39 +17,39 @@ _ERROR_NAME = "SimEntitySinkError"
 @apidoc
 class SimEntitySink(SimStaticObject):
     """
-    Defines an entity sink - where :class:`SimEntity` objects go to die. Every
-    :meth:`SimProcess.run` implementation should end with the equivalent of::
+    Defines an entity sink - where :class:`~.entity.SimEntity` objects go to die.
+    Every :meth:`~.process.SimProcess.run` implementation should end with
+    the equivalent of:
 
         entity.move_to(sink)
 
-    SimEntitySink acts (to some extent) like a :class:`.SimLocation`, but
-    doesn't inherit from it, as we don't need all of SimLocation's baggage.
-    Nonetheless, it does need to at least provide no-op versions of the
-    :class:`SimLocation` interface. (Though no ``onExit()`` is needed, since
-    entities check in, but they don't check out.)
+    SimEntitySink acts (to some extent) like a :class:`~.location.SimLocation`,
+    but doesn't inherit from it, as it doesn't need all of SimLocation's
+    baggage. Nonetheless, it does need to at least provide no-op versions of
+    the :class:`~.location.SimLocation` interface. (Though no ``onExit()`` is
+    needed, since entities check in, but they don't check out.)
     
     SimEntitySinks take no parent location parameter; they are always assigned
-    to the :class:`SimRootLocation`. This restriction ensures entity location 
-    exit processing is always performed on the entity's last location before
-    being destroyed.
+    to the :class:`~.locagtion.SimRootLocation`. This restriction ensures
+    entity location exit processing is always performed on the entity's last
+    location before being destroyed.
+        
+    :param name: The name of the entity sink. Must be unique across all
+                 sinks and other :class:`~.location.SimStaticObject`
+                 objects assigned to the :class:`~.location.SimRootLocation`
+    :type name:  `str`
+        
     """
     __slots__ = ('__entries')
 
     def __init__(self, name):
         """
-        Initializer:
-        
-        :param name: The name of the entity sink. Must be unique across all
-                     sinks and other :class:`SimStaticObject` objects assigned
-                     to the :class:`SimRootLocation`
-        :type name:  str
-        
         """
         super().__init__(name)
-        # For now, at least, sinks should be root-level locations
+        # Sinks should be root-level locations
         if not self.location.is_root:
             msg = "Attempt to assign a entity sink to non-root location ({0})"
-            raise SimError(_ERROR_NAME, msg, str(locationObj))
+            raise SimError(_ERROR_NAME, msg, self.location)
         self.__entries = 0
 
     @property
@@ -88,8 +88,8 @@ class SimEntitySink(SimStaticObject):
     @property
     def entry_point(self):
         """
-        As with a leaf :class:`SimLocation`, the SimEntitySink is its own
-        entry point.
+        As with a leaf :class:`~.location.SimLocation`, the
+        SimEntitySink is its own entry point.
         """
         return self
 
