@@ -13,6 +13,7 @@ import inspect
 
 from simprovise.core import (SimLocation, SimTime,
                             SimClock, SimDistribution)
+from simprovise.core.location import SimStaticObject
 from simprovise.core.utility import SimUtility
 from simprovise.core.apidoc import apidoc, apidocskip
 from simprovise.core.simevent import SimEvent
@@ -30,6 +31,8 @@ class SimEntitySource(SimLocation):
     during a simulation run, initialize them (primarily by also creating the
     :class:`.SimProcess` that will execute on their behalf), and start them
     on their way by initiating that process.
+    
+    Entity sources are always assigned to the root location.
         
     :param name: The name of the entity source. Must be unique across all
                  sources and other :class:`~.location.SimStaticObject`
@@ -43,7 +46,7 @@ class SimEntitySource(SimLocation):
 
     # If we do choose to make this a pseudo-location (inherit from
     # SimStaticObject instead of SimLocation), we'll have to implement both
-    # onEnter() and onExit().
+    # on_enter() and on_exit() and is_location.
 
     __slots__ = ('__generatorPairs')
 
@@ -105,13 +108,24 @@ class SimEntitySource(SimLocation):
         so this method can be called any number of times on the same source
         instance.
 
-        Args:
-            entityClass (class):         SimEntity or SimEntity-derived
-            processClass (class):        SimProcess-derived
-            interarrivalFunc (function): One of the members of
-                                         :class:`.SimDistribution`
-            *iaArgs:                     Positional arguments to interarrivalFunc
-            **iaKwargs:                  Keyword arguments to interarrivalFunc
+        
+        :param entityClass:      The class of the entity to be generated.
+                                 Must be :class:`~.entity.SimEntity` or
+                                 a subclass of that.
+        :type entityClass:       `class`
+        
+        :param processClass:     The class of the process assigned to the
+                                 generated entity. Must be a subclass of
+                                 :class:`~.process.SimProcess`.
+        :type processClass:      `class`
+       
+        :param interarrivalFunc: One of the members of
+                                 :class:`~.random.SimDistribution`
+        :type interarrivalFunc:  `func`
+               
+        :param *iaArgs:          Positional arguments to interarrivalFunc
+        :param **iaKwargs:       Keyword arguments to interarrivalFunc
+         
         """
         # Create a generator object from the interarrival function and parameters
         interarrivalGenerator = SimDistribution.number_generator(interarrivalFunc,
@@ -150,11 +164,15 @@ class SimEntitySource(SimLocation):
         2. An interarrival time generator, each iteration of which yields the
            time (:class:`~.simtime.SimTime`) until the next work item is generated
 
-        Args:
-            entityGenerator:       A generator that yields :class:`.SimEntity`
-                                   (or objects derived from ``SimEntity``)
-            interarrivalGenerator: A generator that yields interarrival times
-                                   (class :class:`~.simtime.SimTime`)
+       
+        :param entityGenerator:      A generator that yields objects of
+                                     :class:`~entity.SimEntity` or a subclass
+        :type entityGenerator:       `generator`
+       
+        :param interarrivalGenerator: A generator that yields interarrival
+                                      times (class :class:`~.simtime.SimTime`)
+        :type interarrivalGenerator:  `generator`
+              
         """
         # As with addEntityGenerator(), we cannot actually create the
         # SimEntityGenerationEvent here, since this method may be called before
