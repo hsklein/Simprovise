@@ -90,7 +90,8 @@ class SimStaticObject(SimLocatableObject, SimElement):
         data themselves.
         
         :return: the SimElements dataset list
-        :rtype: List
+        :rtype:  `list`
+        
         """
         return self._datasets
         
@@ -98,6 +99,10 @@ class SimStaticObject(SimLocatableObject, SimElement):
     def element_name(self):
         """
         The base (non-qualified with ancestor names) name of this static object
+                
+        :return: The object's base (non-qualified) name
+        :rtype:  `str`
+
         """
         return self._name
         
@@ -107,6 +112,10 @@ class SimStaticObject(SimLocatableObject, SimElement):
         Implements the element_id property defined by SimElement.
         The fully-qualified element ID of this static object - the element
         name prepended  by the ancestor location names (not including the root)
+               
+        :return: The object's fully-qualified element ID
+        :rtype:  `str`
+
         """
         if self.parent_location.is_root:
             return self.element_name
@@ -114,10 +123,13 @@ class SimStaticObject(SimLocatableObject, SimElement):
             return "".join((self.parent_location.element_id, '.', self.element_name))
            
     @property
-    def element_class(self):
-        
+    def element_class(self):        
         """
         Implements element_class() by returning the static object's class
+               
+        :return: The object's class
+        :rtype:  `class`
+
         """
         return self.__class__
 
@@ -125,6 +137,10 @@ class SimStaticObject(SimLocatableObject, SimElement):
     def parent_location(self):
         """
         Returns the SimLocation that owns this static object
+               
+        :return: The location that owns this object
+        :rtype:  :class:`SimLocation`
+
         """
         assert self._parentlocation, "No parent location assigned to SimStaticObject"
         return self._parentlocation        
@@ -144,6 +160,10 @@ class SimStaticObject(SimLocatableObject, SimElement):
     def islocation(self):
         """
         Returns true if the object is a SimLocation or SimRootLocation
+               
+        :return: True if this object is a location, False otherwise
+        :rtype:  `bool`
+
         """
         return isinstance(self, (SimLocation, SimRootLocation))
             
@@ -171,16 +191,16 @@ class SimLocation(SimStaticObject):
     location may contain multiple child locations - e.g., a work area
     location might contain several workstations.
 
-    :class:`SimLocatableObject` objects enter and leave SimLocations via the
-    SimLocatable's :meth:`SimLocatableObject.move_to` method.
-    :meth:`SimTransientObject.move_to` also invokes :meth:`on_enter` and/or
-    :meth:`on_exit` methods on the SimLocation(s) involved.
-    SimLocation.on_enter/on_exit generally should only be invoked by
-    transient objects.
+    :class:`~.simobject.SimLocatableObject` objects enter and leave
+    SimLocations via :meth:`~.simobject.SimLocatableObject.move_to` method.
+    :meth:`~.simobject.SimTransientObject.move_to` also invokes
+    :meth:`SimLocation.on_enter` and/or :meth:`SimLocation.on_exit` methods
+    on the SimLocation(s) involved. SimLocation.on_enter/on_exit generally should
+    only be invoked by transient objects.
 
-    Strictly speaking, :class:`SimLocatableObject` instances should only
-    move to leaf locations within a SimLocation hierarchy. We do, however,
-    want to facilitate the notion of hierarchical modeling - e.g., a entity
+    Strictly speaking, :class:`~.simobject.SimLocatableObject` instances
+    should only move to leaf locations within a SimLocation hierarchy. We do,
+    however, want to facilitate the notion of hierarchical modeling - e.g., a entity
     moving from one area of the model to another might invoke
     ``move_to(area2)``, where ``area2`` is a root location containing multiple
     other sub-locations, and we want ``area2`` to define exactly where the
@@ -191,15 +211,20 @@ class SimLocation(SimStaticObject):
     the actual entry point will be that child's entry point, which may be the
     child or may be a descendant of the child.)
 
-    Args:
-        name (str):            Name of the location, must be unique within
-                               the location's parent (parentLocationObj)
-        parentlocation (SimLocation): Location object to which this location
-                               belongs. If None this location is assigned to
-                               the Root location
-        entryPointName (str):  Relative elementID of descendant location that
-                               serves as the entry point for this location. If
-                               this location is it's own entry point.
+            
+    :param name:           The name of the location. Must be unique within
+                           its parent location
+    :type name:            `str`
+            
+    :param parentlocation: The location that "owns" this location.
+                           Defaults to :class:`SimRootLocation`
+    :type parentlocation:  :class:`SimLocation` or None
+            
+    :param entryPointName: Relative element ID of descendant location that
+                           serves as the entry point for this location. If
+                           None, this location is it's own entry point.
+    :type entryPointName:  `str`
+ 
      """
     # TODO locations should be static objects?  Confirm that?
     __slots__ = ('_hasChildren', '_counter', '_entryDataCollector', '_timeDataCollector',
@@ -322,7 +347,12 @@ class SimLocation(SimStaticObject):
     @property
     def islocation(self):
         """
-        Returns true if the object is a SimLocation or SimRootLocation
+        Returns true if the object is a :class:`SimLocation` or
+        :class:`SimRootLocation`
+               
+        :return: True if this object is a location, False otherwise
+        :rtype:  `bool`
+
         """
         return True
 
@@ -330,6 +360,10 @@ class SimLocation(SimStaticObject):
     def is_root(self):
         """
         Returns True only for the single root object (class SimRootLocation)
+               
+        :return: True if this object is the root location, False otherwise
+        :rtype:  `bool`
+
         """
         return False
 
@@ -342,8 +376,6 @@ class SimLocation(SimStaticObject):
         in each pair.
         """
         return (pair[0] for pair in self._residents)
-        #for pair in self._residents:
-        #    yield pair[0]
 
     @property
     def entries(self):
@@ -364,6 +396,10 @@ class SimLocation(SimStaticObject):
     def has_child_locations(self):
         """
         Returns True if this location has at least one child location
+               
+        :return: True if this location has child locations, False otherwise
+        :rtype:  `bool`
+
         """
         childlocs = (obj for obj in self._childStaticObjs if obj.islocation)
         return bool(next(childlocs, None))
@@ -372,8 +408,8 @@ class SimLocation(SimStaticObject):
         """
         A generator that yields all descendant static objects of this
         location that are of/derived from a passed class (which must be
-        a subclass of SimStaticObject). By default, that class is
-        SimLocation.        
+        a subclass of :class:`SimStaticObject`). By default, that class
+        is :class:`SimLocation`.        
         """
         if cls is None:
             cls = SimLocation
@@ -394,7 +430,15 @@ class SimLocation(SimStaticObject):
     
     def is_ancestor_of(self, staticObj):
         """
-        Returns True if a passes static object is a descendant of this location
+        Returns True if a passes static object is a descendant of this location.
+        
+        :param staticObj: The static object to check
+        :type staticObj:  :class:`SimStaticObject`
+               
+        :return: True if this object is an ancestor of the passed
+                 staticObj, False otherwise
+        :rtype:  `bool`
+
         """
         return self in staticObj.ancestor_locations
 
@@ -406,6 +450,16 @@ class SimLocation(SimStaticObject):
     
     def __contains__(self, obj):       
         """
+        Returns True if the passed object is either a transient resident
+        of this location or a descendant static object of this location.
+       
+        :param obj: The object to check (to see if it is contained by
+                    this location)
+        :type obj:  :class:`~.simobject.SimLocatable`
+               
+        :return: True if obj is contained by this location, False otherwise
+        :rtype:  `bool`
+        
         """
         if issubclass(obj.__class__, SimStaticObject):
             return obj in self.descendants(SimStaticObject)
@@ -421,6 +475,11 @@ class SimLocation(SimStaticObject):
         within a location hierarchy, so when an object attempts to move to a
         parent (non-leaf) location, it should be redirected to that parent's
         entry point.
+               
+        :return: The :meth:`~.simelement.DimElement.element_id` of this
+                 location's entry point
+        :rtype:  `str`
+        
         """
         return self._entryPointID
 
@@ -439,9 +498,10 @@ class SimLocation(SimStaticObject):
 
         Raises an error if the entry point is not specified, doesn't exist,
         or is otherwise invalid.
-
-        Returns:
-            SimLocation: entry point location for this SimLocation
+            
+        :return: This location's entry point location
+        :rtype:  :class:`SimLocation`
+ 
         """
         if not self.has_child_locations:
             # Leaf locations are always their own entry points
@@ -484,8 +544,9 @@ class SimLocation(SimStaticObject):
         Subclasses may (optionally) perform additional onEnter() processing
         by implementing ``onEnterImpl()``. The base implementation is a no-op.
 
-        Args:
-            enteringObj (SimEntity): the entity entering this location
+        :param enteringObj: the entity entering this location
+        :type enteringObj:  :class:`~.entity.SimEntity`
+
         """
         pass
 
@@ -494,8 +555,9 @@ class SimLocation(SimStaticObject):
         Subclasses may (optionally) perform additional onExit() processing
         by implementing ``onExitImpl()``. The base implementation is a no-op.
 
-        Args:
-            exitingObj (SimEntity): the entity leaving this location
+        :param exitingObj: the entity leaving this location
+        :type exitingObj:  :class:`~.entity.SimEntity`
+
         """
         pass
 
@@ -506,7 +568,11 @@ class SimLocation(SimStaticObject):
         if the entering object is already resident in the parent - e.g., if
         the entering object moves between child locations belonging to the
         parent)
-        """
+ 
+        :param enteringObj: the entity entering this location
+        :type enteringObj:  :class:`~.entity.SimEntity`
+
+       """
         if enteringObj in self:
             msg = "Object ({0}) cannot enter location {1}; it is already located there"
             raise SimError("SimLocationDuplicateEntryError",
@@ -535,6 +601,10 @@ class SimLocation(SimStaticObject):
         exiting is not currently in the location.  Recursively invokes
         onExit for ancestor locations that are not contained by the
         exiting object's next destination
+
+        :param exitingObj: the entity leaving this location
+        :type exitingObj:  :class:`~.entity.SimEntity`
+
         """
         if not exitingObj in self:
             msg = "Attempt to exit object ({0}) from a location ({1}) that it does not reside in"
