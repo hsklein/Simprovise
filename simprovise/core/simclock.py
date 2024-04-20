@@ -33,13 +33,6 @@ class SimClock(object):
         SimClock._currentTime = simtime.SimTime(0, simtime.SECONDS)
 
     @staticmethod
-    def units():
-        """
-        Return the unit value of the simulated clock - useful for defaults
-        """
-        return SimClock._currentTime.units
-
-    @staticmethod
     def now():
         """
         Return a copy of (not reference to) the current simulated clock time.
