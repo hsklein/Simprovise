@@ -193,7 +193,7 @@ class ResourceAssignmentAgentMixin(object):
         than one of that resource (up to its capacity).
        
         :param txn:        The transaction to which resources are to be assigned
-        :type txn:         :class:`SimProcess`
+        :type txn:         :class:`~.process.SimProcess`
         
         :param resource:    Resource object to be assigned
         :type resource:     :class:`SimResource`
@@ -219,7 +219,7 @@ class ResourceAssignmentAgentMixin(object):
         of resources. A generalized version of :meth:_create_resource_assignment`
 
         :param txn:       The transaction to which resources are to be assigned
-        :type txn:        :class:`SimProcess`
+        :type txn:        :class:`~.process.SimProcess`
         
         :param resources: Sequence of resource object to be assigned
         :type resources:  Sequence of class :class:`SimResource`
@@ -258,7 +258,7 @@ class ResourceAssignmentAgentMixin(object):
         place the request on the message queue for later processing/fulfillment.
 
         :param msg: Resource Request message (SimMsgType RSRC_REQUEST)
-        :type msg:  :class:`SimMessage`
+        :type msg:  :class:`~.agent.SimMessage`
                 
         :return:    True if request is fulfilled immediately, False if queued for
                     fulfillment later.
@@ -371,16 +371,16 @@ class ResourceAssignmentAgentMixin(object):
 
         Handles each resource release notification as it comes in, returning
         ``True`` to indicate that it was, in fact handled. The
-        :class:`SimProcess` (or the agent owning that process) is responsible
-        for updating the resource assignment object that is included in the
-        message.
+        :class:`~.process.SimProcess` (or the agent owning that process)
+        is responsible for updating the resource assignment object that
+        is included in the message.
 
         After releasing the resources, this handler will attempt to respond
         to one or more request messages in the message queue if they can now
         be fulfilled using the newly released resource(s).
 
         :param msg: Resource Request message (SimMsgType RSRC_RELEASE)
-        :type msg:  :class:`SimMessage`
+        :type msg:  :class:`~.agent.SimMessage`
                 
         :return:    ``True`` always, as the message is always handled
         :rtype:     bool
@@ -472,7 +472,7 @@ class ResourceAssignmentAgentMixin(object):
         :return: SimMessage or None: Next request message in queue (based
                  on priority) or None if there are no request messages in
                  the queue
-        :rtype:  :class:`SimMessage` or None
+        :rtype:  :class:`~.agent.SimMessage` or None
 
         """
         return self.next_queued_message(SimMsgType.RSRC_REQUEST)
@@ -507,7 +507,7 @@ class SimResource(SimStaticObject):
     :param assignmentAgent: Agent managing (assigning) this resource.
                             If None, the resource is assumed to be its
                             own agent.
-    :type assignmentAgent:  :class:`SimAgent` or None
+    :type assignmentAgent:  :class:`~.agent.SimAgent` or None
 
     :param moveable:        True if the resource can move (within it's
                             parent location), False if it is filling
@@ -605,11 +605,11 @@ class SimResource(SimStaticObject):
         the assignment.
 
             :param txn:    Transaction/process to which the resource is assigned.
-            :type txn:     :class:`SimProcess`
+            :type txn:     :class:`~.process.SimProcess`
 
             :param number: Number of resources to be assigned (can be > 1 if the
                            resource has capacity > 1)
-             :type number: int
+            :type number:  `int`
 
         """
         if number <= 0:
@@ -656,11 +656,14 @@ class SimResource(SimStaticObject):
 
         TODO change numToRelease to subresource (if None resource to
         release is self)
+        
+        :param txn:             Transaction/process to which the resource
+                                is currently assigned.
+        :type txn:              :class:`~.process.SimProcess`
 
-        Args:
-            txn (SimProcess):      Process to which this resource is currently
-                                   assigned
-            numberToRelease (int): Number of subresources to be released
+        :param numberToRelease: subresources to be released
+        :type numberToRelease:  `int`
+
         """
         assert txn, "Null transaction (task/process) passed to releaseFrom()"
         assert txn in self._currentTxnAssignments, "releaseFrom() call on process/task that was never assigned to this resource."
