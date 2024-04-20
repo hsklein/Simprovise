@@ -18,7 +18,7 @@ logger = SimLogging.get_logger(__name__)
 @apidoc
 class SimElement(object):   
     """
-    SimElement is base class for objects that are elements in the 
+    SimElement is the base class for objects that are elements in the 
     simulation model. These elements include static simulation objects -
     :class:`Locations <.location.SimLocation>`,
     :class:`Resources <.resource.SimResource>`,
@@ -29,16 +29,18 @@ class SimElement(object):
     proxies for transient process and entity objects.
     
     SimElements exist for the lifetime of the simulation, and are 
-    registered on initialization with the :class:`~.model.SimModel` singleton.
+    registered on initialization with the :class:`~.model.SimModel`
+    singleton.
     
-    SimElements are the base unit for data collected during a simulation. Each
-    SimElement maintains a collection of :class:`datasets <.datacollector.Dataset>`
-    associated with the element, and provides methods/properties to define
-    and access them.
+    SimElements are the base unit for data collected during a simulation.
+    Each SimElement maintains a collection of
+    :class:`datasets <.datacollector.Dataset>` associated with the element,
+    and provides methods/properties to define and access them.
     
     SimElement is basically an abstract base class, but we don't
-    define it as such since it is also a mixin class for SimStaticObject,
-    and we'd rather not deal with metaclass conflicts.
+    define it as such since it is also a mixin class for
+    :class:`~.simobject.SimStaticObject`, and we'd rather not deal with
+    metaclass conflicts.
     """
     # Since this is a mixin class for SimStaticObject, we don't define an
     # initializer and don't have any data members. Plus, for that reason we do
@@ -51,9 +53,9 @@ class SimElement(object):
     def element_id(self):
         """
         Basically an abstract property implemented by subclasses.
-        :return: A globally unique identifier for the element.
         
-        :rtype: str
+        :return: A globally unique identifier for the element.        
+        :rtype: `str`
         
         """
         pass
@@ -62,27 +64,42 @@ class SimElement(object):
     def element_class(self):
         
         """
-        Another abstract property implmented by subclasses. For
-        SimEntityElements and SimProcessElements, returns the underlying
-        SimEntity or SimProcess class; for SimStaticObjects, returns
-        the object class.
+        Another abstract property implemented by subclasses.
+        
+        :return: For :class:`~.entity.SimEntityElement` and
+                 :class:`~.process.SimProcessElement` objects, returns
+                 the corresponding class:`~.entity.SimEntity` or
+                 :class:`~.process.SimProcess` subclass; for
+                 :class:`SimStaticObjects <.simobject.SimStaticObject>`,
+                 returns the object's class.
+        :rtype:  `class`
+        
         """
         pass
     
     @staticmethod
     def get_full_class_name(cls):
         """
-        Returns the fully-qualified (module + class) name of the passed
-        class. Convenience method for code that needs to obtain a
-        specific Entity or Process Element from the SimModel.
+        Convenience method for code that needs to obtain a specific
+        Entity or Process Element from the :class:`~.model.SimModel`.
+        
+        :param cls: The Python class to query
+        :type cls:  `class`
+        
+        :return: The fully-qualified (module + class) name of the
+                 passed cls. 
+        :rtype:  `str`
+        
         """
         return cls.__module__ + '.' + cls.__qualname__        
     
     @property
     def full_class_name(self):
         """
-        Returns the fully-qualified (module + class) name of the
-        element_class.
+        :return: The fully-qualified (module + class) name of the
+                 elements :meth:`element_class`.
+        :rtype:  `str`
+        
         """
         return SimElement.get_full_class_name(self.element_class)
         
@@ -90,14 +107,15 @@ class SimElement(object):
     def datasets(self):      
         """
         Abstract property implemented by subclasses :class:`SimClassElement`
-        and :class:`SimStaticObject`.
+        and :class:`~.simobject.SimStaticObject`.
+        
         Returns a sequence of all of the :class:`datasets <Dataset>` for
         this element. Note that datasets are essentially a specification
         of a data stream to be collected during a simulation run, not the 
         data themselves.
         
         :return: The SimElements dataset list
-        :rtype: List
+        :rtype:  list
         """
         pass
     
@@ -108,7 +126,8 @@ class SimElement(object):
         
         :param dataset: The dataset (data stream specification)
                         to add to the SimElement
-        :type dataset: :class:`Dataset`
+        :type dataset: :class:`~.datacollector.Dataset`
+        
         """
         if dataset not in self.datasets:
             self._datasets.append(dataset)
@@ -124,10 +143,11 @@ class SimElement(object):
         this sort of initialization - it generates the initial entity creation
         events (which won't work until after the event process is created).
                 
-        :class:`SimProcessElement` and :class:`SimEntityElement` objects
+        :class:`~.process.SimProcessElement` and
+        :class:`~.entity.SimEntityElement` objects
         call final_initialize() class methods on their respective 
-        :class:`SimProcess` or :class:`SimEntity`-derived classes;
-        model-defined process or entity subclasses can define
+        :class:`~.process.SimProcess` or :class:`~.entity.SimEntity`-derived
+        classes; model-defined process or entity subclasses can define
         final_initialize() when they need to initialize class member data
         at that point just before the simulation execution starts.
         """
@@ -137,14 +157,15 @@ class SimElement(object):
 class SimClassElement(SimElement):   
     """
     Base class for elements representing transient simulation objects
-    it is the base class for :class:`SimProcessElement`SimProcessElement
-    and :class:`SimEntityElement`. While not formally abstract, it
-    is not meant to be instantiated directly.
+    it is the base class for :class:`~.process.SimProcessElement`
+    and :class:`~.entity.SimEntityElement`. While not formally abstract,
+    itis not meant to be instantiated directly.
     
-    :param simclass: The :class:`SimProcess` or :class:`SimEntity` class
-                     or subclass for which this :class:`SimElement` is:return
-                     a proxy.
+    :param simclass: The :class:`~.process.SimProcess` or
+                     :class:`~.entity.SimEntity` class or subclass for
+                     which this :class:`SimElement` is a proxy.
     :type simclass:  Class (NOT an instance of the class)
+    
     """
     __slots__ = ('_simclass', '_datasets')
     def __init__(self, simclass):
@@ -160,7 +181,7 @@ class SimClassElement(SimElement):
     def element_id(self):
         """
         :return: The fully qualified class name (including package)
-        :rtype: String
+        :rtype:  `str`
         """
         return self.full_class_name
     
@@ -168,7 +189,7 @@ class SimClassElement(SimElement):
     def element_class(self):
         
         """
-        Implements element_class() by returning the underlying
+        Implements :meth`element_class` by returning the underlying
         simulation class
         """
         return self._simclass
@@ -176,13 +197,14 @@ class SimClassElement(SimElement):
     @property
     def datasets(self):      
         """
-        Return a list of all of the :class:`datasets <Dataset>` for
-        this element. Note that datasets are essentially a specification
-        of a data stream to be collected during a simulation run, not the 
-        data themselves.
+        Return a list of all of the :class:`datasets
+        <.datacollector.Dataset>` for this element. Note that datasets
+        are essentially a specification of a data stream to be
+        collected during a simulation run, not the data themselves.
         
-        :return: the SImElements dataset list
-        :rtype: List
+        :return: the SimElements dataset list
+        :rtype:  `list`
+        
         """
         return self._datasets
           

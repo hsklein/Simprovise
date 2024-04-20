@@ -40,9 +40,10 @@ class SimClock(object):
         The copy ensures that client does not accidentally modify the clock
         by incrementing, decrementing or explicitly modifying attributes of
         the return value of now()
+        
+        :return: The current simulated clock time
+        :rtype:  :class:`~.simtime.SimTime`
 
-        Returns:
-            SimTime: the current simulated clock time
         """
         return SimClock._currentTime.make_copy()
 

@@ -95,7 +95,8 @@ class Simulation(object):
                              Should only be True if outputpath is not None
         :type overwrite:     bool
         
-        :raise SimError:     Raised if parameters are invalid or an error
+        :raises:             :class:`~.simexception.SimError`
+                             Raised if parameters are invalid or an error
                              occurs during the simulation.
         
         :return:             Result object wrapping simulation output database
@@ -155,7 +156,8 @@ class Simulation(object):
                              Should only be True if outputpath is not None
         :type overwrite:     bool
         
-        :raise SimError:     Raised if parameters are invalid or an error
+        :raises:             :class:`~.simexception.SimError`
+                             Raised if parameters are invalid or an error
                              occurs during the simulation.
         
         :return:             Result object wrapping simulation output database
@@ -224,7 +226,8 @@ class Simulation(object):
                              Should only be True if outputpath is not None
         :type overwrite:     bool
         
-        :raise SimError:     Raised if parameters are invalid or an error
+        :raises:             :class:`~.simexception.SimError`
+                             Raised if parameters are invalid or an error
                              occurs during the simulation.
         
         :return:             Result object wrapping simulation output database
@@ -251,7 +254,7 @@ class Simulation(object):
         file extension, it will add the default output database extension.
         Returns the (possibly refornatted) absolute path with extension.
         
-        Raises a SimError if:
+        Raises a :class:`~.simexception.SimError` if:
         - overwrite is True and no output path is specified
         - the path exists and overwrite is not specified as True
         - the path is an existing directory (which presumably also means
@@ -473,10 +476,13 @@ class SimulationResult(object):
         dataset wll display the mean of the calculated medians for each of
         those ten replications, plus a range [min-max] that indicate the lowest
         and highest of those ten calculated medians.
+        
+        :param rangetype: 'iqr', 'total' or None. 
+        :type rangetype:  `str`
+        
+        :raises:          :class:`~.simexception.SimError`
+                          Raised if rangetype is invalid.
 
-        Args:
-            rangetype (str): 'iqr', 'total' or None. A SimError is raised
-                             for any other value.
         """
         database = self.dbMgr.database
         assert database, "SimResult database not open"

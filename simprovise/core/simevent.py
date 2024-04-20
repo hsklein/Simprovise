@@ -63,7 +63,14 @@ def initialize():
 
 class SimEvent(metaclass=ABCMeta):
     """
-    Base class for simulation events
+    Base class for the simulation events that are processed/executed
+    by an :class:`EventProcessor`. This processing is the very base
+    of the discrete event simulation.
+    
+    :param tm: The simulated time at which the event is to occur/be
+               processed.
+    :type tm:  :class:`~.simtime.SimTime`
+    
     """
     __slots__ = ('_time', '_sequencenum')
     def __init__(self, tm):
@@ -140,7 +147,9 @@ class SimEvent(metaclass=ABCMeta):
 
 class EventProcessor(object):
     """
-    Simulation event manager/processor
+    The simulation event manager/processor. The simulation execution
+    essentially consists of an EventProcessor processing events
+    subclassed from :class:`SimEvent`.
     """
     def __init__(self):
         """

@@ -12,12 +12,18 @@ from simprovise.core.apidoc import apidoc, apidocskip
 @apidoc
 class SimException(Exception):
     """
-    Base simulation exception class, with message formatting
+    Base simulation exception class, with message formatting,
+    derived from the built-in Exception class.
+    
+    :param name:  Exception name
+    :type name:   `str`
+    
+    :param desc:  Exception description string
+    :type desc:   str`
+    
+    :param *args: Argument values to be substituted into the
+                  description string.
 
-    Args:
-        name (str): Exception name
-        desc (str): Exception description
-        *args:      Zero or more arguments, embedded into desc via format()
     """
     def __init__(self, name, desc='', *args):
         super().__init__(name, desc, *args)
@@ -40,8 +46,15 @@ class SimError(SimException):
 @apidoc
 class SimInterruptException(Exception):
     """
-    Exception raised when a transaction wait is interrupted or otherwise ended
-    prematurely and abnormally.  The interrupter may provide a reason.
+    Exception raised when a transaction wait is interrupted or otherwise
+    ended prematurely and abnormally.  The interrupter may provide a
+    reason. Note that this exception class is NOT derived from
+    :class:`SimException`. It is expected for simulation models that
+    that encorporate process interruption.
+    
+    :param reason: Reason for interruption, or None
+    :type reason:  `str` or None
+    
     """
     def __init__(self, reason=None):
         super().__init__(reason)

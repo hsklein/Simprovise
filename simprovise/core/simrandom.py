@@ -140,7 +140,9 @@ def max_run_number():
     generator as configured. (Or, to put it another way, the maximum number
     of replications that can be executed)
     
-    :rtype: int
+    :return: maximum supported run number
+    :rtype:  `int`
+    
     """
     _initialize_state_array_if_required() # read rng state array if necessary
     # pylint thinks that state_array is an NpzFile (which doesn't have a shape)
@@ -152,8 +154,10 @@ def min_run_number():
     """
     The minimum run number supported by the initialized random number
     generator- always 1
+     
+    :return: minimum supported run number
+    :rtype:  `int`
     
-    :rtype: int
     """
     return 1
 
@@ -166,6 +170,11 @@ def initialize(run_number=1):
 
     The state data used to initialize the generators are a slice of the
     state array read by _readStateFile().
+    
+    :param run_number: The run number to initialize random number streams
+                       for. must be in in range 1 - :meth:`max_run_number`
+    :type run_number:  `int`
+    
     """
     _initialize_state_array_if_required() # read rng state array if necessary
 

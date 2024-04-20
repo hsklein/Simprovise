@@ -76,7 +76,8 @@ class SimLogging(object):
     """
     A collection of convenience methods (all static methods) for accessing
     and configuring standard Python logging.
-    """                      
+    """
+    
     @staticmethod
     def get_logger(name, level=logging.NOTSET):
         """
@@ -165,6 +166,7 @@ class SimLogging(object):
         :param dest: A destination object (e.g. a Qt Widget) that can
                      handle the logging output
         :type dest:  object
+        
         """
         hdlr = logging.StreamHandler(dest)
         hdlr.setFormatter(_formatter)
