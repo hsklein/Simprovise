@@ -3,8 +3,9 @@
 #
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
-# Defines the SimLocation and SimRootLocation classes, along with LocationMixin
-# (used by both)
+# Defines the SimLocatableObject and SimTransientObject classes, along
+# with the LocationAssignmentAgentMixin (used by classes in the
+# resource module to start)
 #===============================================================================
 from simprovise.core import SimError, SimLogging
 
@@ -19,12 +20,13 @@ logger = SimLogging.get_logger(__name__)
 @apidoc
 class SimLocatableObject(SimAgent):
     """
-    An object that can either moved to or placed at a :class:`SimLocation`
-    Since SimLocations can be placed (contained) in other SimLocations, they
-    are SimLocatables as well.
+    An object that can either moved to or placed at a
+    :class:`~.location.SimLocation`. Since SimLocations can be placed
+    (contained) in other SimLocations, they are SimLocatables as well.
     
     SimLocatables are initialized with an initial location; if None, that
-    initial location defaults to the singleton Root location.
+    initial location defaults to the singleton Root location
+    (:class:`~.location.SimRootLocation`)
     
     SimLocatables have two key binary propertys:
     
@@ -32,17 +34,19 @@ class SimLocatableObject(SimAgent):
       are assigned at birth. Invoking move() on a fixed SimLocatable will
       raise an exception
       
-    - Static or Transient. Static locatables (:class:`SimStaticObject`) are
-      created prior to the start of a simulation run and exist for the entire
-      run. Transient locatables (:class:`SimTransientObject`) may be created
-      and/or destroyed during a run. :class:`SimEntity` is the primary
+    - Static or Transient. Static locatables
+      (:class:`~.location.SimStaticObject`) are created prior to the start
+      of a simulation run and exist for the entire run. Transient
+      locatables (:class:`SimTransientObject`) may be created and/or
+      destroyed during a run. :class:`~.entity.SimEntity` is the primary
       transient locatable class; most others are static.
     
     Note that SimStaticObjects, while usually fixed, can be moveable; the
-    main example is :class:`SimResource`, some of which can move from place
-    to place. Static objects are assigned both an initial location and parent
-    "owning" location specified at construction. Moveable static objects can
-    only move to that parent or sublocations of that parent.
+    main example is :class:`~.resource.SimResource`, some of which can move
+    from place to place. Static objects are assigned both an initial
+    location and parent"owning" location specified at construction.
+    Moveable static objects can only move to that parent or sublocations
+    of that parent.
     """
     __slots__ = ('_location', '_isMoveable')
 
@@ -64,33 +68,56 @@ class SimLocatableObject(SimAgent):
     def location(self):
         """
         The current location of the Locatable object
+        
+        :return: Current location of the locatable object
+        :rtype:  :class:`~.location.SimLocation` or
+                 :class:`~.location.SimRootLocation`
+                 
         """
         return self._location
     
     @property
     def islocation(self):
         """
-        Returns true if the object is a SimLocation or SimRootLocation
+        
+        :return: True if the object is a :class:`~.location.SimLocation` or
+                 :class:`~.location.SimRootLocation`. Default is False
+                 for SimLocatable (overridden by subclasses as required)
+        :rtype:  `bool`
+        
         """
         return False
     
     @property
     def ismoveable(self):
         """
-        Returns true if the object can be moved from one location to another
+        
+        :return: True if the object can be moved from one location to
+                 another; False otherwise. Inverse of :meth:`isfixed`
+        :rtype:  `bool`
+        
         """
         return self._isMoveable
      
     @property
     def isfixed(self):
         """
-        Returns true if the object cannot be moved from one location to another
+        
+        :return: True if the object cannot be moved from one location to
+                 another; False otherwise. Inverse of :meth:`ismoveable`
+        :rtype:  `bool`
+ 
         """
         return not self._isMoveable
     
     def move_to(self, toLocation):
         """
         Move to a new location.
+        
+        :param toLocation: The location to move to.
+        :type toLocation:  :class:`~.location.SimLocation` or
+                           :class:`~.location.SimRootLocation`.
+                           
         """        
         self._validate_move_to_location(toLocation)
         self._currentLocation = toLocation
@@ -128,7 +155,8 @@ class SimTransientObject(SimLocatableObject):
     simulation run.
 
     Entities are the primary (and at this time, only) subclass of
-    SimTransientObject.
+    SimTransientObject. Client modeling code should NOT inherit directly
+    from SimTransientObject.
 
     Transient objects can move from location to location, and their
     location property value reflects the most-recently-moved-to
@@ -152,9 +180,11 @@ class SimTransientObject(SimLocatableObject):
         point - otherwise, any attempt to move to that non-leaf location will
         raise a :class:`~.simexception.SimError`
 
-        Args:
-            toLocation (SimLocation): location to move to
-        """
+        :param toLocation: The location to move to.
+        :type toLocation:  :class:`~.location.SimLocation` or
+                           :class:`~.location.SimRootLocation`.
+                           
+       """
         self._validate_move_to_location(toLocation)
         # Invoke exit processing on the current location before moving
         # to the destination location - which is actually the toLocation's

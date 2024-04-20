@@ -93,6 +93,7 @@ class SimProcess(SimTransaction):
 
         :return: The SimProcessElement associated with this entity's class.
         :rtype:  :class:`SimProcessElement`
+        
         """
         return self.__element
 
@@ -101,8 +102,9 @@ class SimProcess(SimTransaction):
         """
         The SimEntity (agent) being processed by this SimProcess instance
 
-        Returns:
-            SimEntity: The entity associated with this process
+        :return: The entity object associated with this process
+        :rtype:  :class:`~.entity.SimEntity`
+        
         """
         return self.agent
 
@@ -130,6 +132,7 @@ class SimProcessElement(SimClassElement):
     :param processclass: The :class:`SimProcess` subclass for which this
                          :class:`SimElement` is a proxy.
     :type processclass:  Class (NOT an instance of the class)
+    
     """
     
     __slots__ = ('counter', 'timeDataCollector')

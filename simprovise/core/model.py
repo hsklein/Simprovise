@@ -33,7 +33,9 @@ class SimModel(object):
     @staticmethod
     def model():
         """
-        Returns the singleton SimModel instance
+        :return: The singleton SimModel instance
+        :rtype:  :class:`SimModel`
+        
         """
         assert SimModel._theModel, "SimModel singleton not instantiated"
         return SimModel._theModel
@@ -44,6 +46,11 @@ class SimModel(object):
         Loads a passed model script by importing it, returning the SimModel.model()
         singleton in the imported namespace. Since it is imported, the main program in
         the script does not execute.
+        
+        :param scriptpath: The filesystem path of Python script defining
+                           the main model.
+        :type scriptpaht:  `str`
+        
         """
         logger.info("Loading script file: %s", scriptpath)
         assert scriptpath, "No script path supplied to SimModel.load_model_from_script()"
@@ -75,14 +82,24 @@ class SimModel(object):
     @property
     def filename(self):
         """
+        The file path of the model script loaded via
+        :meth:`load_model_from_script`.
+        
         TODO figure out how to get filename, module if the simulation is run
         directly from the model script
+        
+        :return: filesystem path to the loaded model script, or None
+        :rtype:  `str` or None
+        
         """
         return self._filename
         
     @property
     def model_module(self):
         """
+        The Python module loaded via :meth:`load_model_from_script`.
+         
+        :return: Python module or None
         
         """
         return self._module
@@ -90,9 +107,10 @@ class SimModel(object):
     @property
     def datasets(self):
         """
-        A generator that returns all :class:`datasets {Dataset}` for all
-        SimElements in the model - the static object datasets, process
-        element datasets and entity element datasets.
+        A generator that returns all :class:`datasets {.simelement.Dataset}`
+        for all :class:`~.simelement.SimElement` objects in the model -
+        the static object datasets, process element datasets and entity
+        element datasets.
         """
         for e in self.elements:
             for dset in e.datasets:
@@ -101,7 +119,8 @@ class SimModel(object):
     @property
     def elements(self):
         """
-        A generator that returns all :class:`SimElements <SimElement>` in the model
+        A generator that returns all :class:`SimElements
+        <.simelement.SimElement>` in the model.
         """
         for e in SimProcess.elements.values():
             yield e
@@ -113,7 +132,8 @@ class SimModel(object):
     @property
     def static_objects(self):
         """
-        A generator that returns a all :class:`SimStaticObject` elements in the model
+        A generator that returns a all :class:`~.location.SimStaticObject`
+        elements in the model
          """
         for e in SimStaticObject.elements.values():
             yield e
@@ -121,7 +141,8 @@ class SimModel(object):
     @property
     def process_elements(self):
         """
-        A generator that returns a all :class:`SimProcess` elements in the model
+        A generator that returns a all :class:`~.process.SimProcess`
+        classes in the model
         """
         for e in SimProcess.elements.values():
             yield e
@@ -129,28 +150,36 @@ class SimModel(object):
     @property
     def entity_elements(self):
         """
-        A generator that returns a all :class:`SimEntity` elements in the model
+        A generator that returns a all :class:`~.entity.SimEntity`
+        classes in the model
         """
         for e in SimEntity.elements.values():
             yield e
             
     def has_static_object(self, elementid):
         """
-        Returns True if there is a :class:`SimStaticObject` with the passed
-        element ID registered in the model.
+        Returns True if there is a :class:`~.location.SimStaticObject`
+        with the passed element ID registered in the model, False
+        otherwise.
         
         :param elementid: The element ID of the static object to query for
+        :type elementid:  `str`
+    
         """
         return elementid in SimStaticObject.elements
     
     def get_static_object(self, elementid):
         """
-        Returns the registered :class:`SimStaticObject` with the passed
-        element ID; raises a :class:`~.simexception.SimError` if not found.
+        Returns the registered :class:`~.location.SimStaticObject` with the
+        passed element ID; raises a :class:`~.simexception.SimError` if
+        not found.
         
         :param elementid: The element ID of the requested static object
+        :type elementid:  `str`
+        
         :return: The specified static object
-        :rtype: :class:`SimStaticObject`
+        :rtype:  :class:`~.location.SimStaticObject`
+        
         """
         if elementid in SimStaticObject.elements:
             return SimStaticObject.elements[elementid]
@@ -166,8 +195,11 @@ class SimModel(object):
         
         :param entity_cls: The entity class corresponding to the requested
                            :class:`~.entity.SimEntityElement`
+        :type entity_cls:  `class`
+                           
         :return:           The specified static entity element
         :rtype:            :class:`~.entity.SimEntityElement`
+        
         """
         if not issubclass(entity_cls, SimEntity):
             msg = "get_entity_element({0}): parameter is either not a class or not a subclass of SimEntity"
@@ -189,8 +221,11 @@ class SimModel(object):
         
         :param process_cls: The process class corresponding to the requested
                             :class:`~.process.SimProcessElement`
+        :type entity_cls:  `class`
+        
         :return:            The specified process element
         :rtype:             :class:`~.process.SimProcessElement`
+        
         """
         if not issubclass(process_cls, SimProcess):
             msg = "get_process_element({0}): parameter is either not a class or not a subclass of SimProcess"

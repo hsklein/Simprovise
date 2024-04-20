@@ -10,7 +10,7 @@
 #===============================================================================
 __all__ = ['SimLocation', 'SimRootLocation', 'SimQueue']
 
-from simprovise.core import (SimClock, SimTime, simelement, 
+from simprovise.core import (SimClock, SimTime, simelement, SimEntity, 
                              SimError, SimCounter, SimUnweightedDataCollector,
                              SimLogging)
 
@@ -545,7 +545,7 @@ class SimLocation(SimStaticObject):
         by implementing ``onEnterImpl()``. The base implementation is a no-op.
 
         :param enteringObj: the entity entering this location
-        :type enteringObj:  :class:`~.entity.SimEntity`
+        :type enteringObj:  :class:`~.simobject.SimTransientObject`
 
         """
         pass
@@ -556,7 +556,7 @@ class SimLocation(SimStaticObject):
         by implementing ``onExitImpl()``. The base implementation is a no-op.
 
         :param exitingObj: the entity leaving this location
-        :type exitingObj:  :class:`~.entity.SimEntity`
+        :type exitingObj:  :class:`~.simobject.SimTransientObject`
 
         """
         pass
@@ -567,12 +567,15 @@ class SimLocation(SimStaticObject):
         invokes parent location ``onEnter()`` as required.  (It is not required
         if the entering object is already resident in the parent - e.g., if
         the entering object moves between child locations belonging to the
-        parent)
+        parent). 
  
-        :param enteringObj: the entity entering this location
-        :type enteringObj:  :class:`~.entity.SimEntity`
+        :param enteringObj: the object/entity entering this location
+        :type enteringObj:  :class:`~.simobject.SimTransientObject`
 
        """
+        # while other transient object types may be supported in the
+        # future, for now, at least, they should always be SimEntities
+        assert isinstance(enteringObj, SimEntity), "on_enter called on non-SimEntity"
         if enteringObj in self:
             msg = "Object ({0}) cannot enter location {1}; it is already located there"
             raise SimError("SimLocationDuplicateEntryError",
@@ -602,10 +605,13 @@ class SimLocation(SimStaticObject):
         onExit for ancestor locations that are not contained by the
         exiting object's next destination
 
-        :param exitingObj: the entity leaving this location
-        :type exitingObj:  :class:`~.entity.SimEntity`
+        :param exitingObj: the object/entity leaving this location
+        :type exitingObj:  :class:`~.simobject.SimTransientObject`
 
         """
+        # while other transient object types may be supported in the
+        # future, for now, at least, they should always be SimEntities
+        assert isinstance(exitingObj, SimEntity),  "on_exit called on non-SimEntity"
         if not exitingObj in self:
             msg = "Attempt to exit object ({0}) from a location ({1}) that it does not reside in"
             raise SimError("SimLocationInvalidExit", msg, str(exitingObj),
