@@ -34,13 +34,13 @@ _ERROR_NAME = "SimCounter Error"
 class SimCounter(object):
     """
     SimCounter implements both infinite and finite capacity counters, and
-    collects counter statistics. Primary public methods are :meth:increment and
-    :meth:decrement. increment() calls may block (for simulated time) on finite
+    collects counter statistics. Primary public methods are :meth:`increment` and
+    :meth:`decrement`. increment() calls may block (for simulated time) on finite
     capacity counters, so such increment() calls must also include the
-    :class:`.SimTransaction` (:class:`SimProcess`) on which the increment is
-    being called - if increment blocks, the transaction will be paused, and
-    then resumed once the counter can be successfully incremented by the
-    requested amount.
+    :class:`~.transaction.SimTransaction` (:class:`~.process.SimProcess`)
+    on which the increment is being called - if increment blocks, the
+    transaction will be paused, and then resumed once the counter can be
+    successfully incremented by the requested amount.
 
     In most cases, the modeler would like to collect counter values during
     the simulation as part of their output analysis. In order to do that, the
