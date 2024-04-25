@@ -52,9 +52,10 @@ class SimElementType(object):
 class SimDbDatasink(object):
     """
     An implementation of the datasink interface implicitly defined by
-    Core/NullDataSink that writes non-time-weighted dataset values to the
-    SQLite output database implemented by this module.  Defines a number of
-    additional methods (on top of those defined by NullDataSink) that are
+    :class:`~simprovise.core.datacollector.NullDataSink` that writes
+    non-time-weighted dataset values to the SQLite output database
+    implemented by this module.  Defines a number of additional
+    methods (on top of those defined by NullDataSink) that are
     specific to the SQLite implementation.
 
     TODO Perhaps also take the dataset as a parameter, which would facilitate
@@ -63,6 +64,17 @@ class SimDbDatasink(object):
     that it more or less requires the data collector to be reset for each
     interval, which may not be desirable. The alternative is for summary
     sinks to create their own collectors.
+    
+    :param database: output database to write data to
+    :type database:  :class:`SimOutputDatabase`
+    
+    :param dataset:  The dataset associated with this datasink
+    :type dataset:   :class:`simprovise.core.datacollector.Dataset`
+    
+    :param runNumber: The simulation run number associated
+                      with this datasink
+    :type runNumber:  `int` > 0
+    
     """
     __slots__ = ('__dbConnection', '__datasetID', '__run', '__batch', '__valuesAreSimTime')
     commitRate = 1
@@ -71,12 +83,17 @@ class SimDbDatasink(object):
     def set_commit_rate(rate):
         """
         Static method to globally set the commitRate for all SimDbSinks.  When 1,
-        maybeCommit() always does a commit.  When zero, maybeCommit() never commits
-        (i.e., we rely on flush() to flush the database)
-        Generally the rate is left at 1 for animated runs, zero for background runs.
-        TODO allow other positive rates, to do periodic (but not every put) commits.
-        TODO A more robust implementation might tie the rate to the database/db manager,
-        (rather than a global setting) but that would require a bit of refactoring.
+        maybeCommit() always does a commit.  When zero, maybeCommit()
+        never commits(i.e., we rely on flush() to flush the database)
+        Generally the rate is left at 1 for animated/interactive runs,
+        zero for background runs
+        
+        TODO allow other positive rates, to do periodic (but not every
+        put) commits.
+        
+        TODO A more robust implementation might tie the rate to the
+        database/db manager, (rather than a global setting) but that
+        would require a bit of refactoring.
         """
         SimDbDatasink.commitRate = rate
 
