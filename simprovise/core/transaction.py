@@ -63,7 +63,7 @@ class SimTransactionResumeEvent(SimEvent):
         if interruptEvent and interruptEvent.isRegistered():
             logger.debug("cancelling interrupt in favor of concurrently scheduled resume event")
             interruptEvent.deregister()
-        self.transaction.wakeup()
+        self.transaction._wakeup()
 
     def __str__(self):
         return super().__str__() + " Transaction: " + str(self.transaction)
@@ -97,7 +97,7 @@ class SimTransactionInterruptEvent(SimEvent):
             if resumeEvent:
                 resumeEvent.deregister()
                 self.transaction.resumeEvent = None
-            self.transaction.wakeup_and_interrupt(self.reason)
+            self.transaction._wakeup_and_interrupt(self.reason)
 
     def __str__(self):
         return super().__str__() + \
@@ -108,18 +108,18 @@ class SimTransactionInterruptEvent(SimEvent):
 class SimTransaction(object):
     """
     SimTransaction is the base class representing actions (or a sequence of
-    actions) that are initiated by or on behalf of SimAgents and take place
-    over simulated time.
+    actions) that are initiated by or on behalf of :class:`~.agent.SimAgent`
+    objects and take place over simulated time.
+    
+    At present, the only subclass of SimTransaction is
+    :class:`~.process.SimProcess`; SimProcesses are executed for
+    :class:`~.entity.SimEntity` objects. (A SimTask class may be implemented
+    in the future to work with resources more directly; at that point, this
+    class may require refactoring)
 
-    The two subclasses of SimTransaction are SimProcess (for entities) and SimTask
-    (for resources).  FWIW the term "transaction" is adopted from the GPSS
-    terminology (where a transaction is really a process, as it applies to
-    entities), in the search for a base class name that is different from both
-    "process" and "task".
-
-    Note:
-        SimTask is a concept for a future release that has not yet been
-        implemented.
+    FWIW the term "transaction" is adopted from the GPSS terminology (where a
+    transaction is really a process, as it applies to entities), in the search
+    for a base class name that is different from both "process" and "task".
     """
     __slots__ = ('_greenlet', '_executing', '_agent', 'resumeEvent',
                  'interruptEvent', '_resourceAssignments')
@@ -136,16 +136,21 @@ class SimTransaction(object):
     @apidocskip
     def agent(self):
         """
-        Returns the agent - a SimEntity or SimResource - which is executing this
-        process or task.
+        
+        :return: The agent which is executing this transaction (process).
+        :rtype:  :class:`~.entity.SimEntity`
+        
         """
         return self._agent
 
     @property
     def is_executing(self):
         """
-        Returns True if the transaction (process or task) is currently
-        executing, False otherwise.
+        
+        :return: True if the transaction (process or task) is currently
+                 executing, False otherwise.
+        :rtype:  bool
+        
         """
         return self._executing
 
@@ -154,9 +159,9 @@ class SimTransaction(object):
 
     def run(self):
         """
-        run() is the code that actually specifies process/task execution.
-        It is implemented by concrete subclasses, typically as created by
-        the user/modeler.
+        run() is the code that actually specifies transaction/process
+        execution. It is implemented by concrete subclasses, typically as
+        created by the user/modeler.
         """
         pass
 
@@ -211,7 +216,7 @@ class SimTransaction(object):
         to be broken down into subprocesses, the subprocesses might be executed
         within run() via execute.
         """
-        #since transactions may synchronously execute subtransactiones via execute(),
+        #since transactions may synchronously execute subtransactions via execute(),
         # we'll assign the greenlet attributes here.  That way, subtransactions
         # inherit the greenlet of the parent (calling) transaction
         self._greenlet = greenlet.getcurrent()
@@ -221,8 +226,9 @@ class SimTransaction(object):
         assert self.agent, "Attempt to execute a transaction not associated with an agent"
 
         # As of now, at least, transaction instances are NOT re-entrant
-        # The general intent is for a transaction object to execute once over the course of it's lifetime
-        # At a minimum, we'll ensure that execute() is not called on an instance that is already executing
+        # The general intent is for a transaction object to execute once over 
+        # the course of it's lifetime. At a minimum, we'll ensure that execute() 
+        # is not called on an instance that is already executing
         assert not self.is_executing, "Attempt to re-execute an already-executing transaction"
         self._executing = True
 
@@ -256,13 +262,14 @@ class SimTransaction(object):
         """
         Initiate asynchronous execution of the task or process transaction.
         """
-        # Create a greenlet for this transaction, and start running by scheduling a start event
+        # Create a greenlet for this transaction, and start running by 
+        # scheduling a start event
         gr = greenlet(self.execute, simevent.event_processing_greenlet)
         startEvent = SimTransactionStartEvent(self, gr)
         startEvent.register()
 
     @apidocskip
-    def wakeup(self):
+    def _wakeup(self):
         """
         Restart a waiting transaction. Should be called only by
         SimTransactionResumeEvent. Other code should call resume()
@@ -271,7 +278,7 @@ class SimTransaction(object):
         self._greenlet.switch()
 
     @apidocskip
-    def wakeup_and_interrupt(self, reason):
+    def _wakeup_and_interrupt(self, reason):
         """
         Interrupt a waiting transaction - i.e., wake it prematurely by
         restarting it and throwing a SimInterruptException with the passed
