@@ -304,7 +304,7 @@ class SimTransaction(object):
         """
         Resume transaction by scheduling a continue/resume event. This is the
         method that should be called by to restart a waiting transaction -
-        NOT wakeup()
+        NOT _wakeup()
         """
         resumeEvent = SimTransactionResumeEvent(self)
         resumeEvent.register()
@@ -320,15 +320,16 @@ class SimTransaction(object):
         long.
 
         This is the method that should be called by to restart a waiting
-        transaction - NOT wakeupAndInterrupt()
+        transaction - NOT _wakeup_and_interrupt()
 
         Note that the transaction initiating the interrupt (which is NOT
         this transaction) does __not__ block until the interrupt occurs.
         We might consider a method that facilitates that, though the semantics
         could be confusing.
 
-        Args:
-            reason (str): Reason for interrupt, e.g. 'preemption'
+        :param reason: Reason for interrupt, e.g. 'preemption'
+        :type reason:  `str`
+        
         """
         assert self.is_executing, "Cannot interrupt a non-executing transaction"
         assert self._greenlet != greenlet.getcurrent(), "Transaction interrupted from itself (or its own greenlet)"
@@ -346,16 +347,17 @@ class SimTransaction(object):
         that response message.  The agent will continue to handle other messages
         until that response is received - only this transaction blocks.
 
-        Resource acquisition APIs are implemented using waitForResponse(); end
+        Resource acquisition APIs are implemented using wait_for_response(); end
         user modeling code most likely should not be calling this method
         directly unless the model requires customized inter-agent communication.
+        
+        :param msg: Message that has been sent by this transaction/process, and
+                    for which the transaction/process is awaiting a response.
+        :type msg:  :class:`~.agent.SimMessage`
+        
+        :return:    The response to the passed :class:`~.agent.SimMessage`
+        :rtype:     :class:`~.agent.SimMessage`
 
-        Args:
-            msg (SimMessage): Message that has been sent, and for which the
-                              process is awaiting a response.
-
-        Returns:
-            SimMessage:       The response to msg
         """
         # TODO handle an interrupt
         assert msg.sender == self.agent, "can't wait on message sent by a different agent"
@@ -384,16 +386,17 @@ class SimTransaction(object):
     def wait_for(self, amount):
         """
         Wait (pause transaction execution) for a fixed amount of simulated time.
-
-        Args:
-            amount (SimTime): Length of wait. Though not recommended, amount
-                              can also be specified as a positive integer, in
-                              which case the wait length will be the amount in
-                              SimClock's default time unit (as defined by
-                              simtime.base_unit()).
+        
+        :param amount: Length of wait. Can be specified as a
+                       :class:`~.simtime.SimTime` or a scalar numeric (int or
+                       float). Must be non-negative. If a scalar value, the wait
+                       length will be the amount in the :class:`~.simclock.SimClock`
+                       default time unit (as defined by :func:`simtime.base_unit`.
+                       Scalar values are not recommended unless the base unit
+                       is dimensionless (None)
+        :type amount:  :class:`~.simtime.SimTime`, `int` or `float`
+        
         """
-        # TODO add optional time unit parameter, to be used if amount is not
-        # a SimTime instance and to make the wait length more explicit.
         resumeAtEvent = SimTransactionResumeEvent(self, amount)
         resumeAtEvent.register()
         simevent.event_processing_greenlet.switch()
@@ -403,41 +406,54 @@ class SimTransaction(object):
         Increment a counter by the designated amount. if the counter's capacity
         is not infinite, this may block.
 
-        Args:
-            counter (SimCounter):  Counter to be incremented
-            amount (positive int): Amount to increment counter by. Should be
-                                   less than or equal to the counter's capacity
+        :param counter: Counter object to be incremented
+        :type counter:  :class:`~.counter.SimCounter`
+
+        :param amount:  Amount to increment the counter by. Should be greater
+                        than zero and less than or equal to the counter's
+                        capacity. Defaults to 1
+        :type amount:   `int` 
+
         """
-        #TODO validate counter, amount
         counter.increment(self, amount)
 
     def decrement(self, counter, amount=1):
         """
         Decrement a counter by the designated amount. Never blocks.
 
-        Args:
-            counter (SimCounter):  Counter to be decremented
-            amount (positive int): Amount to decrement counter by. Should be
-                                   less than or equal to the counter's current
-                                   value
+        :param counter: Counter object to be decremented
+        :type counter:  :class:`~.counter.SimCounter`
+
+        :param amount:  Amount to decrement the counter by. Should be greater
+                        than zero. If greater than the current counter value,
+                        will decrement the counter to zero. Defaults to 1
+        :type amount:   `int` 
+
         """
-        #TODO validate counter, amount
         counter.decrement(amount)
 
     def acquire(self, resource, numrequested=1):
         """
-        Acquires a specified resource on behalf of this transaction, blocking
-        until the resource is acquired, and returning a SimResourceAssignment
+        Acquires a specified resource (or resources) on behalf of this
+        transaction, blocking until the resource(s) are acquired, and
+        returning a resource assignment.
+        
+        Note that default behavior typically guarantees that all of
+        the requested resources will be acquired; client code can
+        customize this behavior, possibly providing some but not all
+        of the requested resource if the number requested is > 1.
 
-        Args:
-            resource (SimResource): Resource requested / to be acquired
-            numrequested (int):     Number of resources (subresources) to
-                                    acquire. Can be more than 1 if resource
-                                    has capacity greater than 1.
+        :param resource:     The resource object to be acquired
+        :type resource:      :class:`~.resource.SimResource`
 
-        Returns:
-            SimResourceAssignment: Assignment object that specifies assigned
-                                   resource(s)
+        :param numrequested: The number of resources (subresources) to acquire,
+                             Can be more than 1 if resource has capacity greater
+                             than 1. Defaults to 1
+        :type numrequested:   `int`
+        
+        :return:             Assignment object that specifies assigned resource(s)
+        :rtype:              :class:`~.resource.SimResourceAssignment`
+        
         """
         assert resource.assignment_agent, "Resource has no assignment agent!"
 
@@ -454,19 +470,31 @@ class SimTransaction(object):
     def acquire_from(self, agent, rsrcClass, numrequested=1):
         """
         Acquire a resource (or resources) of a specified class that is
-        managed by a specified assignment agent, returning a
-        SimResourceAssignment. Blocks until the resource(s) are assigned.
+        managed by a specified assignment agent, returning a resource
+        assignment. Blocks until the resource(s) are assigned. Typically
+        used when acquiring resource(s) managed by a
+        :class:`.resource.SimResourcePool`.
+        
+        Note that default behavior typically guarantees that all of
+        the requested resources will be acquired; client code can
+        customize this behavior, possibly providing some but not all
+        of the requested resource if the number requested is > 1.
 
-        Args:
-            agent (SimAgent):   The agent managing the resource(s) requested
-            rsrcClass (class):  The (Python) class of the resource(s) requested
-            numrequested (int): Number of resources being requested. Can be
-                                more than 1 if the agent manages multiple
-                                resources (or a resource with capacity > 1)
+        :param agent:        The assignment agent managing the desired
+                             resource(s)
+        :type agent:         :class:`~.resource.SimResourceAssignmentAgent`
 
-        Returns:
-            SimResourceAssignment: Assignment object that specifies assigned
-                                   resource(s)
+        :param rsrcClass:    The (Python) class of resource object to be
+                             acquired. May be a base class, if a heterogenous
+                             set of resources can meet the request.
+        :type rsrcClass:     `class` derived from :class:`~.resource.SimResource`
+
+        :param numrequested: The number of resources or subresources to acquire.
+                             Can be more than 1 if the agent manages multiple
+                             resources (or a resource with capacity > 1).
+                             Defaults to 1
+        :type numrequested:   `int`
+        
         """
         assert isinstance(rsrcClass, type), "acquireFrom() rsrcClass parameter is not a class"
         assert agent, "Null agent passed to acquireFrom()"
@@ -526,12 +554,15 @@ class SimTransaction(object):
         The default release spec value of None indicates that all resources
         in the assignment are to be released.
 
-        Args:
-            rsrcAssignment (SimResourceAssignment): the assignment object
-                            including the resources to be released
-            releaseSpec:   Specification of resources within the assignment
-                           to release (as described above) or None, to release
-                           all resources in rsrcAssignment.
+        :param rsrcAssignment: The resource assignment that is to be fully or
+                               partially released.
+        :type rsrcAssignment:  :class:`~.resource.SimResourceAssignment`
+
+        :param releaseSpec:    Specification of resources within the assignment
+                               to release (as described above) or None, to
+                               release all resources in rsrcAssignment.
+        :type releaseSpec:     See above.
+ 
         """
         assert self.agent, "Transaction calling release() has no agent"
         assert self.is_executing, "Resources can only be released by executing transactions"
@@ -546,17 +577,13 @@ class SimTransaction(object):
         if rsrcAssignment.count == 0:
             self._resourceAssignments.remove(rsrcAssignment)
 
-
-    # TODO unregisterResourceAssignment()  Confirms that assignment
-    # has a resource count of zero, and removes it from __resourceAssignments
-    # To be called by the resource/resource assignment release.
-
     @property
     def resourceAssignments(self):
         """
-        Returns a list of current resource assignments for the transaction;
-        any assignment with a resource count of zero is ignored (i.e., not part
-        of the returned list).
+        Returns a list of current resource assignments
+        (:class:`~.resource.SimResourceAssignment`) for the transaction;
+        any assignment with a resource count of zero is ignored
+        (i.e., is not included in the returned list).
         """
         return [assg for assg in self._resourceAssignments if assg.count > 0]
 
