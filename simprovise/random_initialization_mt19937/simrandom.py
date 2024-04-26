@@ -8,37 +8,36 @@
 # provides a set of static methods for creating number generators (both
 # pseudo-random and transparently deterministic, e.g. round-robin).
 #
-# The simulator currently allows models to specify the use of up to 2000
-# separate, independent random number streams per simulation run. It also 
-# currently allows for up to 100 simulation replication runs.  This implies 
-# the need for up to 2000x100 (200,000) separate, independent pseudo-random 
-# number streams.
+# The simulator currently allows models to specify the use of up to 100
+# separate (and hopefully independent) random number streams per simulation run.
+# It also currently allows for up to 100 simulation runs.  This implies the
+# need for up to 100x100 (10,000) separate, independent number streams.
 #
-# While we might simply use 200,000 different seed values (one per stream),
-# most pseudo-random number generators (PRNGs) do not provide any guarantees
-# of independence for generators with arbitrarily different seeds. Good
-# generators should have the characteristic that non-overlapping substreams of
-# a single generated stream should pass tests of independence.
+# While we might simply use 10,000 different seed values, random's underlying
+# Mersenne Twister RNG implementation does not make any general guarantees
+# regarding the independence of RNG instances initialized with different seeds.
+# We therefore rely on an offline process that uses a single random number
+# stream, jumps ahead in that stream by a very large value (2 to the 50th)
+# 10,000 times, saving the generator state (624 int values) after each jump
+# into a numpy .npy file, containing a 100x100x624 array.  We rely on the fact
+# that:
+# a) in a high quality random number stream (such as those create by the
+#    Mersenne Twister), discrete substreams should be highly independent, and
+# b) The long period of MT 19937 (2e19937) allows for very long substreams,
+#    and
+# c) Substreams of length 2e50 ought to be long enough for any application.
 #
-# The underlying pseudo-random bit generator currently in use is the PCG64DXSM
-# generator provided by the numpy random module. This generator is reasonably
-# efficient, has a sufficiently long period (2**128) and a very fast function
-# for jumping ahead in a stream, allowing us to deterministically create 
-# generators for an arbitrarily high number of large (> 2**50), sufficiently 
-# independent substreams.
+# This module reads that file back into a numpy array, and initialize uses
+# the 100x624 slice corresponding to the desired run to initialize a list of
+# 100 random.Random instances (one per stream).  All in all, this is hopefully
+# a good way to provide a reasonable guarantee of substream independence
+# while continuing to use the default MT19937 random number generator that
+# ships with the Python standard library.
 #
-# In constrast, the Mersenne Twister (MT19377) PRNG that ships with the
-# standard Python random module has an orders-of-magnitude slower jump ahead
-# function; creating 200,000 independent generators through that method
-# currently (2024) requires an hour or more on a reasonably powerful laptop.
-# An earlier version of this module using the MT generator got around this by
-# creating these generators offline and saving their states to a file to be
-# read by the simulator at run time. Since each generator state consists of
-# 624 unsigned ints, that file gets quite large for a large number of streams.
+# See http://www.howardklein.net/?p=157#more-157 for a more complete discussion.
 #
-# The initialization method initializes a list of random.Random number 
-# generator instances for a specified run/replication number, one per stream 
-# (i.e., a list of 2000 RNGs).
+# The initialization method initializes a list of random.Random number generator
+# instances, one per stream (i.e., a list of 100 RNGs).
 #
 # SimDistribution provides the static method number_generator() that returns
 # a Python generator function that generates values in a (possibly)
@@ -55,7 +54,7 @@
 #===============================================================================
 __all__ = ['SimDistribution']
 
-import os
+import random, os
 import itertools
 from functools import partial
 import numpy as np
@@ -66,41 +65,74 @@ from simprovise.core.apidoc import apidoc, apidocskip
 
 logger = SimLogging.get_logger(__name__)
 
-_BASE_SEED = 1976
-_BASE_BIT_GENERATOR = np.random.PCG64DXSM(seed=_BASE_SEED)
+_STATE_SIZE = 624
 
-# The number of independent streams allowed per model (run) TODO: make configurable
-_NSTREAMS = 2000
+# Full path of file containing initial states for all 10,000 random number
+# streams. Use os.path functions to assemble the name in a
+# platform-independent way.
+_RNG_STATES_FILENAME = os.path.join(
+    os.path.dirname(os.path.abspath(simprovise.__file__)),
+   'random_initialization_mt19937',
+    'mt19937_states.npy')
 
-# The maximum number of replications (runs) supported TODO: make configurable
-_MAX_REPLICATIONS = 100
-
-# We obtain (sufficiently) independent streams by starting with a base
-# generator and advancing/jumping ahead by a delta value
-_STREAM_DELTA = pow(2,48) * 42
-
-# To obtain a separate set of streams for each run, we start by jumping ahead of
-# all the streams created for earlier runs
-_RUN_DELTA = _STREAM_DELTA * _NSTREAMS
-
+_READ_ERROR = "Random Number Generator State File Read Error"
 _RNG_INITIALIATION_ERROR = "Random Number Generator Initialization Error"
 _RAND_PARAMETER_ERROR = "Invalid Psuedo-Random Distribution Parameter(s)"
 
-# The psuedo-random-number generators for a single run, one for each
-# substream in the run.
 _rng = []
 
-        
-def max_streams():
+def _read_state_file():
     """
-    The number of separate pseudo-random-number streams supported for
-    each model run.
-    
-    :return: The (maximum) number of supported separate/independent streams
-    :rtype:  `int`
-    
+    The initial states for all generators for all runs are maintained in a
+    numpy 3-D array, pre-built and stored in a .npy file. The array is of the
+    form state_array[run][substream][statevalue]; there are 624 state values
+    per run/substream. (In other words if we have a maximum of x runs and y
+    substreams per run, the array will be of dimension [x,y,624])
+
+    _readStateFile() reads the Random Generator State initialization file
+    into a 3-d numpy array. The array is checked and returned. An exception
+    is raised if the file array cannot be read or it's format is invalid. (It
+    must be three dimensional, and the final dimension must be 624)
     """
-    return _NSTREAMS
+    statefile = _RNG_STATES_FILENAME
+    logger.info("Reading initial random number generator states from file %s...",
+                statefile)
+
+    try:
+        state_array = np.load(statefile)
+    except IOError:
+        logger.fatal("Failure reading random state initialization file %s",
+                     statefile)
+        raise SimError(_READ_ERROR, "Failure opening/reading file")
+
+    # pylint thinks that state_array is an NpzFile (which doesn't have a shape)
+    # pylint: disable=E1101
+    if len(state_array.shape) != 3:
+        logger.fatal("Random state initialization file %s is not a 3-dimensional array",
+                     statefile)
+        raise SimError(_READ_ERROR, "state array is not 3-dimensional")
+
+    if state_array.shape[2] != _STATE_SIZE:
+        logger.fatal("Random state initialization file %s state length is not %d",
+                     statefile, _STATE_SIZE)
+        raise SimError(_READ_ERROR, "state array state length is invalid")
+
+    return state_array
+
+# Module variable holding initial random number generator state for all runs
+# and all streams. Lazily initialized by _initializeStateArrayIfRequired().
+# Used primarily by initialize() to set the state for all RNGs for a specified
+# run.
+_rng_state_array = None
+
+def _initialize_state_array_if_required():
+    """
+    Read the initial states for all random number generators (all runs, all
+    streams) into module variable _rng_state_array
+    """
+    global _rng_state_array
+    if _rng_state_array is None:
+        _rng_state_array = _read_state_file()
         
 def max_run_number():
     """
@@ -112,7 +144,11 @@ def max_run_number():
     :rtype:  `int`
     
     """
-    return _MAX_REPLICATIONS
+    _initialize_state_array_if_required() # read rng state array if necessary
+    # pylint thinks that state_array is an NpzFile (which doesn't have a shape)
+    # pylint: disable=E1101
+    nruns = _rng_state_array.shape[0]
+    return nruns
 
 def min_run_number():
     """
@@ -131,34 +167,49 @@ def initialize(run_number=1):
     Create the independent random number generators (one per substream) for a
     specified run.  The generators are placed in module variable _rng, a
     single-dimensional list.
+
+    The state data used to initialize the generators are a slice of the
+    state array read by _readStateFile().
     
     :param run_number: The run number to initialize random number streams
                        for. must be in in range 1 - :meth:`max_run_number`
     :type run_number:  `int`
     
     """
-    nsubstreams = max_streams()
+    _initialize_state_array_if_required() # read rng state array if necessary
+
+    # pylint thinks that state_array is an NpzFile (which doesn't have a shape)
+    # pylint: disable=E1101
+    nruns = _rng_state_array.shape[0]
+    nsubstreams = _rng_state_array.shape[1]
     logger.info("Initializing %d random number generators for run %d",
                 nsubstreams, run_number)
 
-    if run_number > max_run_number():
-        msg = "Requested run number {0} exceeds the configured maximum number of runs ({1})"
-        raise SimError(_RNG_INITIALIATION_ERROR, msg, run_number, max_run_number())
+    if run_number > nruns:
+        msg = "Requested run number {0} exceeds the number of runs {1} defined in the random initialization file"
+        raise SimError(_RNG_INITIALIATION_ERROR, msg, run_number, nruns)
+
+    runindex = run_number - 1
 
     global _rng
 
     # Create a new random number generator instance for each substream
-    
-    # start by jumping ahead based on the run number, and adding
-    # one stream delta increment for good measure
-    runjumps = (run_number - 1) * _RUN_DELTA + _STREAM_DELTA
-    bit_generator = _BASE_BIT_GENERATOR.jumped(runjumps)
-    
-    # Create the list of generators, one for each possible stream
-    # in the run.
-    sdelta = _STREAM_DELTA
-    ns = max_streams()    
-    _rng = [np.random.Generator(bit_generator.jumped(i * sdelta)) for i in range(ns)]
+    _rng = [random.Random() for i in range(nsubstreams)]
+
+    # For each substream, extract the initial state data from the array,
+    # massage it, and use it to set the initial state of the corresponding
+    # random number generator instance.
+    for i in range(nsubstreams):
+        # Convert the array of numpy.uint32s to a list of ints
+        state_list = [int(x) for x in _rng_state_array[runindex][i]]
+
+        # Append the required value of 624 to the list
+        state_list.append(_STATE_SIZE)
+
+        # Define the required internal state tuple and use it to set the state for
+        # the corresponding RNG instance.
+        rng_state = (3, tuple(state_list), None)
+        _rng[i].setstate(rng_state)
 
 @apidoc
 class SimDistribution(object):
@@ -238,16 +289,16 @@ class SimDistribution(object):
             msg = "{0} is not a valid/defined distribution function"
             raise SimError("SimDistribution Error", msg, functionName)
 
-    #@staticmethod
-    #def n_random_number_streams():
-        #"""
-        #Returns the number of initialized random number streams. By default,
-        #this is 100.
-        #"""
-        #_initialize_state_array_if_required() # read rng state array if necessary
-        ## pylint thinks that state_array is an NpzFile (which doesn't have a shape)
-        ## pylint: disable=E1101
-        #return _rng_state_array.shape[1]
+    @staticmethod
+    def n_random_number_streams():
+        """
+        Returns the number of initialized random number streams. By default,
+        this is 100.
+        """
+        _initialize_state_array_if_required() # read rng state array if necessary
+        # pylint thinks that state_array is an NpzFile (which doesn't have a shape)
+        # pylint: disable=E1101
+        return _rng_state_array.shape[1]
 
     @staticmethod
     def constant(constValue):
@@ -297,7 +348,7 @@ class SimDistribution(object):
             choices:        A sequence of the possible values to be returned by
                             the function/generator.
             rnStream (int): Identifies the random stream to sample from.
-                            Should be in range [1 - :meth:`max_streams`]
+                            Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
         f = _rng[rnStream].choice
         return partial(f, choices)
@@ -313,18 +364,18 @@ class SimDistribution(object):
             SimDistribution.number_generator(SimDistribution.exponential, 42)
 
         Args:
-            mean:           The mean value (or scale) of the desired exponentially
+            mean:           The mean value of the desired exponentially
                             distributed sample. May be either numeric or a
                             :class:`~.simtime.SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
-                            Should be in range [1 - :meth:`max_streams`]
+                            Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
-        f = _rng[rnStream].exponential
-        return partial(f, mean)
+        f = _rng[rnStream].expovariate
+        return partial(f, 1.0 /  mean)
     functionDict["exponential"] = exponential
 
     @staticmethod
-    def uniform(low, high, rnStream=1):
+    def uniform(a, b, rnStream=1):
         """
         Returns a function that returns pseudo-random values from the uniform
         distribution with the specified bounds. Sample usage::
@@ -335,21 +386,21 @@ class SimDistribution(object):
                                             rnStream=12)
 
         Args:
-            low:              The low bound of the desired uniformly distributed
+            a:              The low bound of the desired uniformly distributed
                             sample. May be either numeric or a :class:`~.simtime.SimTime`
                             instance
-            high:              The high bound of the desired uniformly distributed
+            b:              The high bound of the desired uniformly distributed
                             sample. May be either numeric or a :class:`~.simtime.SimTime`
                             instance
             rnStream (int): Identifies the random stream to sample from.
-                            Should be in range [1 - :meth:`max_streams`]
+                            Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
         f = _rng[rnStream].uniform
-        return partial(f, low, high)
+        return partial(f, a, b)
     functionDict["uniform"] = uniform
 
     @staticmethod
-    def triangular(low, mode, high, rnStream=1):
+    def triangular(low, high, mode, rnStream=1):
         """
         Returns a function that returns pseudo-random values from the triangular
         distribution with the specified bounds. Sample usage::
@@ -364,20 +415,20 @@ class SimDistribution(object):
             mode:           The mode of the desired triangular distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
-                            Should be in range [1 - :meth:`max_streams`]
+                            Should be in range [1 - :meth:`nRandomNumberStreams`]
        """
         f = _rng[rnStream].triangular
-        return partial(f, low, mode, high)
+        return partial(f, low, high, mode)
     functionDict["triangular"] = triangular
 
     @staticmethod
-    def normal(mu, sigma, floor=0, rnStream=1):
+    def gaussian(mu, sigma, floor=0, rnStream=1):
         """
         Returns a function that returns pseudo-random values from the gaussian
         distribution with the specified mu (mean) and sigma (standard deviation).
         Sample usage::
 
-            SimDistribution.number_generator(SimDistribution.normal, 27, 4.5)
+            SimDistribution.number_generator(SimDistribution.gaussian, 27, 4.5)
 
         Gaussian distribution values are not guaranteed to be positive, and
         negative values are obviously a problem in many situations (e.g.,
@@ -386,14 +437,14 @@ class SimDistribution(object):
         effective mean and standard deviation of the distribution.
 
         Args:
-            mu:             The mean value of the desired normal distribution.
+            mu:             The mean value of the desired gaussian distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance
-            sigma:          The std deviation of the desired normal distribution.
+            sigma:          The std deviation of the desired gaussian distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
-                            Should be in range [1 - :meth:`max_streams`]
+                            Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
-        f = _rng[rnStream].normal
+        f = _rng[rnStream].gauss
         if floor is None:
             return partial(f, mu, sigma)
         else:
@@ -403,25 +454,27 @@ class SimDistribution(object):
                 x = f1()
                 return max(x, floor)
             return f2
-    functionDict["gaussian"] = normal
+    functionDict["gaussian"] = gaussian
 
     @staticmethod
-    def weibull(a, rnStream=1):
+    def weibull(alpha, beta, rnStream=1):
         """
         Returns a function that returns pseudo-random values from the weibull
-        distribution with the specified a (shape)
+        distribution with the specified alpha (scale) and beta (shape)
         parameters. Sample usage::
 
             SimDistribution.number_generator(SimDistribution.weibull, 2, 0.7)
 
         Args:
-            a:           The shape of the of the desired weibull distribution.
+            alpha:          The scale parameter of the desired weibull distribution.
+                            May be either numeric or a :class:`~.simtime.SimTime` instance
+            beta:           The shape paramter of the desired triangular distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
-                            Should be in range [1 - :meth:`max_streams`]
+                            Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
         f = _rng[rnStream].weibullvariate
-        return partial(f, a)
+        return partial(f, alpha, beta)
     functionDict["weibull"] = weibull
 
     @staticmethod
@@ -436,32 +489,32 @@ class SimDistribution(object):
             alpha:          The shape parameter of the desired pareto distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance
             rnStream (int): Identifies the random stream to sample from.
-                            Should be in range [1 - :meth:`max_streams`]
+                            Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
         f = _rng[rnStream].paretovariate
         return partial(f, alpha)
     functionDict["pareto"] = pareto
 
     @staticmethod
-    def lognormal(mean, sigma, rnStream=1):
+    def lognormal(mu, sigma, rnStream=1):
         """
         Returns a function that returns pseudo-random values from the log-
         normal distribution with the specified mu and sigma parameters.
 
         Args:
-            mean:           The mean of the underlying normal distribution.
+            mu:             The location parameter of the desired lognormal distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance
-            sigma:          The standard deviation of the underlying normal distribution.
+            sigma:          The scale parameter of the desired lognormal distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance,
                             but must be greater than zero
             rnStream (int): Identifies the random stream to sample from.
-                            Should be in range [1 - :meth:`max_streams`]
+                            Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
         if sigma <= 0:
             msg = "Invalid Lognormal sigma ({0}); value must be greater than zero"
             raise SimError(_RAND_PARAMETER_ERROR, msg, sigma)
         f = _rng[rnStream].lognormvariate
-        return partial(f, mean, sigma)
+        return partial(f, mu, sigma)
     functionDict["lognormal"] = lognormal
 
     @staticmethod
@@ -474,11 +527,11 @@ class SimDistribution(object):
             alpha:          Shape parameter of the desired beta distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance.
                             Must be greater than zero
-            beta:           Scale parameter of the desired beta distribution.
+            beta:           Shape parameter of the desired beta distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance
                             Must be greater than zero
             rnStream (int): Identifies the random stream to sample from.
-                            Should be in range [1 - :meth:`max_streams`]
+                            Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
         if alpha <= 0:
             msg = "Beta Distribution: invalid alpha value ({0}); alpha and beta parameters must be greater than zero"
@@ -497,14 +550,14 @@ class SimDistribution(object):
         distribution with the specified alpha and beta parameters.
 
         Args:
-            alpha:          Alpha (shape) parameter of the desired gamma distribution.
+            alpha:          Alpha parameter of the desired gamma distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance.
                             Must be greater than zero
-            beta:           Beta (scale) parameter of the desired gamma distribution.
+            beta:           Beta parameter of the desired gamma distribution.
                             May be either numeric or a :class:`~.simtime.SimTime` instance
                             Must be greater than zero
             rnStream (int): Identifies the random stream to sample from.
-                            Should be in range [1 - :meth:`max_streams`]
+                            Should be in range [1 - :meth:`nRandomNumberStreams`]
         """
         if alpha <= 0:
             msg = "Gamma Distribution: invalid alpha value ({0}); alpha and beta parameters must be greater than zero"
@@ -515,9 +568,6 @@ class SimDistribution(object):
         f = _rng[rnStream].gammavariate
         return partial(f, alpha, beta)
     functionDict["gamma"] = gamma
-    
-    # TODO Add geometric, gumbel, logistic, binomial, multinomial, pareto, poisson,
-    # power distributions from numpy
 
     @staticmethod
     def number_generator(func, *args, **kwargs):
@@ -630,7 +680,7 @@ if __name__ == '__main__':
     cpuend = time.process_time()
     print("SimDistribution number_generator uniform time", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.number_generator(SimDistribution.triangular, SimTime(10), 35, SimTime(1, simtime.MINUTES))
+    gen = SimDistribution.number_generator(SimDistribution.triangular, SimTime(10), SimTime(1, simtime.MINUTES), 35)
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
@@ -651,7 +701,7 @@ if __name__ == '__main__':
     print("SimDistribution number_generator triangular time", cpuend - cpustart, "mean value:", total / 100000)
 
 
-    gen = SimDistribution.number_generator(SimDistribution.normal, SimTime(10), 4)
+    gen = SimDistribution.number_generator(SimDistribution.gaussian, SimTime(10), 4)
     total = 0
     negativeCount = 0
     cpustart = time.process_time()
@@ -661,4 +711,15 @@ if __name__ == '__main__':
         if nextVal < 0: negativeCount += 1
     cpuend = time.process_time()
     print("SimDistribution number_generator gaussian time", cpuend - cpustart, negativeCount, "mean value:", total / 1000)
+
+    r = random.Random()
+    n = pow(10, 6)
+    cpustart = time.process_time()
+
+    for i in range(n):
+        r.random()
+    cpuend = time.process_time()
+    s = r.getstate()
+    #print(s)
+    print("random() time", cpuend - cpustart, "mean value:", (cpuend - cpustart) / 100, type(s))
 
