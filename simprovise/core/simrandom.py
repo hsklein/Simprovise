@@ -636,11 +636,11 @@ class SimDistribution(object):
             msg = "Geometric Distribution: invalid rho (probability) value ({0}); must >= 0 and <= 1>"
             raise SimError(_RAND_PARAMETER_ERROR, msg, rho)
         
-        f = _rng[rnStream].geometric
+        f = _rng[rnStream].binomial
         return partial(f, n, rho)
     functionDict["binomial"] = binomial
     
-    # TODO Add  binomial, multinomial, poisson, power distributions from numpy
+    # TODO Add  , poisson, power distributions from numpy
 
     @staticmethod
     def number_generator(func, *args, **kwargs):
@@ -785,3 +785,66 @@ if __name__ == '__main__':
     cpuend = time.process_time()
     print("SimDistribution number_generator gaussian time", cpuend - cpustart, negativeCount, "mean value:", total / 1000)
 
+    gen = SimDistribution.number_generator(SimDistribution.normal, SimTime(10), 4, floor=None)
+    total = 0
+    negativeCount = 0
+    for i in range(1000):
+        nextVal = next(gen)
+        total += nextVal
+        if nextVal < 0: negativeCount += 1
+    print("SimDistribution number_generator normal time no floor negative count:", negativeCount, "mean value:", total / 1000)
+
+    gen = SimDistribution.number_generator(SimDistribution.choice, (2, 4, 6))
+    total = 0
+    negativeCount = 0
+    for i in range(1000):
+        total += next(gen)
+    print("SimDistribution number_generator choice expected mean 4, actual mean:", total / 1000)
+
+    gen = SimDistribution.number_generator(SimDistribution.weibull, 2.0)
+    total = 0
+    for i in range(1000):
+        total += next(gen)
+    print("SimDistribution number_generator weibull, actual mean:", total / 1000)
+
+    gen = SimDistribution.number_generator(SimDistribution.pareto, 2.0)
+    total = 0
+    for i in range(1000):
+        total += next(gen)
+    print("SimDistribution number_generator pareto, actual mean:", total / 1000)
+
+    gen = SimDistribution.number_generator(SimDistribution.lognormal, 10, 2.0)
+    total = 0
+    for i in range(1000):
+        total += next(gen)
+    print("SimDistribution number_generator lognormal, actual mean:", total / 1000)
+
+    gen = SimDistribution.number_generator(SimDistribution.beta, 10, 2.0)
+    total = 0
+    for i in range(1000):
+        total += next(gen)
+    print("SimDistribution number_generator beta, actual mean:", total / 1000)
+
+    gen = SimDistribution.number_generator(SimDistribution.gamma, 10, 2.0)
+    total = 0
+    for i in range(1000):
+        total += next(gen)
+    print("SimDistribution number_generator gamma, actual mean:", total / 1000)
+
+    gen = SimDistribution.number_generator(SimDistribution.geometric, 0.35)
+    total = 0
+    for i in range(1000):
+        total += next(gen)
+    print("SimDistribution number_generator geometric, actual mean:", total / 1000)
+
+    gen = SimDistribution.number_generator(SimDistribution.logistic, 0, 2)
+    total = 0
+    for i in range(1000):
+        total += next(gen)
+    print("SimDistribution number_generator logistic, actual mean:", total / 1000)
+
+    gen = SimDistribution.number_generator(SimDistribution.binomial, 5, 0.2)
+    total = 0
+    for i in range(1000):
+        total += next(gen)
+    print("SimDistribution number_generator binomial, actual mean:", total / 1000)
