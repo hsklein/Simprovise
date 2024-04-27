@@ -620,20 +620,20 @@ class SimDistribution(object):
         try:
             n = int(n)
         except TypeError:
-            msg = "binomial Distribution: invalid (non-numeric) n value ({0}); must be >= 0 "
+            msg = "Binomial Distribution: invalid (non-numeric) n value ({0}); must be >= 0 "
             raise SimError(_RAND_PARAMETER_ERROR, msg, n)
         
         try:
             rho = float(rho)
         except TypeError:
-            msg = "binomial Distribution: invalid (non-numeric) rho value ({0}); must be >= 0 and <= 1"
+            msg = "Binomial Distribution: invalid (non-numeric) rho value ({0}); must be >= 0 and <= 1"
             raise SimError(_RAND_PARAMETER_ERROR, msg, rho)
                       
         if n < 0:
-            msg = "Geometric Distribution: invalid n value ({0}); must >= 0"
+            msg = "Binomial Distribution: invalid n value ({0}); must >= 0"
             raise SimError(_RAND_PARAMETER_ERROR, msg, n)
         if rho < 0 or rho > 1:
-            msg = "Geometric Distribution: invalid rho (probability) value ({0}); must >= 0 and <= 1>"
+            msg = "Binomial Distribution: invalid rho (probability) value ({0}); must >= 0 and <= 1>"
             raise SimError(_RAND_PARAMETER_ERROR, msg, rho)
         
         f = _rng[rnStream].binomial
