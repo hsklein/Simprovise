@@ -32,16 +32,14 @@ class RandomInitializationTests(unittest.TestCase):
         "Test: sampling from stream zero raises"
         simrandom.initialize(1)
         with self.assertRaises(simexception.SimError):
-            SimDistribution.number_generator(SimDistribution.exponential, 3,
-                                             rnStream=0)
+            SimDistribution.exponential(3, streamNum=0)
         
     def testStreamOverMax(self):
         "Test: sampling from stream zero raises"
         simrandom.initialize(1)
         stream_num = simrandom.max_streams() + 1
         with self.assertRaises(simexception.SimError):
-            SimDistribution.number_generator(SimDistribution.exponential, 3,
-                                             rnStream=stream_num)
+            SimDistribution.exponential(3, streamNum=stream_num)
         
 
 

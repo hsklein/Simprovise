@@ -19,8 +19,8 @@ RSRC2_WAITS = [SimTime(0.5, simtime.MINUTES), SimTime(20), SimTime(4)]
 
 pcounter = itertools.count()
 
-rsrc1_wait = SimDistribution.number_generator(SimDistribution.round_robin, RSRC1_WAITS)
-rsrc2_wait = SimDistribution.number_generator(SimDistribution.round_robin, RSRC2_WAITS)
+rsrc1_wait = SimDistribution.round_robin(RSRC1_WAITS)
+rsrc2_wait = SimDistribution.round_robin(RSRC2_WAITS)
 
 warmupLength = SimTime(40)
 batchLength = SimTime(300)
@@ -69,8 +69,8 @@ class TestProcess1(SimProcess):
         self.release(rsrcAssignment)
         entity.move_to(sink)
 
-source.add_entity_generator(SimEntity, TestProcess1, SimDistribution.constant,
-                            meanInterarrivalTime)
+source.add_entity_generator(SimEntity, TestProcess1,
+                            SimDistribution.constant(meanInterarrivalTime))
 
 
 if __name__ == '__main__':

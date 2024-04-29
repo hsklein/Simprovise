@@ -5,7 +5,7 @@ from simprovise.runcontrol.replication import (SimReplication,
 from simprovise.core import *
 from simprovise.core.location import SimStaticObject
 from simprovise.database import *
-from simprovise import Simulation
+from simprovise.simulation import Simulation
 import logging
 import unittest
 

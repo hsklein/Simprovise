@@ -37,8 +37,7 @@ serverLocation = SimLocation("ServerLocation")
 source = SimEntitySource("Source")
 sink = SimEntitySink("Sink")
 
-stimeGenerator = SimDistribution.number_generator(SimDistribution.exponential,
-                                                 meanServiceTime, 1)
+stimeGenerator = SimDistribution.exponential(meanServiceTime)
 
 class mm1Process(SimProcess):
     """
@@ -56,8 +55,8 @@ class mm1Process(SimProcess):
         self.release(resourceAssignment)
         entity.move_to(sink)
 
-source.add_entity_generator(SimEntity, mm1Process, SimDistribution.exponential,
-                          meanInterarrivalTime, 2)
+source.add_entity_generator(SimEntity, mm1Process,
+                            SimDistribution.exponential(meanInterarrivalTime, streamNum=2))
 
 
 if __name__ == '__main__':

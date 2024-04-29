@@ -143,6 +143,10 @@ def initialize(run_number=1):
     logger.info("Initializing %d random number generators for run %d",
                 nsubstreams, run_number)
 
+    if run_number <= 0:
+        msg = "Requested run number ({0}) must be greater than zero"
+        raise SimError(_RNG_INITIALIATION_ERROR, msg, run_number)
+
     if run_number > max_run_number():
         msg = "Requested run number {0} exceeds the configured maximum number of runs ({1})"
         raise SimError(_RNG_INITIALIATION_ERROR, msg, run_number, max_run_number())
@@ -253,7 +257,7 @@ class SimDistribution(object):
         
         """
         def f(): return constValue
-        return f
+        return SimDistribution._random_generator(f)
     functionDict["constant"] = constant
 
     @staticmethod
@@ -273,11 +277,12 @@ class SimDistribution(object):
         cycle = itertools.cycle(choices)
         def f():
             return next(cycle)
-        return f
+        
+        return SimDistribution._random_generator(f)
     functionDict["roundRobin"] = round_robin
 
     @staticmethod
-    def choice(choices, rnStream=1):
+    def choice(choices, streamNum=1):
         """
         Returns a function that returns a pseudo-randomly chosen value from
         the passed sequence of choices. The below returns a generator that
@@ -289,45 +294,47 @@ class SimDistribution(object):
                          the function/generator.
         :type choices:   Sequence
 
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        f = _rng[rnStream].choice
-        return partial(f, choices)
+        f =  lambda: _rng[streamNum-1].choice(choices)
+        return SimDistribution._random_generator(f, streamNum)
     functionDict["choice"] = choice
 
     @staticmethod
-    def exponential(mean, rnStream=1):
+    def exponential(mean, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the
         exponential distribution with a specified mean. To generate
         exponentially distributed values with a mean of 42 use::
 
-            SimDistribution.number_generator(SimDistribution.exponential, 42)
+            SimDistribution.exponential(42)
                         
         :param mean:     The mean value (or scale) of the desired exponentially
                          distributed sample.
         :type mean:      Either numeric or a :class:`~.simtime.SimTime`
 
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
            
         """
-        f = _rng[rnStream].exponential
-        return partial(f, mean)
+        scalarArgs, timeUnit = SimDistribution._scalar_args(mean)
+        
+        f =  lambda: _rng[streamNum-1].exponential(*scalarArgs)
+        return SimDistribution._random_generator(f, streamNum, timeUnit)
+    
     functionDict["exponential"] = exponential
 
     @staticmethod
-    def uniform(low, high, rnStream=1):
+    def uniform(low, high, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the uniform
         distribution with the specified bounds. Sample usage::
 
-            SimDistribution.number_generator(SimDistribution.uniform,
-                                            SimTime(10, simtime.SECONDS),
-                                            SimTime(1.5, simtime.MINUTES),
-                                            rnStream=12)
+            SimDistribution.uniform(SimTime(10, simtime.SECONDS),
+                                    SimTime(1.5, simtime.MINUTES),
+                                    streamNum=12)
                                             
         :param low:      The low bound of the desired uniformly distributed sample. 
         :type low:       Either numeric or a :class:`~.simtime.SimTime`
@@ -335,22 +342,25 @@ class SimDistribution(object):
         :param high:     The high bound of the desired uniformly distributed sample. 
         :type high:      Either numeric or a :class:`~.simtime.SimTime`
 
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        f = _rng[rnStream].uniform
-        return partial(f, low, high)
+        if low > high:
+            msg = "Invalid uniform distribution parameters: low ({0}) is greater than high ({1}}"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, low, high)
+        
+        scalarArgs, timeUnit = SimDistribution._scalar_args(low, high)
+        
+        f =  lambda: _rng[streamNum-1].uniform(*scalarArgs)
+        return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["uniform"] = uniform
 
     @staticmethod
-    def triangular(low, mode, high, rnStream=1):
+    def triangular(low, mode, high, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the triangular
-        distribution with the specified bounds. Sample usage::
-
-            SimDistribution.number_generator(SimDistribution.triangular, 2, 9, 4)
-
+        distribution with the specified bounds. Must be: low <= mode <= high
                                             
         :param low:      The low bound of the desired triangular distribution. 
         :type low:       Either numeric or a :class:`~.simtime.SimTime`
@@ -361,22 +371,26 @@ class SimDistribution(object):
         :param high:     The high bound of the desired triangular distribution. 
         :type high:      Either numeric or a :class:`~.simtime.SimTime`
 
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
-       """
-        f = _rng[rnStream].triangular
-        return partial(f, low, mode, high)
+       """       
+        scalarArgs, timeUnit = SimDistribution._scalar_args(low, mode, high)
+        low2, mode2, high2 = scalarArgs
+        if not (low2 <= mode2 and mode <= high2):
+            msg = "Invalid triangular distribution parameters: must be low ({0}) <= mode ({1}} <= high ({2})>"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, low, mode, high)
+        
+        f =  lambda: _rng[streamNum-1].triangular(*scalarArgs)
+        return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["triangular"] = triangular
 
     @staticmethod
-    def normal(mu, sigma, floor=0, rnStream=1):
+    def normal(mu, sigma, floor=0, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the normal
         (Gaussian) distribution with the specified mu (mean) and sigma
-        (standard deviation). Sample usage::
-
-            SimDistribution.number_generator(SimDistribution.normal, 27, 4.5)
+        (standard deviation). 
 
         Normal distribution values are not guaranteed to be positive, and
         negative values are obviously a problem in many situations (e.g.,
@@ -395,88 +409,85 @@ class SimDistribution(object):
                          negative value.
         :type floor:     `None`, numeric, or a :class:`~.simtime.SimTime`
 
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]      
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]      
 
         """
-        f = _rng[rnStream].normal
+        scalarArgs, timeUnit = SimDistribution._scalar_args(mu, sigma, floor)
+        mu, sigma, floor = scalarArgs
+        
         if floor is None:
-            return partial(f, mu, sigma)
+            f = lambda: _rng[streamNum-1].normal(mu, sigma)
         else:
-            # TODO I'm sure there is a more efficient way to do this...
-            f1 = partial(f, mu, sigma)
-            def f2():
-                x = f1()
-                return max(x, floor)
-            return f2
+            f = lambda: max(_rng[streamNum-1].normal(mu, sigma), floor)
+        
+        return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["normal"] = normal
 
     @staticmethod
-    def weibull(a, rnStream=1):
+    def weibull(a, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the weibull
-        distribution with the specified alpha (shape) parameter. Sample usage::
-
-            SimDistribution.number_generator(SimDistribution.weibull, 2, 0.7)
+        distribution with the specified alpha (shape) parameter. 
                         
         :param a:        The shape of the of the desired weibull distribution.
         :type a:         Either numeric or a :class:`~.simtime.SimTime`
 
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        f = _rng[rnStream].weibull
-        return partial(f, a)
+        scalarArgs, timeUnit = SimDistribution._scalar_args(a)       
+        f =  lambda: _rng[streamNum-1].weibull(*scalarArgs)
+        return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["weibull"] = weibull
 
     @staticmethod
-    def pareto(alpha, rnStream=1):
+    def pareto(alpha, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the pareto
-        distribution with the specified alpha (shape) parameter. Sample usage::
-
-            SimDistribution.number_generator(SimDistribution.pareto, 1.5)
+        distribution with the specified alpha (shape) parameter. S
                         
         :param alpha:    The shape of the of the desired pareto distribution.
         :type alpha:     Either numeric or a :class:`~.simtime.SimTime`
 
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        f = _rng[rnStream].pareto
-        return partial(f, alpha)
+        scalarArgs, timeUnit = SimDistribution._scalar_args(alpha)       
+        f =  lambda: _rng[streamNum-1].pareto(*scalarArgs)
+        return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["pareto"] = pareto
 
     @staticmethod
-    def lognormal(mean, sigma, rnStream=1):
+    def lognormal(mean, sigma, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the log-
         normal distribution with the specified mean and sigma parameters.
-        Sample usage::
-
-            SimDistribution.number_generator(SimDistribution.lognormal, 20, 1.5)
                        
         :param mean:     The mean of the underlying normal distribution.
         :type mean:      Either numeric or a :class:`~.simtime.SimTime`
                         
         :param sigma:    The standard deviation of the underlying normal distribution.
-        :type sigma:     Either numeric or a :class:`~.simtime.SimTime`
+                         Must be greater than zero.
+        :type sigma:     Either numeric or a :class:`~.simtime.SimTime` 
 
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
         if sigma <= 0:
             msg = "Invalid Lognormal sigma ({0}); value must be greater than zero"
             raise SimError(_RAND_PARAMETER_ERROR, msg, sigma)
-        f = _rng[rnStream].lognormal
-        return partial(f, mean, sigma)
+        
+        scalarArgs, timeUnit = SimDistribution._scalar_args(mean, sigma)       
+        f =  lambda: _rng[streamNum-1].lognormal(*scalarArgs)
+        return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["lognormal"] = lognormal
 
     @staticmethod
-    def beta(alpha, beta, rnStream=1):
+    def beta(alpha, beta, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the beta
         distribution with the specified alpha (shape) and beta (scale) parameters.
@@ -489,8 +500,8 @@ class SimDistribution(object):
                          Must be greater than zero.
         :type beta:      Either numeric or a :class:`~.simtime.SimTime`
 
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
         
         """
         if alpha <= 0:
@@ -499,12 +510,14 @@ class SimDistribution(object):
         if beta <= 0:
             msg = "Beta Distribution: invalid beta value ({0}); alpha and beta parameters must be greater than zero"
             raise SimError(_RAND_PARAMETER_ERROR, msg, beta)
-        f = _rng[rnStream].beta
-        return partial(f, alpha, beta)
+        
+        scalarArgs, timeUnit = SimDistribution._scalar_args(alpha, beta)       
+        f =  lambda: _rng[streamNum-1].beta(*scalarArgs)
+        return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["beta"] = beta
 
     @staticmethod
-    def gamma(alpha, beta, rnStream=1):
+    def gamma(alpha, beta, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the gamma
         distribution with the specified alpha (shape) and beta (scale) parameters.
@@ -517,8 +530,8 @@ class SimDistribution(object):
                          Must be non-negative.
         :type beta:      Either numeric or a :class:`~.simtime.SimTime`
 
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
         if alpha < 0:
@@ -527,25 +540,25 @@ class SimDistribution(object):
         if beta < 0:
             msg = "Gamma Distribution: invalid beta value ({0}); alpha and beta parameters must be non-negative"
             raise SimError(_RAND_PARAMETER_ERROR, msg, beta)
-        f = _rng[rnStream].gamma
-        return partial(f, alpha, beta)
+
+        scalarArgs, timeUnit = SimDistribution._scalar_args(alpha, beta)       
+        f =  lambda: _rng[streamNum-1].gamma(*scalarArgs)
+        return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["gamma"] = gamma
 
     @staticmethod
-    def geometric(rho, rnStream=1):
+    def geometric(rho, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the geometric
         distribution with the specified rho (probability of success of a single
-        trial) parameter. Sample usage::
-
-            SimDistribution.number_generator(SimDistribution.geometric, 0.35)
+        trial) parameter. 
 
         :param rho:      The probability of success of an individual trial.
                          0.0 < rho <= 1.0
         :type rho:       `float`
                        
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
         try:
@@ -557,13 +570,13 @@ class SimDistribution(object):
         if rho <= 0 or rho > 1:
             msg = "Geometric Distribution: invalid rho (probability) value ({0}); must > 0 and <= 1"
             raise SimError(_RAND_PARAMETER_ERROR, msg, rho)
-        
-        f = _rng[rnStream].geometric
-        return partial(f, rho)
+                
+        f =  lambda: _rng[streamNum-1].geometric(rho)
+        return SimDistribution._random_generator(f, streamNum)
     functionDict["geometric"] = geometric
 
     @staticmethod
-    def logistic(loc=0.0, scale=1.0, floor=0, rnStream=1):
+    def logistic(loc=0.0, scale=1.0, floor=0, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the logistic
         distribution with the specified loc and scale parameters. Like the normal
@@ -581,30 +594,27 @@ class SimDistribution(object):
                          negative value.
         :type floor:     `None`, numeric, or a :class:`~.simtime.SimTime`
                        
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        f = _rng[rnStream].logistic
+        scalarArgs, timeUnit = SimDistribution._scalar_args(loc, scale, floor)
+        loc, scale, floor = scalarArgs
+        
         if floor is None:
-            return partial(f, loc, scale)
+            f = lambda: _rng[streamNum-1].logistic(loc, scale)
         else:
-            # TODO I'm sure there is a more efficient way to do this...
-            f1 = partial(f, loc, scale)
-            def f2():
-                x = f1()
-                return max(x, floor)
-            return f2
+            f = lambda: max(_rng[streamNum-1].logistic(loc, scale), floor)
+        
+        return SimDistribution._random_generator(f, streamNum)
     functionDict["logistic"] = logistic    
 
     @staticmethod
-    def binomial(n, rho, rnStream=1):
+    def binomial(n, rho, *, streamNum=1):
         """
         Returns a function that returns pseudo-random values from the binomial
         distribution with the specified n (number of trials) and rho (probability of
-        success of a single trial) parameter. Sample usage::
-
-            SimDistribution.number_generator(SimDistribution.binomial, 5, 0.35)
+        success of a single trial) parameter. 
 
         :param n:       The number of trials, >= 0
         :type n:       `int`
@@ -613,8 +623,8 @@ class SimDistribution(object):
                          0.0 <= rho <= 1.0
         :type rho:       `float`
                        
-        :param rnStream: Identifies the random stream to sample from.
-        :type rnStream:  `int` in range [1 - :func:`max_streams`]
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
         try:
@@ -636,57 +646,32 @@ class SimDistribution(object):
             msg = "Binomial Distribution: invalid rho (probability) value ({0}); must >= 0 and <= 1>"
             raise SimError(_RAND_PARAMETER_ERROR, msg, rho)
         
-        f = _rng[rnStream].binomial
-        return partial(f, n, rho)
+        f =  lambda: _rng[streamNum-1].binomial(n, rho)
+        return SimDistribution._random_generator(f, streamNum)
     functionDict["binomial"] = binomial
     
     # TODO Add  , poisson, power distributions from numpy
-
-    @staticmethod
-    def number_generator(func, *args, **kwargs):
-        """
-        Creates and returns a number generator using the passed function and
-        arguments. The passed function will typically be one of the
-        distribution methods defined by this class. These functions, when
-        called with the passed arguments (or modified arguments, as described
-        below) return a (related) function that will then be called by the
-        generator to create the yielded values.
-        
-        For example, the code below returns a generator yielding pseudo-random
-        values uniformly distributed between 100 and 200, based on random number
-        stream #4:
     
-        ``SimDistribution.number_generator(SimDistribution.uniform, 100, 200, 4)``
-
-        If any of the passed arguments are :class:`~.simtime.SimTime` instances,
-        the generator will yield :class:`~.simtime.SimTime` instances. In that
-        case, the passed arguments are, in effect, converted to the same units
-        (the unit of the first :class:`~.simtime.SimTime` encountered), and the
-        resulting scalar values are passed to func. The generator then converts
-        the generated values back into :class:`~.simtime.SimTime` instances and
-        yields them. In this way, the number functions do not have to be aware of
-        :class:`~.simtime.SimTime`.
-        
+    @staticmethod
+    def _scalar_args(*args):
         """
-        # TODO: if any argument is a SimTime, then they all should be.
-        # Check and raise if that is not the case.
-        # Also... if the arguments are SimTime, it is probably safe to assume that
-        # the returned value of the generator should never be negative.
-        isSimTimeGenerator = False
+        Takes the list of passed positional arguments, converting any SimTime
+        values into scalar values using the time unit of  the first SimTime
+        argument encountered.
+        
+        Returns the updated/converted list of arguments and the time unit used
+        (or None if no SimTime values were found)
+        
+        Called by distribution methods whose parameters may optionally be
+        SimTime values. The returned scalar argument list and time unit are
+        then typically passed to _random_generator() create a generator object
+        for a parameterized distribution function.
+        """
         timeUnits = None
-
-        # Create a (possibly) modified argument list.
-        # If any of the arguments are SimTime instances, convert the argument
-        # to a scalar value, using the time unit of the first SimTime
-        # argument we encounter in the argument list. We hold onto that time
-        # unit, so that the generator yields SimTime instances of that unit.
-        # (Our assumption is that if any arguments are SimTime instances,
-        # than the intention is to to generate time values)
-        def modifiedArg(a):
+        
+        def scalar_arg(a):
             nonlocal timeUnits
-            nonlocal isSimTimeGenerator
             if isinstance(a, SimTime):
-                isSimTimeGenerator = True
                 if timeUnits is None:
                     timeUnits = a.units
                     return a.value
@@ -694,25 +679,47 @@ class SimDistribution(object):
                     return a.to_units(timeUnits).value
             else:
                 return a
-
-        # Modify the positional arguments
-        modifiedArgs = [modifiedArg(a) for a in args]
-
-        # Modify the keyword arguments
-        modifiedKwargs = {}
-        for key in kwargs:
-            modifiedKwargs[key] = modifiedArg(kwargs[key])
-
-        # Call the passed function with the modified arguments, which should
-        # return another function to be used by the generator.
-        generatorFunc = func(*modifiedArgs, **modifiedKwargs)
-
-        if isSimTimeGenerator:
+            
+        scalarArgs = [scalar_arg(a) for a in args]
+        return scalarArgs, timeUnits
+    
+    @staticmethod
+    def _random_generator(f, streamNum=1, timeUnit=None):
+        """
+        First validates the passed random stream number.
+        
+        Then creates and returns a generator wrapping the passed SimDistribution
+        parameterized function. If the passed timeUnit parameter is not None, the
+        generated values will be SimTime objects of the specified time unit.
+        Otherwise, the generated values will be scalars (or whatever type
+        is output from the passed function).
+        
+        Called by the SimDistribution methods above to create a sampling
+        generator based on the specified distribution and parameters.
+        
+        Note that this design ensures that the passed function is not actually
+        evaluated/executed until the first value is requested from the generator.
+        Typically the generator is created prior to random number generator
+        initialization (simrandom.initialize()); any attempt to by the function
+        access a RNG prior to that will result in an error.
+        """
+        # validate the selected random number stream
+        if streamNum <= 0 or streamNum > max_streams():
+            msg = "Requested stream number ({0}) must be in range 1 - {1}"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, streamNum, max_streams())
+        
+        def sim_time_generator():
             while True:
-                yield SimTime(generatorFunc(), timeUnits)
+                 yield SimTime(f(), timeUnit)
+        
+        def scalar_generator():
+            while True:
+                 yield f()
+                 
+        if timeUnit is None:
+            return scalar_generator()
         else:
-            while True:
-                yield generatorFunc()
+            return sim_time_generator()
 
 
 if __name__ == '__main__':
@@ -721,15 +728,15 @@ if __name__ == '__main__':
     for n in SimDistribution.function_names():
         print(n)
 
-    gen = SimDistribution.number_generator(SimDistribution.constant, 10)
+    gen = SimDistribution.constant(10)
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
         total += next(gen)
     cpuend = time.process_time()
-    print("SimDistribution number_generator constant scalar", cpuend - cpustart, "mean value:", total / 100000)
+    print("SimDistribution constant scalar", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.number_generator(SimDistribution.exponential, 10)
+    gen = SimDistribution.exponential(10)
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
@@ -737,7 +744,7 @@ if __name__ == '__main__':
     cpuend = time.process_time()
     print("SimDistribution number_generator exponential scalar", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.number_generator(SimDistribution.exponential, SimTime(9), 2)
+    gen = SimDistribution.exponential(SimTime(9), streamNum=2)
     total = SimTime(0)
     cpustart = time.process_time()
     for i in range(100000):
@@ -745,7 +752,7 @@ if __name__ == '__main__':
     cpuend = time.process_time()
     print("SimDistribution number_generator exponential SimTime", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.number_generator(SimDistribution.uniform, SimTime(10), SimTime(1, simtime.MINUTES))
+    gen = SimDistribution.uniform(SimTime(10), SimTime(1, simtime.MINUTES))
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
@@ -753,7 +760,7 @@ if __name__ == '__main__':
     cpuend = time.process_time()
     print("SimDistribution number_generator uniform time", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.number_generator(SimDistribution.triangular, SimTime(10), 35, SimTime(1, simtime.MINUTES))
+    gen = SimDistribution.triangular(SimTime(10), 35, SimTime(1, simtime.MINUTES))
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
@@ -765,7 +772,7 @@ if __name__ == '__main__':
     kwargs1 = {}
     kwargs1['high'] = SimTime(1, simtime.MINUTES)
     kwargs1['mode'] = 35
-    gen = SimDistribution.number_generator(SimDistribution.triangular, *args1, **kwargs1)
+    gen = SimDistribution.triangular(*args1, **kwargs1)
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
@@ -774,7 +781,7 @@ if __name__ == '__main__':
     print("SimDistribution number_generator triangular time", cpuend - cpustart, "mean value:", total / 100000)
 
 
-    gen = SimDistribution.number_generator(SimDistribution.normal, SimTime(10), 4)
+    gen = SimDistribution.normal(SimTime(10), 4)
     total = 0
     negativeCount = 0
     cpustart = time.process_time()
@@ -785,7 +792,7 @@ if __name__ == '__main__':
     cpuend = time.process_time()
     print("SimDistribution number_generator gaussian time", cpuend - cpustart, negativeCount, "mean value:", total / 1000)
 
-    gen = SimDistribution.number_generator(SimDistribution.normal, SimTime(10), 4, floor=None)
+    gen = SimDistribution.normal(SimTime(10), 4, floor=None)
     total = 0
     negativeCount = 0
     for i in range(1000):
@@ -794,56 +801,56 @@ if __name__ == '__main__':
         if nextVal < 0: negativeCount += 1
     print("SimDistribution number_generator normal time no floor negative count:", negativeCount, "mean value:", total / 1000)
 
-    gen = SimDistribution.number_generator(SimDistribution.choice, (2, 4, 6))
+    gen = SimDistribution.choice((2, 4, 6))
     total = 0
     negativeCount = 0
     for i in range(1000):
         total += next(gen)
     print("SimDistribution number_generator choice expected mean 4, actual mean:", total / 1000)
 
-    gen = SimDistribution.number_generator(SimDistribution.weibull, 2.0)
+    gen = SimDistribution.weibull(2.0)
     total = 0
     for i in range(1000):
         total += next(gen)
     print("SimDistribution number_generator weibull, actual mean:", total / 1000)
 
-    gen = SimDistribution.number_generator(SimDistribution.pareto, 2.0)
+    gen = SimDistribution.pareto(2.0)
     total = 0
     for i in range(1000):
         total += next(gen)
     print("SimDistribution number_generator pareto, actual mean:", total / 1000)
 
-    gen = SimDistribution.number_generator(SimDistribution.lognormal, 10, 2.0)
+    gen = SimDistribution.lognormal(10, 2.0)
     total = 0
     for i in range(1000):
         total += next(gen)
     print("SimDistribution number_generator lognormal, actual mean:", total / 1000)
 
-    gen = SimDistribution.number_generator(SimDistribution.beta, 10, 2.0)
+    gen = SimDistribution.beta(10, 2.0)
     total = 0
     for i in range(1000):
         total += next(gen)
     print("SimDistribution number_generator beta, actual mean:", total / 1000)
 
-    gen = SimDistribution.number_generator(SimDistribution.gamma, 10, 2.0)
+    gen = SimDistribution.gamma(10, 2.0)
     total = 0
     for i in range(1000):
         total += next(gen)
     print("SimDistribution number_generator gamma, actual mean:", total / 1000)
 
-    gen = SimDistribution.number_generator(SimDistribution.geometric, 0.35)
+    gen = SimDistribution.geometric(0.35)
     total = 0
     for i in range(1000):
         total += next(gen)
     print("SimDistribution number_generator geometric, actual mean:", total / 1000)
 
-    gen = SimDistribution.number_generator(SimDistribution.logistic, 0, 2)
+    gen = SimDistribution.logistic(0, 2)
     total = 0
     for i in range(1000):
         total += next(gen)
     print("SimDistribution number_generator logistic, actual mean:", total / 1000)
 
-    gen = SimDistribution.number_generator(SimDistribution.binomial, 5, 0.2)
+    gen = SimDistribution.binomial(5, 0.2)
     total = 0
     for i in range(1000):
         total += next(gen)

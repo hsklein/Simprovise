@@ -78,8 +78,7 @@ class SimEntitySource(SimLocation):
                                              interarrivalGenerator)
             event.register()
 
-    def add_entity_generator(self, entityClass, processClass,
-                           interarrivalFunc, *iaArgs, **iaKwargs):
+    def add_entity_generator(self, entityClass, processClass, interarrivalGenerator):
         """
         Initializes a stream of entities to be generated via the following
         specification:
@@ -107,8 +106,7 @@ class SimEntitySource(SimLocation):
         Note that a entity source can be associated with multiple generators,
         so this method can be called any number of times on the same source
         instance.
-
-        
+       
         :param entityClass:      The class of the entity to be generated.
                                  Must be :class:`~.entity.SimEntity` or
                                  a subclass of that.
@@ -128,9 +126,7 @@ class SimEntitySource(SimLocation):
          
         """
         # Create a generator object from the interarrival function and parameters
-        interarrivalGenerator = SimDistribution.number_generator(interarrivalFunc,
-                                                                *iaArgs,
-                                                                **iaKwargs)
+        #interarrivalGenerator = interarrivalFunc(*iaArgs, **iaKwargs)
 
         # Define a simple generator that creates a entity and process of the right type,
         # and yields the entity
