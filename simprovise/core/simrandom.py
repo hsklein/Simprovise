@@ -329,6 +329,11 @@ class SimDistribution(object):
            
         """
         scalarArgs, timeUnit = SimDistribution._scalar_args(mean)
+        try:
+            m = float(scalarArgs[0])
+        except ValueError:
+            msg = "Exponential Distribution: invalid (non-numeric) mean value ({0})"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, mean)
         
         f =  lambda: _rng[streamNum-1].exponential(*scalarArgs)
         return SimDistribution._random_generator(f, streamNum, timeUnit)
@@ -354,12 +359,19 @@ class SimDistribution(object):
         :param streamNum: Identifies the random stream to sample from.
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
-        """
-        if low > high:
-            msg = "Invalid uniform distribution parameters: low ({0}) is greater than high ({1}}"
-            raise SimError(_RAND_PARAMETER_ERROR, msg, low, high)
-        
+        """        
         scalarArgs, timeUnit = SimDistribution._scalar_args(low, high)
+        low2, high2 = scalarArgs
+        try:
+            x = float(low2)
+            y = float(high2)
+        except ValueError:
+            msg = "Invalid uniform distribution parameters: low ({0}) or high ({1}) is non-numeric"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, low, high)        
+             
+        if low2 > high2:
+            msg = "Invalid uniform distribution parameters: low ({0}) is greater than high ({1})"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, low, high)
         
         f =  lambda: _rng[streamNum-1].uniform(*scalarArgs)
         return SimDistribution._random_generator(f, streamNum, timeUnit)
@@ -386,8 +398,17 @@ class SimDistribution(object):
        """       
         scalarArgs, timeUnit = SimDistribution._scalar_args(low, mode, high)
         low2, mode2, high2 = scalarArgs
-        if not (low2 <= mode2 and mode <= high2):
-            msg = "Invalid triangular distribution parameters: must be low ({0}) <= mode ({1}} <= high ({2})>"
+        
+        try:
+            x = float(low2)
+            x = float(mode2)
+            x = float(high2)
+        except ValueError:
+            msg = "Invalid (non-numeric) triangular distribution parameter(s): low ({0}), mode ({1}), or high ({2})"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, low, high)        
+        
+        if not (low2 <= mode2 and mode2 <= high2):
+            msg = "Invalid triangular distribution parameters: must be low ({0}) <= mode ({1}) <= high ({2})"
             raise SimError(_RAND_PARAMETER_ERROR, msg, low, mode, high)
         
         f =  lambda: _rng[streamNum-1].triangular(*scalarArgs)
@@ -424,6 +445,14 @@ class SimDistribution(object):
         """
         scalarArgs, timeUnit = SimDistribution._scalar_args(mu, sigma, floor)
         mu, sigma, floor = scalarArgs
+        try:
+            x = float(mu)
+            x = float(sigma)
+            if floor is not None:
+                x = float(floor)
+        except ValueError:
+            msg = "Invalid (non-numeric) normal distribution parameter(s): mu({0}), sigma ({1}), or floor ({2})"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, mu, sigma, floor)        
         
         if floor is None:
             f = lambda: _rng[streamNum-1].normal(mu, sigma)
@@ -447,6 +476,12 @@ class SimDistribution(object):
 
         """
         scalarArgs, timeUnit = SimDistribution._scalar_args(a)       
+        try:
+            x = float(scalarArgs[0])
+        except ValueError:
+            msg = "Invalid (non-numeric) weibull distribution parameter(s): a ({0})"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, a)        
+        
         f =  lambda: _rng[streamNum-1].weibull(*scalarArgs)
         return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["weibull"] = weibull
@@ -465,6 +500,12 @@ class SimDistribution(object):
 
         """
         scalarArgs, timeUnit = SimDistribution._scalar_args(alpha)       
+        try:
+            x = float(scalarArgs[0])
+        except ValueError:
+            msg = "Invalid (non-numeric) pareto distribution parameter(s): a ({0})"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, alpha)        
+
         f =  lambda: _rng[streamNum-1].pareto(*scalarArgs)
         return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["pareto"] = pareto
@@ -486,11 +527,19 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
+        scalarArgs, timeUnit = SimDistribution._scalar_args(mean, sigma)       
+        try:
+            x, y = scalarArgs
+            x = float(x)
+            x = float(y)
+        except ValueError:
+            msg = "Invalid (non-numeric) lognormal distribution parameter(s): mu({0}) or sigma ({1})"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, mean, sigma)        
+
         if sigma <= 0:
             msg = "Invalid Lognormal sigma ({0}); value must be greater than zero"
             raise SimError(_RAND_PARAMETER_ERROR, msg, sigma)
         
-        scalarArgs, timeUnit = SimDistribution._scalar_args(mean, sigma)       
         f =  lambda: _rng[streamNum-1].lognormal(*scalarArgs)
         return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["lognormal"] = lognormal
@@ -513,6 +562,15 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
         
         """
+        scalarArgs, timeUnit = SimDistribution._scalar_args(alpha, beta)       
+        try:
+            x, y = scalarArgs
+            x = float(x)
+            x = float(y)
+        except ValueError:
+            msg = "Invalid (non-numeric) beta distribution parameter(s): alpha({0}) or beta ({1})"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, alpha, beta)        
+
         if alpha <= 0:
             msg = "Beta Distribution: invalid alpha value ({0}); alpha and beta parameters must be greater than zero"
             raise SimError(_RAND_PARAMETER_ERROR, msg, alpha)
@@ -520,7 +578,6 @@ class SimDistribution(object):
             msg = "Beta Distribution: invalid beta value ({0}); alpha and beta parameters must be greater than zero"
             raise SimError(_RAND_PARAMETER_ERROR, msg, beta)
         
-        scalarArgs, timeUnit = SimDistribution._scalar_args(alpha, beta)       
         f =  lambda: _rng[streamNum-1].beta(*scalarArgs)
         return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["beta"] = beta
@@ -543,6 +600,15 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
+        scalarArgs, timeUnit = SimDistribution._scalar_args(alpha, beta)       
+        try:
+            x, y = scalarArgs
+            x = float(x)
+            x = float(y)
+        except ValueError:
+            msg = "Invalid (non-numeric) gamma distribution parameter(s): alpha({0}) or beta ({1})"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, alpha, beta)        
+
         if alpha < 0:
             msg = "Gamma Distribution: invalid alpha value ({0}); alpha and beta parameters must be non-negative"
             raise SimError(_RAND_PARAMETER_ERROR, msg, alpha)
@@ -550,7 +616,6 @@ class SimDistribution(object):
             msg = "Gamma Distribution: invalid beta value ({0}); alpha and beta parameters must be non-negative"
             raise SimError(_RAND_PARAMETER_ERROR, msg, beta)
 
-        scalarArgs, timeUnit = SimDistribution._scalar_args(alpha, beta)       
         f =  lambda: _rng[streamNum-1].gamma(*scalarArgs)
         return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["gamma"] = gamma
@@ -572,7 +637,7 @@ class SimDistribution(object):
         """
         try:
             rho = float(rho)
-        except TypeError:
+        except ValueError:
             msg = "Geometric Distribution: invalid (non-numeric) rho value ({0}); must be > 0 and <= 1"
             raise SimError(_RAND_PARAMETER_ERROR, msg, rho)
             
@@ -609,6 +674,14 @@ class SimDistribution(object):
         """
         scalarArgs, timeUnit = SimDistribution._scalar_args(loc, scale, floor)
         loc, scale, floor = scalarArgs
+        try:
+            x = float(loc)
+            x = float(scale)
+            if floor is not None:
+                x = float(floor)
+        except ValueError:
+            msg = "Invalid (non-numeric) logistic distribution parameter(s): loc({0}), scale ({1}), or floor ({2})"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, loc, scale, floor)        
         
         if floor is None:
             f = lambda: _rng[streamNum-1].logistic(loc, scale)
@@ -637,20 +710,23 @@ class SimDistribution(object):
 
         """
         try:
-            n = int(n)
-        except TypeError:
+            if int(n) != float(n) or int(n) < 0:
+                msg = "Binomial Distribution: invalid (non-integer) n value ({0}); must be >= 0 "
+                raise SimError(_RAND_PARAMETER_ERROR, msg, n)
+                
+        except ValueError:
             msg = "Binomial Distribution: invalid (non-numeric) n value ({0}); must be >= 0 "
             raise SimError(_RAND_PARAMETER_ERROR, msg, n)
         
         try:
             rho = float(rho)
-        except TypeError:
+        except ValueError:
             msg = "Binomial Distribution: invalid (non-numeric) rho value ({0}); must be >= 0 and <= 1"
             raise SimError(_RAND_PARAMETER_ERROR, msg, rho)
                       
-        if n < 0:
-            msg = "Binomial Distribution: invalid n value ({0}); must >= 0"
-            raise SimError(_RAND_PARAMETER_ERROR, msg, n)
+        #if n < 0:
+            #msg = "Binomial Distribution: invalid n value ({0}); must >= 0"
+            #raise SimError(_RAND_PARAMETER_ERROR, msg, n)
         if rho < 0 or rho > 1:
             msg = "Binomial Distribution: invalid rho (probability) value ({0}); must >= 0 and <= 1>"
             raise SimError(_RAND_PARAMETER_ERROR, msg, rho)
@@ -690,7 +766,7 @@ class SimDistribution(object):
                 return a
             
         scalarArgs = [scalar_arg(a) for a in args]
-        return scalarArgs, timeUnits
+        return scalarArgs, timeUnits            
     
     @staticmethod
     def _random_generator(f, streamNum=1, timeUnit=None):
@@ -817,13 +893,13 @@ if __name__ == '__main__':
         total += next(gen)
     print("SimDistribution number_generator choice expected mean 4, actual mean:", total / 1000)
 
-    gen = SimDistribution.weibull(2.0)
+    gen = SimDistribution.weibull(1.0)
     total = 0
     for i in range(1000):
         total += next(gen)
     print("SimDistribution number_generator weibull, actual mean:", total / 1000)
 
-    gen = SimDistribution.pareto(2.0)
+    gen = SimDistribution.pareto(1.0)
     total = 0
     for i in range(1000):
         total += next(gen)
