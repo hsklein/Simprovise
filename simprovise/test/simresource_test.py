@@ -45,8 +45,8 @@ class RATestCaseBase(unittest.TestCase):
     
         
 class MockSource(SimEntitySource):
-    def __init__(self, parentlocation=None):
-        super().__init__("MockSource", parentlocation)
+    def __init__(self):
+        super().__init__("MockSource")
 
 class MockEntity(SimEntity):
     ""

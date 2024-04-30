@@ -2,6 +2,7 @@ import unittest
 
 from simprovise.test import simtime_test
 from simprovise.test import simclock_test
+from simprovise.test import simrandom_test
 from simprovise.test import simevent_test
 from simprovise.test import simdatacollector_test
 from simprovise.test import simcounter_test
@@ -26,6 +27,7 @@ def run_tests():
     #suite.addTest(system_test1.makeTestSuite())
     suite.addTest(simtime_test.makeTestSuite())
     suite.addTest(simclock_test.makeTestSuite())
+    suite.addTest(simrandom_test.makeTestSuite())
     suite.addTest(simevent_test.makeTestSuite())
     suite.addTest(simdatacollector_test.makeTestSuite())
     suite.addTest(simcounter_test.makeTestSuite() )

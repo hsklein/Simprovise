@@ -24,8 +24,8 @@ class MockProcess(SimProcess):
         
         
 class MockSource(SimEntitySource):
-    def __init__(self, parentlocation=None):
-        super().__init__("MockSource", parentlocation)
+    def __init__(self):
+        super().__init__("MockSource")
 
             
 def reinitialize():
@@ -106,7 +106,7 @@ class SimEntitySourceTests(unittest.TestCase):
         generation, one transaction start)
         """
         self.source.add_entity_generator(TestEntity, MockProcess,
-                                         SimDistribution.constant, SimTime(10))
+                                         SimDistribution.constant(SimTime(10)))
         self.source.final_initialize()              
         eventsProcessed = self.eventProcessor.process_events(SimTime(10))
         self.assertEqual(eventsProcessed, 2)
@@ -118,7 +118,7 @@ class SimEntitySourceTests(unittest.TestCase):
         run() method
         """
         self.source.add_entity_generator(TestEntity, MockProcess,
-                                         SimDistribution.constant, SimTime(10))
+                                         SimDistribution.constant(SimTime(10)))
         self.source.final_initialize()              
         eventsProcessed = self.eventProcessor.process_events(SimTime(10))
         self.assertEqual(len(MockProcess.processStarts), 1)
@@ -131,9 +131,9 @@ class SimEntitySourceTests(unittest.TestCase):
         generation, three transaction start)
         """
         self.source.add_entity_generator(TestEntity, MockProcess,
-                                         SimDistribution.constant, SimTime(5))
+                                         SimDistribution.constant(SimTime(5)))
         self.source.add_entity_generator(TestEntity, MockProcess,
-                                         SimDistribution.constant, SimTime(10))
+                                         SimDistribution.constant(SimTime(10)))
         self.source.final_initialize()              
         eventsProcessed = self.eventProcessor.process_events(SimTime(10))
         self.assertEqual(eventsProcessed, 6)

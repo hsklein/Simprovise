@@ -46,6 +46,7 @@ class RandomInitializationTests(unittest.TestCase):
 def makeTestSuite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(RandomInitializationTests))
+    return suite
 
 
 if __name__ == '__main__':

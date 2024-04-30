@@ -22,14 +22,27 @@ class TestLocation(SimLocation):
     def on_exit_impl(self, exitingObj): 
         self.exitCount += 1
         
-class TestTransient(SimTransientObject):
-    def __init__(self, name, locationObj=None):
-        super().__init__(locationObj)
+class MockSource(SimEntitySource):
+    def __init__(self):
+        super().__init__("MockSource")
+        
+
+class MockEntity(SimEntity):
+    ""
+  
+class MockProcess(SimProcess):
+    ""
+
+# TestTransient and MockNamedObject need to inherit from SimEntity
+# to pass assertion (since SimEntities are the only SimTransientObjects
+# currently allowed)
+class TestTransient(SimEntity):
+    def __init__(self, name, source=None):
+        super().__init__(source, MockProcess())
         self.name = name
         
-class MockNamedObject(object):
-    def __init__(self, name):
-        self.name = name
+class MockNamedObject(TestTransient):
+    ""
     
 def reinitialize():
     SimDataCollector.reinitialize()
@@ -126,7 +139,9 @@ class SimEmptyLocationTests(unittest.TestCase):
         
     def testAddNotStaticChildRaises(self):
         "Test: addChild() with a non-static object raises and error"
-        testObj = TestTransient("test", self.parentLoc)
+        process = MockProcess()
+        source = MockSource()
+        testObj = MockEntity(source, process)
         self.assertRaises(SimError, lambda: self.parentLoc._add_child(testObj))
         
                        
@@ -140,8 +155,9 @@ class SimParentLocationEntryTests(unittest.TestCase):
         self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
+        self.source = MockSource()
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]
-        self.testObj = [MockNamedObject(name) for name in names]
+        self.testObj = [MockNamedObject(name, self.source) for name in names]
 
     def testParentEnter1(self):
         "Test: add five entries to parent location, entries == 5"
@@ -212,8 +228,9 @@ class SimParentLocationExitTests(unittest.TestCase):
         self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
+        self.source = MockSource()
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]
-        self.testObj = [MockNamedObject(name) for name in names]
+        self.testObj = [MockNamedObject(name, self.source) for name in names]
         
         for i in range(5):
             self.parentLoc.on_enter(self.testObj[i])
@@ -274,8 +291,9 @@ class SimChildLocationEntryTests1(unittest.TestCase):
         self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
+        self.source = MockSource()
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]
-        self.testObj = [MockNamedObject(name) for name in names]
+        self.testObj = [MockNamedObject(name, self.source) for name in names]
         
         self.parentLoc.on_enter(self.testObj[0])
         self.childLoc.on_enter(self.testObj[1])
@@ -352,8 +370,9 @@ class SimChildLocationEntryTests2(unittest.TestCase):
         self.parentLoc = TestLocation("Parent", rootLoc, "Child")
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
+        self.source = MockSource()
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]
-        self.testObj = [MockNamedObject(name) for name in names]
+        self.testObj = [MockNamedObject(name, self.source) for name in names]
 
         self.parentLoc.on_enter(self.testObj[0])
         self.childLoc.on_enter(self.testObj[1])
@@ -438,8 +457,9 @@ class SimChildLocationExitTests1(unittest.TestCase):
         self.childLoc = TestLocation("Child", self.parentLoc)
         self.childLoc2 = TestLocation("Child2", self.parentLoc)
         self.exitToLoc = TestLocation("ExitLoc", rootLoc)
+        self.source = MockSource()
         names = ["Bert", "Ernie", "Oscar", "Kermit", "Elmo"]
-        self.testObj = [MockNamedObject(name) for name in names]
+        self.testObj = [MockNamedObject(name, self.source) for name in names]
 
         self.parentLoc.on_enter(self.testObj[0])
         self.childLoc.on_enter(self.testObj[1])
