@@ -40,18 +40,27 @@
 # generator instances for a specified run/replication number, one per stream 
 # (i.e., a list of 2000 RNGs).
 #
-# SimDistribution provides the static method number_generator() that returns
+# SimDistribution provides static methods that return generators for a
+# variety of NumPy-implemented probablility distributions. When it makes sense,
+# distribution parameters may be specified as SimTime instances. When the
+# client supplies a SimTime parameter value, the generated values will all be
+# SimTime objects (in the time unit of the first SimTime parameter supplied).
+# When no SimTime parameters are specified by the client, the generated values
+# are all scalar numerics.
+#
+# Each SimDistribution method includes a streamNum parameter that allows the
+# client to specify a specific stream to be sampled from. This allows
+# modeling code to ensure that different model components sample from
+# different, independent random number streams. The default streamNum is 1.
+# 
+# he static method number_generator() that returns
 # a Python generator function that generates values in a (possibly)
 # pseudo-random distribution. For example:
 #
-#    SimDistribution.number_generator(SimDistribution.uniform, 100, 200, 4)
-#
-# returns a generator that uses the RNG for substream 4 (as created by
-# initialize()) to generate uniformly distributed values in the range
-# [100,200].  SimDistribution also provides static methods that enable the UI
-# to inform the user of available distributions and their arguments, as well
-# as facilitate the serialization of distribution specifications in a simulation
-# model definition file.
+# SimDistribution also provides static methods that enable a UI to inform the 
+# user of available distributions and their arguments, as well as facilitate 
+# the serialization of distribution specifications in a simulation model 
+# definition file.
 #===============================================================================
 __all__ = ['SimDistribution']
 
