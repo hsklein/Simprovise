@@ -182,23 +182,15 @@ class SimDistribution(object):
     methods used to generate values from both deterministic and pseudo-random
     distributions.
 
-    Most of the public static methods are functions that (when parameterized
-    with their passed arguments) return functions that sample from a
-    specified distribution. uniform(a,b), for example, returns a function
-    that produces numbers uniformly distributed between a and b.
-
     There are two methods (:meth:`~function` and :meth:`.function_names`) provided
     for the benefit of a UI. :meth:`function_names` provides a sequence of
     distribution functions by name (e.g., for populating a list box), while
     :meth:`function` maps those names back to a function object.
 
-    The final method, :meth:`number_generator`, returns a Python generator using 
-    one of the above described methods. It is passed both a reference to one of
-    these functions and it's parameters. The code below returns a generator
-    yielding pseudo-random values uniformly distributed between 100 and 200,
-    based on random number stream #4::
-    
-        SimDistribution.number_generator(SimDistribution.uniform, 100, 200, 4)
+    The other public static methods are functions that (when parameterized
+    with their passed arguments) return generators that yield samples from a
+    specified distribution. uniform(a,b), for example, returns a generation
+    that produces numbers uniformly distributed between a and b.
 
     In many (if not most) cases, these methods are being used to generate
     time values (class :class:`~.simtime.SimTime`) - e.g., we need a generator for
@@ -212,21 +204,32 @@ class SimDistribution(object):
     
     .. code-block:: python
     
-       SimDistribution.number_generator(SimDistribution.uniform,
-                                        SimTime(30, simtime.SECONDS),
-                                        SimTime(2, simtime.MINUTES))
+       SimDistribution.uniform(SimTime(30, simtime.SECONDS),
+                               SimTime(2, simtime.MINUTES))
 
+    Additional notes on the use of :class:`~.simtime.SimTime` parameters:
+    
+    - When provided multiple SimTime parameter, the generated values will
+      have the units of the first SimTime provided - e.g. SECONDS in the
+      example above.
+      
+    - If there is at least one SimTime parameter value, any scalar parameter
+      values will be assumed to be SimTime values with the same units as the
+      first SimTime parameter. e.g., for the following call, the second
+      parameter value will be assumed to be 200 seconds::
+    
+      SimDistribution.uniform(SimTime(30, simtime.SECONDS), 200)
+       
     Finally, note that in a few cases (:meth:`round_robin`, :meth:`choice`)
-    the values returned can be non-numeric and non-time (despite the name
-    'number_generator'). We could, for example, define an entity generator (for
-    a :class:`SimEntitySource` object) that instantiates a randomly-selected
-    SimEntity subclass via:
+    the values returned can be non-numeric and non-time. We could, for
+    example, define an entity generator (for a
+    :class:`~.entitysource.SimEntitySource` object) that instantiates a
+    randomly-selected :class:`~.entity.SimEntity` subclass via:
 
     .. code-block:: python
 
        entity_classes = (MyEntity1, MyEntity2, MyEntity3)
-       et_generator = SimDistribution.number_generator(SimDistribution.choice,
-                                                       entity_classes)
+       et_generator = SimDistribution.choice(entity_classes)
  
     """
     functionDict = {}
@@ -256,11 +259,8 @@ class SimDistribution(object):
     @staticmethod
     def constant(constValue):
         """
-        Returns a function that returns a specified constant value. For example,
-        the below returns a generator that always yields 42::
-
-            SimDistribution.number_generator(SimDistribution.constant, 42)
-
+        Returns a generator that yields a specified constant value.
+        
         :param constValue: The value to be returned by the function/generator
         :type constValue:  Any
         
@@ -272,11 +272,11 @@ class SimDistribution(object):
     @staticmethod
     def round_robin(choices):
         """
-        Returns a function that returns values from a passed sequence of
-        choices, cycling through them deterministically. For example, the
-        below returns a generator that yields the sequence (2,4,6,2,4,6,2...)::
+        Returns a generator that yields values from a passed sequence of
+        choices, cycling through them deterministically. For example, to
+        create a generator that yields the sequence (2,4,6,2,4,6,2...)::
 
-            SimDistribution.number_generator(SimDistribution.roundRobin, (2,4,6))
+            SimDistribution.roundRobin((2,4,6))
 
         :param choices: A sequence of values to be returned, one at a time,
                         by the function/generator.
@@ -293,11 +293,11 @@ class SimDistribution(object):
     @staticmethod
     def choice(choices, streamNum=1):
         """
-        Returns a function that returns a pseudo-randomly chosen value from
+        Returns a generator that yields a pseudo-randomly chosen value from
         the passed sequence of choices. The below returns a generator that
         yields a random sequence containing only the values 2, 4 or 6::
 
-            SimDistribution.number_generator(SimDistribution.choice, (2,4,6))
+            SimDistribution.choice((2,4,6))
 
         :param choices:  A sequence of the possible values to be returned by
                          the function/generator.
@@ -314,7 +314,7 @@ class SimDistribution(object):
     @staticmethod
     def exponential(mean, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the
+        Returns a generator that yields pseudo-random values from the
         exponential distribution with a specified mean. To generate
         exponentially distributed values with a mean of 42 use::
 
@@ -343,7 +343,7 @@ class SimDistribution(object):
     @staticmethod
     def uniform(low, high, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the uniform
+        Returns a generator that yields pseudo-random values from the uniform
         distribution with the specified bounds. Sample usage::
 
             SimDistribution.uniform(SimTime(10, simtime.SECONDS),
@@ -380,7 +380,7 @@ class SimDistribution(object):
     @staticmethod
     def triangular(low, mode, high, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the triangular
+        Returns a generator that yields pseudo-random values from the triangular
         distribution with the specified bounds. Must be: low <= mode <= high
                                             
         :param low:      The low bound of the desired triangular distribution. 
@@ -418,7 +418,7 @@ class SimDistribution(object):
     @staticmethod
     def normal(mu, sigma, floor=0, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the normal
+        Returns a generator that yields pseudo-random values from the normal
         (Gaussian) distribution with the specified mu (mean) and sigma
         (standard deviation). 
 
@@ -465,7 +465,7 @@ class SimDistribution(object):
     @staticmethod
     def weibull(a, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the weibull
+        Returns a generator that returns pseudo-random values from the weibull
         distribution with the specified alpha (shape) parameter. 
                         
         :param a:        The shape of the of the desired weibull distribution.
@@ -489,7 +489,7 @@ class SimDistribution(object):
     @staticmethod
     def pareto(alpha, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the pareto
+        Returns a generator that yields pseudo-random values from the pareto
         distribution with the specified alpha (shape) parameter. S
                         
         :param alpha:    The shape of the of the desired pareto distribution.
@@ -513,7 +513,7 @@ class SimDistribution(object):
     @staticmethod
     def lognormal(mean, sigma, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the log-
+        Returns a generator that yields pseudo-random values from the log-
         normal distribution with the specified mean and sigma parameters.
                        
         :param mean:     The mean of the underlying normal distribution.
@@ -547,7 +547,7 @@ class SimDistribution(object):
     @staticmethod
     def beta(alpha, beta, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the beta
+        Returns a generator that yields pseudo-random values from the beta
         distribution with the specified alpha (shape) and beta (scale) parameters.
         
         :param alpha:    Shape parameter of the of the desired beta distribution.
@@ -585,7 +585,7 @@ class SimDistribution(object):
     @staticmethod
     def gamma(alpha, beta, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the gamma
+        Returns a generator that yields pseudo-random values from the gamma
         distribution with the specified alpha (shape) and beta (scale) parameters.
 
         :param alpha:    Shape parameter of the of the desired gamma distribution.
@@ -623,7 +623,7 @@ class SimDistribution(object):
     @staticmethod
     def geometric(rho, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the geometric
+        Returns a generator that returns pseudo-random values from the geometric
         distribution with the specified rho (probability of success of a single
         trial) parameter. 
 
@@ -652,7 +652,7 @@ class SimDistribution(object):
     @staticmethod
     def logistic(loc=0.0, scale=1.0, floor=0, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the logistic
+        Returns a generator that yields pseudo-random values from the logistic
         distribution with the specified loc and scale parameters. Like the normal
         distribution, values are not guaranteed to be positive; a floor value of
         zero ensures that negative values are never returned.
@@ -694,7 +694,7 @@ class SimDistribution(object):
     @staticmethod
     def binomial(n, rho, *, streamNum=1):
         """
-        Returns a function that returns pseudo-random values from the binomial
+        Returns a generator that yields pseudo-random values from the binomial
         distribution with the specified n (number of trials) and rho (probability of
         success of a single trial) parameter. 
 
