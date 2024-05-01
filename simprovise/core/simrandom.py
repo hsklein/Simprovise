@@ -209,7 +209,7 @@ class SimDistribution(object):
 
     Additional notes on the use of :class:`~.simtime.SimTime` parameters:
     
-    - When provided multiple SimTime parameter, the generated values will
+    - When provided multiple SimTime parameters, the generated values will
       have the units of the first SimTime provided - e.g. SECONDS in the
       example above.
       
