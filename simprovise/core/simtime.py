@@ -129,7 +129,7 @@ class SimTime(object):
                 return
         
         if not units in _UNITS:
-            msg = "Invalid SimTimee units ({0}) specified"
+            msg = "Invalid SimTime units ({0}) specified"
             raise SimError(_ERROR_NAME, msg, units)
  
     def __str__(self):
