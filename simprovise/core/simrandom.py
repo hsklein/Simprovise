@@ -813,10 +813,19 @@ if __name__ == '__main__':
     for n in SimDistribution.function_names():
         print(n)
 
-    gen = SimDistribution.constant(10)
+    f = SimDistribution.function('exponential')
+    gen = f(10)
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
+        total += next(gen)
+    cpuend = time.process_time()
+    print("SimDistribution number_generator exponential scalar from dict", cpuend - cpustart, "mean value:", total / 100000)
+    
+    gen = SimDistribution.constant(10)
+    total = 0
+    cpustart = time.process_time()
+    for i in range(100):
         total += next(gen)
     cpuend = time.process_time()
     print("SimDistribution constant scalar", cpuend - cpustart, "mean value:", total / 100000)
