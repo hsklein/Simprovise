@@ -58,16 +58,14 @@ def _next_msgID():
 class SimMsgType(object):
     """
     Basically, a namespace of message types.
-    TODO Refactor, possibly into a Python 3.4 enum. We also need a means for
-    client code to extend this, adding new message types.
-    
+    TODO Should this be an Enum?
     """
     RSRC_REQUEST = "ResourceRequest"
     RSRC_ASSIGNMENT = "ResourceAssignment"
     RSRC_RELEASE = "ResourceRelease"
     LOC_REQUEST = "LocationRequest"
     LOC_ASSIGNMENT = "LocationAssignment"
-    LOC_RELEASE = "LocationeRelease"
+    LOC_RELEASE = "LocationRelease"
 
 
 @apidoc
