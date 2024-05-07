@@ -60,22 +60,9 @@ class SimInfiniteCounterTests(unittest.TestCase):
         self.counter.capacity = None
         self.assertEqual(self.counter.capacity, None)
 
-    def testUtilization(self):
-        "Test: utilization of an infinite counter is None"
-        self.assertEqual(self.counter.utilization, None)
-
     def testInitialValue(self):
         "Test: initial value of counter is zero"
         self.assertEqual(self.counter.value, 0)
-
-    def testInitialMean1(self):
-        "Test: if clock has not advanced, mean value is None"
-        self.assertEqual(self.counter.mean_value, None)
-
-    def testInitialMean2(self):
-        "Test: if clock has not advanced, mean value is None, even with an increment"
-        self.counter.increment(self.process)
-        self.assertEqual(self.counter.mean_value, None)
 
     def testIncrement1(self):
         "Test: value property after increment"
@@ -124,25 +111,6 @@ class SimInfiniteCounterTests(unittest.TestCase):
         self.counter.decrement(2)
         self.assertEqual(self.counter.value, 0)
         #self.assertRaises(simexception.Error, lambda: self.counter.decrement(2))
-
-    def testMean1(self):
-        "Test: if counter is not incremented and any time passes, mean is zero"
-        SimClock.advance_to(simtime.SimTime(1))
-        self.assertEqual(self.counter.mean_value, 0.0)
-
-    def testMean2(self):
-        "Test: if counter is incremented at time zero and any time passes, mean is 1"
-        self.counter.increment(self.process)
-        SimClock.advance_to(simtime.SimTime(1))
-        self.assertEqual(self.counter.mean_value, 1.0)
-
-    def testMean3(self):
-        "Test: counter is incremented at time zero, decremented at time 1, and clock advanced to time 2 - mean = 0.5"
-        self.counter.increment(self.process)
-        SimClock.advance_to(simtime.SimTime(1))
-        self.counter.decrement()
-        SimClock.advance_to(simtime.SimTime(2))
-        self.assertEqual(self.counter.mean_value, 0.5)
 
     def testOverflow1(self):
         "Test: Attempt to increment by sys.maxsize raises an error"
@@ -238,19 +206,6 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
         "Test: initial value of counter is zero"
         self.assertEqual(self.counter.value, 0)
 
-    def testInitialMean1(self):
-        "Test: if clock has not advanced, mean value is None"
-        self.assertEqual(self.counter.mean_value, None)
-
-    def testInitialMean2(self):
-        "Test: if clock has not advanced, mean value is None, even with an increment"
-        self.counter.increment(self.process)
-        self.assertEqual(self.counter.mean_value, None)
-
-    def testInitialUtilization(self):
-        "Test: if clock has not advanced, utilization is None"
-        self.assertEqual(self.counter.utilization, None)
-
     def testIncrement1(self):
         "Test: value property after increment"
         self.counter.increment(self.process)
@@ -320,25 +275,6 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
         self.counter.decrement(2)
         self.assertEqual(self.counter.value, 0)
         #self.assertRaises(simexception.Error, lambda: self.counter.decrement(2))
-
-    def testMean1(self):
-        "Test: if counter is not incremented and any time passes, mean is zero"
-        SimClock.advance_to(simtime.SimTime(1))
-        self.assertEqual(self.counter.mean_value, 0.0)
-
-    def testMean2(self):
-        "Test: if counter is incremented at time zero and any time passes, mean is 1"
-        self.counter.increment(self.process)
-        SimClock.advance_to(simtime.SimTime(1))
-        self.assertEqual(self.counter.mean_value, 1.0)
-
-    def testMean3(self):
-        "Test: counter is incremented at time zero, decremented at time 1, and clock advanced to time 2 - mean = 0.5"
-        self.counter.increment(self.process)
-        SimClock.advance_to(simtime.SimTime(1))
-        self.counter.decrement()
-        SimClock.advance_to(simtime.SimTime(2))
-        self.assertEqual(self.counter.mean_value, 0.5)
 
     def testIncrementAboveCapacity(self):
         "Test: increment of an amount greater than capacity raises an error"
@@ -370,19 +306,6 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
         "Test: initial value of counter is zero"
         self.assertEqual(self.counter.value, 0)
 
-    def testInitialMean1(self):
-        "Test: if clock has not advanced, mean value is None"
-        self.assertEqual(self.counter.mean_value, None)
-
-    def testInitialMean2(self):
-        "Test: if clock has not advanced, mean value is None, even with an increment"
-        self.counter.increment(self.process)
-        self.assertEqual(self.counter.mean_value, None)
-
-    def testInitialUtilization(self):
-        "Test: if clock has not advanced, utilization is None"
-        self.assertEqual(self.counter.utilization, None)
-
     def testIncrement1(self):
         "Test: value property after increment"
         self.counter.increment(self.process)
@@ -452,25 +375,6 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
         self.counter.decrement(2)
         self.assertEqual(self.counter.value, 0)
         #self.assertRaises(simexception.Error, lambda: self.counter.decrement(2))
-
-    def testMean1(self):
-        "Test: if counter is not incremented and any time passes, mean is zero"
-        SimClock.advance_to(simtime.SimTime(1))
-        self.assertEqual(self.counter.mean_value, 0.0)
-
-    def testMean2(self):
-        "Test: if counter is incremented at time zero and any time passes, mean is 1"
-        self.counter.increment(self.process)
-        SimClock.advance_to(simtime.SimTime(1))
-        self.assertEqual(self.counter.mean_value, 1.0)
-
-    def testMean3(self):
-        "Test: counter is incremented at time zero, decremented at time 1, and clock advanced to time 2 - mean = 0.5"
-        self.counter.increment(self.process)
-        SimClock.advance_to(simtime.SimTime(1))
-        self.counter.decrement()
-        SimClock.advance_to(simtime.SimTime(2))
-        self.assertEqual(self.counter.mean_value, 0.5)
 
     def testIncrementAboveCapacity(self):
         "Test: increment of an amount greater than capacity raises an error"
@@ -675,45 +579,13 @@ class SimProcessResumeCounterTests(unittest.TestCase):
         self.assertEqual(MockProcess.resumedProcess, self.process3)
 
 
-class TimeWeightTests(unittest.TestCase):
-    "Test time-weighted statistics on a counter of capacity 4"
-    def setUp(self):
-        SimClock.initialize()
-        element = MockElement()
-        self.counter = counter.SimCounter(element, 'Test', CAP)
-        self.process = MockProcess()
-        SimClock.advance_to(simtime.SimTime(1))
-        self.counter.increment(self.process)
-        SimClock.advance_to(simtime.SimTime(2))
-        self.counter.increment(self.process, 2)
-        SimClock.advance_to(simtime.SimTime(4))
 
-    def testMean1(self):
-        "Test: initial mean value is (1 + 2*3)/4"
-        self.assertEqual(self.counter.mean_value, 1.75)
-
-    def testMean2(self):
-        "Test: increment without clock advance does not impact mean"
-        initMean = self.counter.mean_value
-        self.counter.increment(self.process)
-        self.assertEqual(self.counter.mean_value, initMean)
-
-    def testMean3(self):
-        "Test: decrement without clock advance does not impact mean"
-        initMean = self.counter.mean_value
-        self.counter.decrement()
-        self.assertEqual(self.counter.mean_value, initMean)
-
-    def testUtil1(self):
-        "Test: initial utilization value is 1.75/4"
-        self.assertEqual(self.counter.utilization, 0.4375)
 
 def makeTestSuite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(SimInfiniteCounterTests))
     suite.addTest(unittest.makeSuite(SimFiniteCapacityCounterTests))
     suite.addTest(unittest.makeSuite(SimSetFiniteCapacityCounterTests))
-    suite.addTest(unittest.makeSuite(TimeWeightTests))
     return suite
 
 if __name__ == '__main__':

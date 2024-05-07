@@ -37,9 +37,35 @@
 # output.  At that point, we may find that the NullDataSink requires additional
 # stub methods.
 #===============================================================================
+from abc import ABCMeta, abstractmethod, abstractproperty
 
-class NullDataSink(object):
+class DataSink(metaclass=ABCMeta):
+    """
+    """
+    
+    @abstractproperty
+    def dataset_id(self):
+        pass
+    
+    @abstractmethod
+    def put(self, value):
+        pass
+
+    @abstractmethod
+    def flush(self):
+        pass
+
+    @abstractmethod
+    def initialize_batch(self, batchnum):
+        pass
+
+    @abstractmethod
+    def finalize_batch(self, batchnum):
+        pass    
+    
+class NullDataSink(DataSink):
     "Implements the DataSink interface with no-ops"
+    
     @property
     def dataset_id(self):
         return None

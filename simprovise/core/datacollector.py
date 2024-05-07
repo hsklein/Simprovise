@@ -8,6 +8,8 @@
 __all__ = ['SimDataCollector',
            'SimUnweightedDataCollector', 'SimTimeWeightedDataCollector']
 
+from abc import ABCMeta, abstractmethod
+
 from simprovise.core import (SimClock, simtime, SimLogging, SimError)
 from simprovise.core.datasink import NullDataSink
 from simprovise.core.apidoc import apidoc, apidocskip
@@ -56,25 +58,18 @@ class Dataset(object):
      
     """
     __slots__ = ('__element', '__dataCollector', '__name', '__valueType',
-                 '__isTimeWeighted', '__isCollectingData', '__batchNumber',
-                 '__datasink', '__timeUnit')
+                 '__isTimeWeighted', '__batchNumber', '__timeUnit')
 
     def __init__(self, element, dataCollector, name, valueType, isTimeWeighted):
         # TODO all parameters should be non-null. registerDataset() should
         # raise if the dataset name is a duplicate
-        # TODO timeunit is currently hardwired to seconds.  Other code 
-        # (e.g dbDatasink)  still assumes data in seconds, so a fix for this 
-        # cascades to a number of places
         self.__element = element
         self.__dataCollector = dataCollector
         self.__name = name
         self.__valueType = valueType
         self.__isTimeWeighted = isTimeWeighted
         self.__timeUnit = None
-        self.__isCollectingData = True
         self.__batchNumber = None
-        self.__datasink = NullDataSink()
-        self.__dataCollector.datasink = self.__datasink
         self.__element.register_dataset(self)
 
     @property
@@ -133,22 +128,19 @@ class Dataset(object):
     @property
     def datasink(self):
         """The datasink that drains this dataset"""
-        return self.__datasink
+        return self.__dataCollector.datasink
 
     @datasink.setter
     def datasink(self, newSink):
-        oldSink = self.__datasink
-        self.__datasink = newSink
-        if self.__isCollectingData:
-            self.__dataCollector.datasink = newSink
-            if self.__batchNumber is not None:
-                oldSink.finalize_batch(self.__batchNumber)
-                newSink.initialize_batch(self.__batchNumber)
+        oldSink = self.datasink
+        self.__dataCollector.datasink = newSink
+        if self.__batchNumber is not None:
+            oldSink.finalize_batch(self.__batchNumber)
+            newSink.initialize_batch(self.__batchNumber)
 
     @apidocskip
     def flush(self):
-        if self.__isCollectingData:
-            self.__dataCollector.datasink.flush()
+        self.__dataCollector.datasink.flush()
 
     @apidocskip
     def initialize_batch(self, batchnum):
@@ -158,8 +150,7 @@ class Dataset(object):
         sink-specific (typically database-specific) start-of-batch processing.
         """
         self.__batchNumber = batchnum
-        if self.__isCollectingData:
-            self.datasink.initialize_batch(batchnum)
+        self.datasink.initialize_batch(batchnum)
 
     @apidocskip
     def finalize_batch(self, batchnum):
@@ -174,84 +165,19 @@ class Dataset(object):
         if batchnum != self.__batchNumber:
             errstr = "finalizeBatch({0}) called on dataset when current batch is {1}"
             raise SimError(_ERROR_NAME, errstr, batchnum, self.__batchNumber)
-        if self.__isCollectingData:
-            self.datasink.finalize_batch(batchnum)
-
-    def start_data_collection(self):
-        "Tell the datacollector to start collecting data by passing it the datasink"
-        if not self.__isCollectingData:
-            self.__isCollectingData = True
-            self.__dataCollector.datasink = self.datasink
-            self.datasink.initialize_batch(self.__batchNumber)
-
-    def stop_data_collection(self):
-        "Tell the datacollector to stop collecting data by passing it a null datasink"
-        if self.__isCollectingData:
-            self.__isCollectingData = False
-            self.datasink.finalize_batch(self.__batchNumber)
-            self.__dataCollector.datasink = NullDataSink()
-
-
-class UnweightedAggregate(object):
-    "Produces un (not time) weighted statistics for aggregated data"
-    __slots__ = ('__datasink')
-
-    def __init__(self):
-        self.__datasink = NullDataSink()
-
-    def initialize(self):
-        pass
-
-    def setDataSink(self, datasink):
-        self.__datasink = datasink
-
-    @property
-    def datasink(self):
-        return self.__datasink
-
-    def __iadd__(self, value):
-        "increment for a nonweighted sum"
-        self.__datasink.put(value)
-        return self
-
-
-class TimeWeightedAggregate(object):
-    "Produces time-weighted statistics for aggregated data"
-    __slots__ = ('__currentValue', '__datasink')
-
-    def __init__(self):
-        self.__currentValue = None
-        self.__datasink = NullDataSink()
-        self.initialize(0)
-
-    def initialize(self, initialValue=0):
-        if self.__currentValue == None:
-            self.__currentValue = initialValue
-
-    def setDataSink(self, datasink):
-        self.__datasink = datasink
-        datasink.put(self.__currentValue)
-
-    @property
-    def datasink(self):
-        return self.__datasink
-
-    def __iadd__(self, other):
-        "increment for a time-weighted sum"
-        self.__currentValue = other
-        self.__datasink.put(other)
-        return self
+             
+        self.datasink.finalize_batch(batchnum)
 
 
 @apidoc
-class SimDataCollector(object):
+class SimDataCollector(metaclass=ABCMeta):
     """
     SimDataCollectors collect numeric or state data (including
     :class:`~.simtime.SimTime` data) during a simulation run.
     SimDataCollector works in tandem with :class:`Dataset`; SimDataCollector
     objects each have an associated dataset object, which, coupled with
     a datasink object, are used to collect, store and eventually process 
-    simulation output data.n
+    simulation output data.
 
     Essentially, the roles are as follows:
 
@@ -259,27 +185,25 @@ class SimDataCollector(object):
       modeling elements (class :class:`~.element.SimElement`) such as
       processes and resources.
 
-    - :class`Dataset` objects encapsulate output metadata, while providing 
-      the interface to the output data collection subsystem.
-      
-    - Aggregate objects serve as an intermediary between data collectors
-      and datasinks. There is an unweighted aggregate used for non-state
-      datasets (e.g. process times) and a time weighted aggregate used
-      for datasets collecting system state values such as work-in-process.
+    - :class:`Dataset` objects encapsulate output metadata, for use
+      primarily by the output data collection subsystem.
 
-    - Datasink objects provide the implementation of the output data collection
-      subsystem. Plugging in different datasink types allows us to use a
-      different data store, vary the amount/type of data collected, or to turn
-      off data collection entirely for datasets we are not interested in.
-      There are separate datasink classes for time-weighted and
+    - :class"`~.datasink.Datasink` is an abstract class defining the interface
+      to the output data collection subsystem; concrete subclasses implement
+      that interface, which is used by data collectors - i.e., simulation
+      data are sent from modeling elements to data collectors, which then
+      send them on to data sinks. Plugging in different datasink types allows
+      us to use different data stores, vary the amount/type of data collected,
+      or to turn off data collection entirely for datasets we are not interested
+      in. There are separate datasink classes for time-weighted and
       unweighted data
 
-    `SimDataCollector` is essentially an abstract base class; client code
-    should instantiate one of its subclasses, either
-    :class:`SimTimeWeightedDataCollector` or
-    :class:`SimUnweightedDataCollector`.
+    `SimDataCollector` is an abstract base class; client code should instantiate
+    one of its subclasses, either :class:`SimTimeWeightedDataCollector` or
+    :class:`SimUnweightedDataCollector` (which are in fact different
+    parameterizations of `SimDataCollector`)
     """
-    __slots__ = ('__dataset', '__aggregate', '__entries')
+    __slots__ = ('__dataset', '__datasink', '__entries')
     collectorList = []
 
     # Class methods
@@ -296,26 +220,20 @@ class SimDataCollector(object):
         for dc in cls.collectorList:
             dc.reset()
 
-    def __init__(self, element, datasetName, datasetValueType, isTimeSeriesDataset, aggregate):
+    def __init__(self, element, datasetName, datasetValueType, isTimeSeriesDataset):
         """
-        Initialize the entries and aggregate members. If an element is specified, also
+        Initialize the entries and datasink members. If an element is specified, also
         create a dataset.
         """
         # TODO all parameters should be non-null
-        self.__entries = None
-        self.__aggregate = aggregate
+        self.__entries = 0
+        self.__datasink = NullDataSink()
         dset = None
         if element is not None:
             dset = Dataset(element, self, datasetName, datasetValueType, isTimeSeriesDataset)
         self.__dataset = dset
-        self.initialize()
+        #self.initialize()
         SimDataCollector.collectorList.append(self)
-
-    @apidocskip
-    def initialize(self):
-        "Initialize (or re-initialize) raw data collectors"
-        self.__entries = 0
-        self.__aggregate.initialize()
 
     @apidocskip
     def reset(self):
@@ -327,12 +245,15 @@ class SimDataCollector(object):
         Add a new value to the dataset.
         """
         self.__entries += 1
-        self.__aggregate += newValue
+        self.datasink.put(newValue)
 
     @property
     def name(self):
         "The data collector's dataset name"
-        return self.__dataset.name
+        if self.__dataset is not None:
+            return self.__dataset.name
+        else:
+            return None
 
     @apidocskip
     def entries(self):
@@ -347,13 +268,13 @@ class SimDataCollector(object):
     @property
     def datasink(self):
         "Returns the datasink for the collector"
-        return self.__aggregate.datasink
+        return self.__datasink
 
     @datasink.setter
     def datasink(self, newDatasink):
-        "Set the datasink for the collector (delegates to aggregate)"
-        self.__aggregate.setDataSink(newDatasink)
-
+        "Set the datasink for the collector"
+        self.__datasink = newDatasink
+        
     def __str__(self):
         # entries is invalid for queues, stations, etc.
         return 'Entries:' + str(self.entries()) + ' Min:' + str(self.min()) + ' Max:' + str(self.max()) + ' Mean:' + str(self.mean())
@@ -379,7 +300,8 @@ class SimUnweightedDataCollector(SimDataCollector):
     """
     # TODO should be no default values
     def __init__(self, element=None, datasetName=None, datasetValueType=None):
-        super().__init__(element, datasetName, datasetValueType, False, UnweightedAggregate())
+        super().__init__(element, datasetName, datasetValueType, False)
+
 
 @apidoc
 class SimTimeWeightedDataCollector(SimDataCollector):
@@ -403,23 +325,18 @@ class SimTimeWeightedDataCollector(SimDataCollector):
 
     """
     def __init__(self, element=None, datasetName=None, datasetValueType=None):
-        super().__init__(element, datasetName, datasetValueType, True, TimeWeightedAggregate())
+        super().__init__(element, datasetName, datasetValueType, True)
+               
 
-class NullDataCollector(object):
+class NullDataCollector(SimDataCollector):
     "Implements the DataCollector interface with no-ops"
-
-    def initialize(self): pass
+    
+    def __init__(self):
+        super().__init__(None, None, None, False)
 
     def add_value(self, newValue): pass
-
-    def min(self):
-        return None
-
-    def max(self):
-        return None
 
     def entries(self):
         return None
 
-    def mean(self):
-        return None
+    def _add_value_impl(self, newValue): pass

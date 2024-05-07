@@ -166,26 +166,6 @@ class SimCounter(object):
 
     @property
     @apidocskip
-    def min_value(self): return self.__datacollector.min()
-
-    @property
-    @apidocskip
-    def max_value(self): return self.__datacollector.max()
-
-    @property
-    @apidocskip
-    def mean_value(self): return self.__datacollector.mean()
-
-    @property
-    @apidocskip
-    def utilization(self):
-        if self.__capacity == SimCounter.infinite or self.mean_value == None:
-            return None
-        else:
-            return self.mean_value / self.__capacity
-
-    @property
-    @apidocskip
     def waiting_transaction_count(self): return len(self.__waitingTransactions)
 
     def increment(self, txn=None, amount=1):
