@@ -43,8 +43,7 @@ class Dataset(object):
                            unique within the element.
     :type name:            str
     
-    :param datacollector:  The capacity of the counter (> 0) or None if the
-                           capacity is infinite
+    :param datacollector:  The data collector associated with this dataset
     :type datacollector:   :class:`~.datacollector.SimDatacollector`     
     
     :param valueType:      The Python numeric type of the data values
