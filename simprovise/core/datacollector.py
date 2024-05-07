@@ -194,25 +194,13 @@ class Dataset(object):
 
 class UnweightedAggregate(object):
     "Produces un (not time) weighted statistics for aggregated data"
-    __slots__ = ('__mean', '__entries', '__datasink')
+    __slots__ = ('__datasink')
 
     def __init__(self):
-        self.__mean = None
-        self.__entries = None
-        self.initialize()
         self.__datasink = NullDataSink()
 
     def initialize(self):
-        self.__mean = 0
-        self.__entries = 0
-
-    def reset(self):
-        "reset for a new set of statistics"
-        self.initialize()
-
-    def initial_min_max_value(self):
-        "Value used to initialize Min and Max of owning data collector after initialization or reset"
-        return None
+        pass
 
     def setDataSink(self, datasink):
         self.__datasink = datasink
@@ -223,54 +211,22 @@ class UnweightedAggregate(object):
 
     def __iadd__(self, value):
         "increment for a nonweighted sum"
-        # source: http://en.wikipedia.org/wiki/Algorithms_for_calculating_variance
-        # (algorithm reference is Knuth, Welford)
-        # TODO - add variance, per meanAndVariance() below?
-        self.__entries += 1
-        mean = self.__mean
-        delta = value - mean
-        mean += delta/self.__entries
-        self.__mean = mean
         self.__datasink.put(value)
         return self
-
-    def mean(self):
-        "Mean collected data value"
-        if self.__entries > 0:
-            return self.__mean
-        else:
-            return None
 
 
 class TimeWeightedAggregate(object):
     "Produces time-weighted statistics for aggregated data"
-    __slots__ = ('__sum', '__initialTime', '__currentTime',
-                 '__currentValue', '__initialValue', '__datasink')
+    __slots__ = ('__currentValue', '__datasink')
 
     def __init__(self):
-        self.__sum = None
-        self.__initialTime = None
-        self.__currentTime = None
         self.__currentValue = None
-        self.__initialValue = None
         self.__datasink = NullDataSink()
         self.initialize(0)
 
     def initialize(self, initialValue=0):
-        self.__initialTime = SimClock.now()
-        self.__currentTime = SimClock.now()
         if self.__currentValue == None:
             self.__currentValue = initialValue
-        self.__sum = 0
-        self.__initialValue = initialValue
-
-    def reset(self):
-        "reset for a new set of statistics, leaving the current value as-is"
-        self.initialize(self.__currentValue)
-
-    def initial_min_max_value(self):
-        "Value used to initialize Min and Max of owning data collector after initialization or reset"
-        return self.__initialValue
 
     def setDataSink(self, datasink):
         self.__datasink = datasink
@@ -282,31 +238,10 @@ class TimeWeightedAggregate(object):
 
     def __iadd__(self, other):
         "increment for a time-weighted sum"
-        # TODO adapt weighted incremental algorithm, per reference above
-        now = SimClock.now()
-        if self.__currentValue == None:
-            self.__initialTime = now
-        elif now > self.__currentTime:
-            timeDiff = now - self.__currentTime
-            self.__sum += timeDiff.to_scalar() * self.__currentValue
-
         self.__currentValue = other
-        self.__currentTime = now
         self.__datasink.put(other)
-
         return self
 
-    def mean(self):
-        "Mean collected data value"
-        # first update the sum with the latest value and time
-        self.__iadd__(self.__currentValue)
-
-        #calculate and return time-weighted mean
-        timeDiff = self.__currentTime - self.__initialTime
-        if timeDiff > 0:
-            return float(self.__sum) / float(timeDiff.to_scalar())
-        else:
-            return None
 
 @apidoc
 class SimDataCollector(object):
@@ -344,7 +279,7 @@ class SimDataCollector(object):
     :class:`SimTimeWeightedDataCollector` or
     :class:`SimUnweightedDataCollector`.
     """
-    __slots__ = ('__dataset', '__aggregate', '__entries', '__min', '__max')
+    __slots__ = ('__dataset', '__aggregate', '__entries')
     collectorList = []
 
     # Class methods
@@ -363,13 +298,11 @@ class SimDataCollector(object):
 
     def __init__(self, element, datasetName, datasetValueType, isTimeSeriesDataset, aggregate):
         """
-        Initialize the min, max and aggregate members. If an element is specified, also
+        Initialize the entries and aggregate members. If an element is specified, also
         create a dataset.
         """
         # TODO all parameters should be non-null
         self.__entries = None
-        self.__min = None
-        self.__max = None
         self.__aggregate = aggregate
         dset = None
         if element is not None:
@@ -383,32 +316,16 @@ class SimDataCollector(object):
         "Initialize (or re-initialize) raw data collectors"
         self.__entries = 0
         self.__aggregate.initialize()
-        self.__min = self.__aggregate.initial_min_max_value()
-        self.__max = self.__aggregate.initial_min_max_value()
 
     @apidocskip
     def reset(self):
         "Reset the statistics and data collection, typically for a new batch"
         self.__entries = 0
-        self.__aggregate.reset()
-        self.__min = self.__aggregate.initial_min_max_value()
-        self.__max = self.__aggregate.initial_min_max_value()
-
+ 
     def add_value(self, newValue):
         """
         Add a new value to the dataset.
         """
-        # TODO stop collecting min, max, mean
-        if self.__max is None:
-            self.__max = newValue
-        else:
-            self.__max = max(newValue, self.__max)
-
-        if self.__min is None:
-            self.__min = newValue
-        else:
-            self.__min = min(newValue, self.__min)
-
         self.__entries += 1
         self.__aggregate += newValue
 
@@ -418,24 +335,9 @@ class SimDataCollector(object):
         return self.__dataset.name
 
     @apidocskip
-    def min(self):
-        "Minimum collected data value"
-        return self.__min
-
-    @apidocskip
-    def max(self):
-        "Maximum collected data value"
-        return self.__max
-
-    @apidocskip
     def entries(self):
         "Number of collected data values"
         return self.__entries
-
-    @apidocskip
-    def mean(self):
-        "Mean collected data value"
-        return self.__aggregate.mean()
     
     @property
     def dataset(self):
