@@ -27,26 +27,14 @@ INSERT INTO elementtype VALUES(2, 'Resource');
 INSERT INTO elementtype VALUES(3, 'Location');
 INSERT INTO elementtype VALUES(4, 'Source');
 INSERT INTO elementtype VALUES(5, 'Sink');
---INSERT INTO elementtype VALUES(6, 'Counter');
 INSERT INTO elementtype VALUES(6, 'Entity');
 
-CREATE TABLE elementclass(
-	  id INTEGER PRIMARY KEY
-	, type INTEGER NOT NULL REFERENCES elementtype(id) ON DELETE RESTRICT ON UPDATE CASCADE
-	, name TEXT NOT NULL UNIQUE
-	, package TEXT NOT NULL
-);
 
--- We'd like to use (as an optimization) the WITHOUT ROWID syntax available from sqlite version 3.8.2
--- http://www.sqlite.org/withoutrowid.html
--- But - the python 3.3.2 sqlite3 module is based on sqlite 3.7.12, as shown via:
--- >>>import sqlite3
--- >>>sqlite3.sqlite_version_info
 CREATE TABLE element(
 	  id TEXT PRIMARY KEY 
 	, classname TEXT NOT NULL
 	, type INTEGER NOT NULL REFERENCES elementtype(id) ON DELETE RESTRICT ON UPDATE CASCADE
-);
+) WITHOUT ROWID;
 
 CREATE VIEW elementview as
 select element.id as id, elementtype.name as type, element.classname as class
