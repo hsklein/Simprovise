@@ -17,18 +17,6 @@ INSERT INTO timeunit VALUES(0, 'Seconds', 'secs', 1);
 INSERT INTO timeunit VALUES(1, 'Minutes', 'mins', 60);
 INSERT INTO timeunit VALUES(2, 'Hours', 'hrs', 3600);
 
-CREATE TABLE execution(
-	  id INTEGER PRIMARY KEY AUTOINCREMENT
-	, modelname TEXT
-	, timestamp TIME DEFAULT(datetime('now', 'localtime'))
-	, warmuptime REAL NOT NULL CHECK (warmuptime >= 0.0)
-	, warmuptimeunit INTEGER NOT NULL REFERENCES timeunit(id) ON DELETE RESTRICT ON UPDATE CASCADE
-	, runtime REAL NOT NULL CHECK (runtime > 0.0)
-	, runtimeunit INTEGER NOT NULL REFERENCES timeunit(id) ON DELETE RESTRICT ON UPDATE CASCADE
-	, nbatches INTEGER NOT NULL DEFAULT(1) CHECK (nbatches > 0)
-	, nruns INTEGER NOT NULL DEFAULT(1) CHECK (nbatches > 0)
-);
-
 
 CREATE TABLE elementtype(
 	  id INTEGER PRIMARY KEY
