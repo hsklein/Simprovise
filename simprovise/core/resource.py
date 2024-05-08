@@ -710,30 +710,6 @@ class SimResource(SimStaticObject):
         else:
             return self.capacity - self.inUse
 
-    @property
-    @apidocskip
-    def min_process_time(self):
-        "Time spent processing an assignment - minimum"
-        return self._processtimeDataCollector.min()
-
-    @property
-    @apidocskip
-    def max_process_time(self):
-        "Timespent processing an assignment - maximum"
-        return self._processtimeDataCollector.max()
-
-    @property
-    @apidocskip
-    def mean_process_time(self):
-        "Time spent processing an assignment - mean"
-        return self._processtimeDataCollector.mean()
-
-    @property
-    @apidocskip
-    def utilization(self):
-        "Resource utilization (range 0-1)"
-        return self._utilCounter.utilization
-
     @apidocskip
     def takedown(self, reason):
         """
