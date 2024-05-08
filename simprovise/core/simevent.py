@@ -7,25 +7,36 @@
 #
 # SimEvent is a base class for specialized event types. This base class
 # maintains the simulated time when the event is to occur, and implements a
-# register() method that registers the event for eventual
-# processing/execution by placing it on an event queue (see below). An event
-# is executed via its process() method, which delegates to process_impl(),
-# which should be overridden by SimEvent subclasses. A registered event may
-# also be removed from the event queue via it's deregister() method. The
-# primary use case for deregistration is to facilitate event interruption/
-# rescheduling.
+# register() method that registers the event for eventual processing/execution 
+# by placing it on an event queue (see below). An event is executed via its 
+# process() method, which delegates to process_impl(), which should be 
+# overridden by SimEvent subclasses. A registered event may also be removed 
+# from the event queue via it's deregister() method. The primary use case for 
+# deregistration is to facilitate event interruption/ rescheduling. Events also 
+# have a priority; when multiple events are scheduled for the same simulated 
+# time, higher priority events are processed first. (Events with the same time 
+# and priority are executed in registration order.) The priority feature is 
+# motivated by the need to ensure that some events - also timeouts and 
+# interrupts - are processed after other events that might cancel out the 
+# timeout/interrupt. (For example, if a resource is released at the same
+# time that a timeout is due to occur, we want the resource release and
+# reassignment to occur first; if it is reassigned to the timing out
+# process, the timeout can then be deregistered/cancelled)
 #
 # The event queue is implemented via a global heap (module heapq), ordered
-# by event time and (for events scheduled for the same time) the order of
+# by event time, event priority and the order of
 # registration.  The implementation follows the priority queue example in
 # the heapq module documentation, including a separate global dictionary
-# (entry_finder) that faciliates deregistration.
+# (entry_finder) that faciliates deregistration. The main deviation from that
+# example is the addition of a priority value to the heap entry, so that
+# the heap is ordered by event time, priority and sequence number.
 #
 # SimEvent registration places the event, along with it's scheduled execution
-# time and registration sequence number, into the event heap via heappush().
-# Deregistration finds that heap queue entry and changes the event element to
-# a REMOVED value, indicating that it should be ignored.  (The entry cannot
-# be removed from the middle of the queue without violating the heap invariant.)
+# time, priority, and registration sequence number, into the event heap via 
+# heappush(). Deregistration finds that heap queue entry and changes the event 
+# element to a REMOVED value, indicating that it should be ignored.  (The entry 
+# cannot be removed from the middle of the queue without violating the heap 
+# invariant.)
 #
 # EventProcessor.processEvents() essentially runs the simulation - it pops
 # and processes events in the entry heap queue, advancing the simulation clock
@@ -72,24 +83,25 @@ class SimEvent(metaclass=ABCMeta):
     :type tm:  :class:`~.simtime.SimTime`
     
     """
-    __slots__ = ('_time', '_sequencenum')
-    def __init__(self, tm):
+    __slots__ = ('_time', '_sequencenum', '_priority')
+    def __init__(self, tm, *, priority=1):
         assert isinstance(tm, SimTime), 'SimEvent constructor parameter ' + str(tm) + ' is not a SimTime'
         assert tm >= SimClock.now(), 'SimEvent constructor parameter ' + str(tm) + ' is less than current time:' + str(SimClock.now())
         self._time = tm.make_copy()
         self._sequencenum = -1
+        self._priority = priority
 
     def register(self):
         """
         Add event to the list of events set to fire at that event's time
         """
-        assert not self.isRegistered(), 'SimEvent ' + str(self) + ' is already registered'
+        assert not self.is_registered(), 'SimEvent ' + str(self) + ' is already registered'
         self._sequencenum = next(counter)
-        entry = [self._time, self._sequencenum, self]
+        entry = [self._time, self._priority, self._sequencenum, self]
         heappush(event_heap, entry)
         entry_finder[self] = entry
 
-    def isRegistered(self):
+    def is_registered(self):
         """
         Returns True if the event is currently in the events chain - i.e., it
         is scheduled for execution now or in the simulated future. Returns
@@ -111,7 +123,7 @@ class SimEvent(metaclass=ABCMeta):
         Used as part of the wait interrupt implementation.  (Get rid of the
         resumeAt event, and issue an interrupt event instead.)
         """
-        if not self.isRegistered():
+        if not self.is_registered():
             return False
 
         entry = entry_finder.pop(self)

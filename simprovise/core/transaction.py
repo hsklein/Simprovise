@@ -15,7 +15,7 @@
 from greenlet import greenlet           # pylint: disable=E0611
 
 from simprovise.core import (SimClock, SimError, simevent,
-                            SimInterruptException)
+                            SimInterruptException, SimTimeOutException)
 
 from simprovise.core.simevent import SimEvent
 from simprovise.core.agent import SimMsgType
@@ -45,22 +45,24 @@ class SimTransactionStartEvent(SimEvent):
 
 class SimTransactionResumeEvent(SimEvent):
     """
-    Wake up the transaction and resume now.  If through some sort or race
-    condition, an interrupt has also been scheduled, cancel the interrupt
-    by deregistering the interrupt event.  (In other words, if an interrupt
-    and "regular" resume are somehow scheduled for the same simulated time,
-    the "regular" resume should take precedence.)
+    Wake up the transaction and resume now.  If an interrupt has also been
+    scheduled, cancel the interrupt by deregistering the interrupt event.
+    In other words, if an there is both an interrupt and resume event
+    scheduled for this transaction, the resume takes precedence unless
+    the interrupt is scheduled for an earlier simulated time. The resume
+    event is set to a higher priority to ensure that it executes first
+    if the resume and interrupt are scheduled for the same simulated time.
     """
     __slots__ = ('transaction')
     def __init__(self, transaction, wait=0):
-        super().__init__(SimClock.now() + wait)
+        super().__init__(SimClock.now() + wait, priority=1)
         self.transaction = transaction
         transaction.resumeEvent = self
 
     def process_impl(self):
         self.transaction.resumeEvent = None
         interruptEvent = self.transaction.interruptEvent
-        if interruptEvent and interruptEvent.isRegistered():
+        if interruptEvent and interruptEvent.is_registered():
             logger.debug("cancelling interrupt in favor of concurrently scheduled resume event")
             interruptEvent.deregister()
         self.transaction._wakeup()
@@ -74,34 +76,53 @@ class SimTransactionResumeEvent(SimEvent):
 
 class SimTransactionInterruptEvent(SimEvent):
     """
-    Interrupt the waiting transaction by waking it and raising a
-    SimInterruptException (with the supplied reason).
+    Interrupt the waiting transaction by waking it and raising a supplied
+    exception (expected to be derived from SimInterruptException)
+    
+    The priority of the Interrupt event is set to 3, so that any resume
+    event (priority 1) for this transaction scheduled for the same time is
+    executed before (and instead of) the interrupt.
 
     If a concurrent "regular" resume has also been scheduled (i.e. for the
     same simulated time), that resume takes precedence and should be allowed
     to proceed by ignoring the interrupt.
     """
-    __slots__ = ('transaction', 'reason')
-    def __init__(self, transaction, reason=None):
-        super().__init__(SimClock.now())
+    __slots__ = ('transaction', 'exception')
+    def __init__(self, transaction, exception, wait=0):
+        super().__init__(SimClock.now() + wait, priority=3)
         self.transaction = transaction
-        self.reason = reason
+        self.exception = exception
         transaction.interruptEvent = self
 
     def process_impl(self):
         self.transaction.interruptEvent = None
         resumeEvent = self.transaction.resumeEvent
-        if resumeEvent and resumeEvent.time == self.time:
-            logger.debug("Ignoring interrupt in favor of concurrently scheduled resume event")
-        else:
-            if resumeEvent:
-                resumeEvent.deregister()
-                self.transaction.resumeEvent = None
-            self.transaction._wakeup_and_interrupt(self.reason)
+        if resumeEvent and resumeEvent.is_registered():
+            assert resumeEvent.time != self.time, "Concurrent resume event not executed before interrupt event"
+            resumeEvent.deregister()
+            self.transaction.resumeEvent = None
+        self.transaction._wakeup_and_interrupt(self.exception)
 
     def __str__(self):
         return super().__str__() + \
-            " Transaction: {0}, reason: {1}".format(self.transaction, self.reason)
+            " Transaction: {0}, reason: {1}".format(self.transaction, self.exception)
+
+
+class SimTimeOutEvent(SimTransactionInterruptEvent):
+    """
+    """
+    __slots__ = ('assignmentAgent', 'requestMsg')
+    def __init__(self, transaction, agent, msg, timeout=0):
+        super().__init__(transaction, SimTimeOutException('timeout'),
+                         SimClock.now() + timeout)
+        self.assignmentAgent = agent
+        self.requestMsg = msg
+        
+    def process_impl(self):
+        """
+        """
+        super().process_impl()
+        self.assignmentAgent.remove_request_message(self.requestMsg)
 
 
 @apidoc
@@ -278,7 +299,7 @@ class SimTransaction(object):
         self._greenlet.switch()
 
     @apidocskip
-    def _wakeup_and_interrupt(self, reason):
+    def _wakeup_and_interrupt(self, exception):
         """
         Interrupt a waiting transaction - i.e., wake it prematurely by
         restarting it and throwing a SimInterruptException with the passed
@@ -288,7 +309,7 @@ class SimTransaction(object):
         should call interrupt()
         """
         logger.debug("wakeupAndInterrupt on transaction %s on greenlet %s", self, self._greenlet)
-        self._greenlet.throw(SimInterruptException(reason))
+        self._greenlet.throw(exception)
 
     @apidocskip
     def wait_until_notified(self):
@@ -309,7 +330,7 @@ class SimTransaction(object):
         resumeEvent = SimTransactionResumeEvent(self)
         resumeEvent.register()
 
-    def interrupt(self, reason):
+    def interrupt(self, exception):
         """
         Interrupt a transaction that is currently waiting - i.e., interrupt
         the wait state and prematurely, resume the transaction, but raise a
@@ -322,13 +343,14 @@ class SimTransaction(object):
         This is the method that should be called by to restart a waiting
         transaction - NOT _wakeup_and_interrupt()
 
-        Note that the transaction initiating the interrupt (which is NOT
+        Note that the initiator of the interrupt (which is NOT
         this transaction) does __not__ block until the interrupt occurs.
         We might consider a method that facilitates that, though the semantics
         could be confusing.
 
-        :param reason: Reason for interrupt, e.g. 'preemption'
-        :type reason:  `str`
+        :param exception: Exception object that is raised when the waiting
+                          transaction is resumed.
+        :type exception:  `Exception`
         
         """
         assert self.is_executing, "Cannot interrupt a non-executing transaction"
@@ -336,7 +358,7 @@ class SimTransaction(object):
 
         # Now schedule the interrupt event
         logger.debug("scheduling interrupt on transaction %s on greenlet %s", self, self._greenlet)
-        interruptEvent = SimTransactionInterruptEvent(self, reason)
+        interruptEvent = SimTransactionInterruptEvent(self, exception)
         interruptEvent.register()
 
     # methods used by run()
@@ -432,7 +454,7 @@ class SimTransaction(object):
         """
         counter.decrement(amount)
 
-    def acquire(self, resource, numrequested=1):
+    def acquire(self, resource, numrequested=1, *, timeout=None):
         """
         Acquires a specified resource (or resources) on behalf of this
         transaction, blocking until the resource(s) are acquired, and
@@ -465,9 +487,9 @@ class SimTransaction(object):
         # agent (which may or may not be the resource itself)
         assignmentAgent = resource.assignment_agent
         msgData = (self, numrequested, resource)
-        return self._acquire_impl(assignmentAgent, msgData)
+        return self._acquire_impl(assignmentAgent, msgData, timeout)
 
-    def acquire_from(self, agent, rsrcClass, numrequested=1):
+    def acquire_from(self, agent, rsrcClass, numrequested=1, *, timeout=None):
         """
         Acquire a resource (or resources) of a specified class that is
         managed by a specified assignment agent, returning a resource
@@ -504,9 +526,9 @@ class SimTransaction(object):
             raise SimError(_ACQUIRE_ERROR, errorMsg, numrequested)
 
         msgData = (self, numrequested, rsrcClass)
-        return self._acquire_impl(agent, msgData)
+        return self._acquire_impl(agent, msgData, timeout)
 
-    def _acquire_impl(self, assignmentAgent, msgData):
+    def _acquire_impl(self, assignmentAgent, msgData, timeout):
         """
         Implements the bulk of the resource acquisition that is common to both
         acquire() and acquire_from()
@@ -526,7 +548,11 @@ class SimTransaction(object):
         else:
             # If the assignment agent did not respond immediately (presumably
             # because the requested resource is not available), wait for a
-            # response.
+            # response. Schedule a timeout that will be executed if the resource
+            # request is not fulfilled first.
+            if timeout is not None:
+                timeoutEvent = SimTimeOutEvent(self, assignmentAgent, msg, timeout)
+                timeoutEvent.register()
             response = self.wait_for_response(msg)
             assert response, "No response from waitForRespoonse"
             assert response.msgType == SimMsgType.RSRC_ASSIGNMENT, "Response to Resource request was not a resource assignment"

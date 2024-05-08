@@ -9,6 +9,7 @@ from simprovise.test import simcounter_test
 from simprovise.test import simlocation_test
 from simprovise.test import simresource_test
 from simprovise.test import simentity_test
+from simprovise.test import simtransaction_test
 #from simprovise.test import simelement_test
 
 # Note that running the system test creates too much state, and
@@ -35,6 +36,7 @@ def run_tests():
     #suite.addTest(unittest.makeSuite(SimTime_test.SimTimeIntervalTests))
     suite.addTest(simresource_test.makeTestSuite())
     suite.addTest(simentity_test.makeTestSuite())
+    suite.addTest(simtransaction_test.makeTestSuite())
     #suite.addTest(simelement_test.makeTestSuite())
 
     unittest.TextTestRunner(verbosity=1).run(suite)

@@ -1,5 +1,5 @@
 #===============================================================================
-# MODULE simeventtest
+# MODULE simevent_test
 #
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
@@ -15,14 +15,19 @@ class TestEvent(simevent.SimEvent):
     processedCount = 0
     processedEvents = []
     
-    def __init__(self, time):
-        super().__init__(time)
+    def __init__(self, time, priority=1):
+        super().__init__(time, priority=priority)
         TestEvent.eventCount += 1       
         self._id = TestEvent.eventCount
         
     def process_impl(self):
         TestEvent.processedCount += 1
         TestEvent.processedEvents.append(self)
+        
+class TestEventP2(TestEvent):
+    
+    def __init__(self, time):
+        super().__init__(time, 2)        
         
 class SimEventTests1(unittest.TestCase):
     "Tests for single SimEvent"
@@ -39,17 +44,22 @@ class SimEventTests1(unittest.TestCase):
 
     def testAddEvent2(self):
         "Test: first item on heap is correct event time"
-        tm, seq, event = heappop(simevent.event_heap)
+        tm, priority, seq, event = heappop(simevent.event_heap)
         self.assertEqual(tm, event.time)
 
     def testAddtEvent3(self):
         "Test: first item on heap is initialized time"
-        tm, seq, event = heappop(simevent.event_heap)
+        tm, priority, seq, event = heappop(simevent.event_heap)
         self.assertEqual(tm, self.twoMins)
+
+    def testAddtEvent3a(self):
+        "Test: time in event heap entry equals event time"
+        tm, priority, seq, event = heappop(simevent.event_heap)
+        self.assertEqual(tm, event.time)
         
     def testAddEvent4(self):
         "Test: first item on heap is the event"
-        tm, seq, event = heappop(simevent.event_heap)
+        tm, priority, seq, event = heappop(simevent.event_heap)
         self.assertEqual(event, self.testEvent)
         
     def testAddEvent5(self):
@@ -58,18 +68,18 @@ class SimEventTests1(unittest.TestCase):
 
     def testAddEvent6(self):
         "Test: Added event is registered"
-        self.assertTrue(self.testEvent.isRegistered())
+        self.assertTrue(self.testEvent.is_registered())
 
     def testAddEvent7(self):
         "Test: deregistration - event is not registered"
         self.testEvent.deregister()
-        self.assertFalse(self.testEvent.isRegistered())
+        self.assertFalse(self.testEvent.is_registered())
 
     def testAddEvent8(self):
         "Test: deregistration/registration - event is registered"
         self.testEvent.deregister()
         self.testEvent.register()
-        self.assertTrue(self.testEvent.isRegistered())
+        self.assertTrue(self.testEvent.is_registered())
 
     def testAddEvent9(self):
         "Test: registration of an event scheduled prior to SimClock.now() raises"
@@ -95,30 +105,82 @@ class SimEventTests2(unittest.TestCase):
 
     def testAdd2(self):
         "Test: first item on heap is the first registered event"
-        tm, seq, event = heappop(simevent.event_heap)
+        tm, priority, seq, event = heappop(simevent.event_heap)
         self.assertEqual(event, self.testEvent1)
 
     def testAdd3(self):
         "Test: first item on heap is scheduled for initialized time"
-        tm, seq, event = heappop(simevent.event_heap)
+        tm, priority, seq, event = heappop(simevent.event_heap)
         self.assertEqual(tm, self.twoMins)
 
     def testAdd4(self):
         "Test: second item on heap is the second registered event"
         for i in range(2):
-            tm, seq, event = heappop(simevent.event_heap)
+            tm, priority, seq, event = heappop(simevent.event_heap)
         self.assertEqual(event, self.testEvent2)
 
     def testAdd5(self):
         "Test: second item on heap is scheduled for initialized time"
         for i in range(2):
-            tm, seq, event = heappop(simevent.event_heap)
+            tm, priority, seq, event = heappop(simevent.event_heap)
         self.assertEqual(tm, self.twoMins)
         
     def testAdd6(self):
         "Test: Registering same event twice (without popping) raises assert exception"
         self.assertRaises(AssertionError, lambda: self.testEvent1.register())
 
+        
+class SimEventPriorityTests(unittest.TestCase):
+    "Tests for SimEvents of different priorities"
+    def setUp( self ):
+        simevent.initialize()
+        SimClock.initialize()
+        self.twoMins = simtime.SimTime(2, simtime.MINUTES)
+        self.threeMins = simtime.SimTime(3, simtime.MINUTES)
+        self.testEvent1 = TestEventP2(self.twoMins)
+        self.testEvent1.register()
+        self.testEvent2 = TestEvent(self.threeMins)
+        self.testEvent2.register()
+        self.testEvent3 = TestEvent(self.twoMins)
+        self.testEvent3.register()
+
+    def testAdd1(self):
+        "Test: Adding a three new events should create an event heap of length 3"
+        self.assertEqual(len(simevent.event_heap), 3)
+
+    def testAdd2(self):
+        "Test: first item on heap is the higher priority event"
+        tm, priority, seq, event = heappop(simevent.event_heap)
+        self.assertEqual(event, self.testEvent3)
+
+    def testAdd3(self):
+        "Test: first item on heap is scheduled for initialized time"
+        tm, priority, seq, event = heappop(simevent.event_heap)
+        self.assertEqual(tm, self.twoMins)
+
+    def testAdd4(self):
+        "Test: second item on heap is the priority 2 event"
+        for i in range(2):
+            tm, priority, seq, event = heappop(simevent.event_heap)
+        self.assertEqual(event, self.testEvent1)
+
+    def testAdd5(self):
+        "Test: second item on heap is scheduled for initialized time"
+        for i in range(2):
+            tm, priority, seq, event = heappop(simevent.event_heap)
+        self.assertEqual(tm, self.twoMins)
+        
+    def testAdd6(self):
+        "Test: third item on heap is the latest event"
+        for i in range(3):
+            tm, priority, seq, event = heappop(simevent.event_heap)
+        self.assertEqual(event, self.testEvent2)
+
+    def testAdd7(self):
+        "Test: third item on heap is scheduled for initialized time"
+        for i in range(3):
+            tm, priority, seq, event = heappop(simevent.event_heap)
+        self.assertEqual(tm, self.threeMins)
        
 
 class SimEventProcessorTests( unittest.TestCase ): 
@@ -141,6 +203,17 @@ class SimEventProcessorTests( unittest.TestCase ):
         for e in eventList:
             e.register()
         return eventList
+        
+    def addMixedPriorityTestEvents(self, time, count):
+        event1_p1 = TestEvent(time)
+        event2_p2 = TestEventP2(time)
+        event3_p1 = TestEvent(time)
+        event4_p2 = TestEventP2(time)
+        eventList = [event1_p1, event2_p2, event3_p1, event4_p2]
+        prioritized_eventList = [event1_p1, event3_p1, event2_p2, event4_p2]
+        for e in eventList:
+            e.register()
+        return prioritized_eventList
         
     def testProcessCurrentEvents1(self):
         "Test:  Register 3 events at time now - processEvents() hits all three"
@@ -166,6 +239,12 @@ class SimEventProcessorTests( unittest.TestCase ):
         "Test:  process events at time zero, two mins - clock is at two minutes"
         eventList = self.addTestEvents(SimClock.now(), 2)
         eventList.extend(self.addTestEvents(self.twoMins, 1))
+        self.eventProcessor.process_events()                       
+        self.assertEqual(TestEvent.processedEvents, eventList)
+
+    def testProcessEventsByPriority(self):
+        "Test:  process events of priority 1 and 2 in proper order"
+        eventList = self.addMixedPriorityTestEvents(SimClock.now(), 2)
         self.eventProcessor.process_events()                       
         self.assertEqual(TestEvent.processedEvents, eventList)
 
@@ -243,6 +322,7 @@ def makeTestSuite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(SimEventTests1))
     suite.addTest(unittest.makeSuite(SimEventTests2))
+    suite.addTest(unittest.makeSuite(SimEventPriorityTests))
     suite.addTest(unittest.makeSuite(SimEventProcessorTests))
     return suite
         
