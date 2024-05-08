@@ -8,7 +8,7 @@
 # SimAssignmentAgentMixin.
 #===============================================================================
 __all__ = ['SimResource', 'SimSimpleResource', 'SimResourcePool', 
-           'SimResourceAssignment']
+           'SimResourceAssignment', 'SimResourceAssignmentAgent']
 
 from itertools import chain
 from inspect import isclass
@@ -329,7 +329,7 @@ class ResourceAssignmentAgentMixin(object):
 
     def _assign_from_request(self, requestMsg):
         """
-        This method, called by _processRequest(), actually implements the
+        This method, called by _process_request(), actually implements the
         logic that determines whether a resource (or resources) can be
         assigned to a request, and if so, the specifics of that assignment.
         Those specifics are in the form of a SimResourceAssignment object,
@@ -476,7 +476,12 @@ class ResourceAssignmentAgentMixin(object):
 
         """
         return self.next_queued_message(SimMsgType.RSRC_REQUEST)
-
+    
+    def remove_request_message(self, msg):
+        """
+        """
+        assert msg.msgType == SimMsgType.RSRC_REQUEST, "Invalid message type passed to handleResourceRequest()"
+        self.msgQueue.remove(msg)
 
 @apidoc
 class SimResource(SimStaticObject):
