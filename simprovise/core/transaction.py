@@ -573,7 +573,7 @@ class SimTransaction(object):
         
         if timeout is not None:
             if not isinstance(timeout, SimTime):
-                # let this providing if timeout cannot be converted to a SimTime
+                # let this raise if timeout cannot be converted to a SimTime
                 timeout = SimTime(timeout)
             if timeout < 0:
                 msg = "Transaction {0} invoked a resource acquire with timeout < 0: {1}"
