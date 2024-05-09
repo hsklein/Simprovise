@@ -14,7 +14,7 @@
 #===============================================================================
 from greenlet import greenlet           # pylint: disable=E0611
 
-from simprovise.core import (SimClock, SimError, simevent,
+from simprovise.core import (SimClock, SimError, SimTime, simevent,
                             SimInterruptException, SimTimeOutException)
 
 from simprovise.core.simevent import SimEvent
@@ -26,6 +26,7 @@ from simprovise.core import SimLogging
 logger = SimLogging.get_logger(__name__)
 
 _ACQUIRE_ERROR = "Resource Acquisition Error"
+_TXN_ERROR = "SimTransaction Error"
 
 class SimTransactionStartEvent(SimEvent):
     """
@@ -272,8 +273,8 @@ class SimTransaction(object):
             hasUnreleasedAssignments = any([True for assg in self._resourceAssignments if assg.count > 0])
             if hasUnreleasedAssignments:
                 unreleasedAssignments = [assg for assg in self._resourceAssignments if assg.count > 0]
-                errstr = "Transaction {0} run() error.  All resources must be released prior to the end of transaction execution (run()).  The following resource assignments have not been released: {1}"
-                raise SimError("Transaction Execution Error", errstr.format(str(self), str(unreleasedAssignments)))
+                msg = "Transaction {0} run() error.  All resources must be released prior to the end of transaction execution (run()).  The following resource assignments have not been released: {1}"
+                raise SimError(_TXN_ERROR, msg, self, unreleasedAssignments)
         finally:
             self._executing = False
             self.decrement(inTransactionCounter)
@@ -535,6 +536,15 @@ class SimTransaction(object):
         """
         assert self.agent, "Transaction calling acquire() has no agent"
         assert self.is_executing, "Resources can only be acquired by executing transactions"
+        
+        if timeout is not None:
+            if not isinstance(timeout, SimTime):
+                # let this providing if timeout cannot be converted to a SimTime
+                timeout = SimTime(timeout)
+            if timeout < 0:
+                msg = "Transaction {0} invoked a resource acquire with timeout < 0: {1}"
+                raise SimError(_TXN_ERROR, msg, self, timeout)
+         
 
         msgType = SimMsgType.RSRC_REQUEST
         msg, responses = self.agent.send_message(assignmentAgent,

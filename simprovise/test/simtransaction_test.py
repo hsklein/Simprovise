@@ -6,7 +6,7 @@
 # Unit tests for the SimTransaction and related classes
 #===============================================================================
 from simprovise.core import (simevent, simtime, SimClock, SimTime,
-                             SimSimpleResource, SimResourceAssignmentAgent)
+                             SimSimpleResource, SimResourceAssignmentAgent, SimError)
 from simprovise.core.transaction import (SimTransaction,
                                          SimTransactionResumeEvent,
                                          SimTransactionInterruptEvent)
@@ -169,6 +169,68 @@ class TestTransaction2(TestTransaction1):
         self.wait_for(TWO_MINS)
         self.release(assignment)
         self.completed = True
+
+class TestNoReleaseTransaction(TestTransaction2):
+    rsrc = None
+    
+    def __init__(self, agent, timeout=None):
+        super().__init__(agent)
+        self.timeout = timeout
+        self.completed = False
+    
+    def runimpl(self):
+        assignment = self.acquire(TestTransaction2.rsrc, timeout=self.timeout)
+        self.wait_for(TWO_MINS)
+        #self.release(assignment)
+        self.completed = True        
+        
+class SimTransactionBasicTimeoutTests(unittest.TestCase):
+    """
+    Tests conditions after completion of the following actions:
+    - starting a transaction whose run() acquires a resource and waits 2 mins
+    - starting a second transaction, same run() with a acquire timeout of 1 min
+    """
+    def setUp( self ):
+        simevent.initialize()
+        SimClock.initialize()
+        TestTransaction2.rsrc = SimSimpleResource("test")
+        self.eventProcessor = simevent.EventProcessor()        
+
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimStaticObject.elements = {}
+        
+    def testNegativeTimeout(self):
+        """
+        Test: A negative timeout value raises a SimError
+        """
+        negtime = simtime.SimTime(-1, simtime.SECONDS)
+        txn = TestTransaction2(SimAgent(), timeout=negtime)
+        txn.start()
+        self.eventProcessor.process_events()
+        self.assertTrue(isinstance(txn.exception, SimError))
+        
+    def testInvalidTimeout(self):
+        """
+        Test: A non-time/numeric timeout value raises a SimError
+        """
+        txn = TestTransaction2(SimAgent(), timeout='x')
+        txn.start()
+        self.eventProcessor.process_events()
+        self.assertTrue(isinstance(txn.exception, SimError))
+        
+    def testNoResourceRelease(self):
+        """
+        Test: Failing to release acquired resources when run() ends raises a SimError
+        Note that this error is caught outside of run() (in execute()), so the
+        exception leaks out to here. (Unlike the exceptions generated with invalid
+        timeout values)
+        """
+        txn = TestNoReleaseTransaction(SimAgent())
+        txn.start()
+        with self.assertRaises(SimError):
+            self.eventProcessor.process_events()
         
 class SimTransactionTimeoutTests(unittest.TestCase):
     """
@@ -304,27 +366,82 @@ class SimTransactionTimeoutTests2(unittest.TestCase):
 
     def testTimeout4(self):
         """
-        Test: After running all events, he timed-out transaction stopped waiting
-              at 3 minutes
+        Test: After running all events, he timed-out transaction stopped waiting at 3 minutes
         """
         self.eventProcessor.process_events()
         self.assertEqual(self.txn3.waitdone_time, THREE_MINS)
 
     def testTimeout5(self):
         """
-        Test: After running all events,t he timed-out transaction run() raised a
-              SimTimeOutException
+        Test: After running all events,t he timed-out transaction run() raised a SimTimeOutException
         """
         self.eventProcessor.process_events()
         self.assertTrue(isinstance(self.txn3.exception, SimTimeOutException))
      
-                
+       
+class SimTransactionZeroTimeoutTests(unittest.TestCase):
+    """
+    Tests acquire calls with timeout of zero.
+    Scenario starts two transactions at the same time with timeout of zero
+    The first should complete normally; the second should timeout and raise
+    a SimTimeOutException
+   """
+    def setUp( self ):
+        simevent.initialize()
+        SimClock.initialize()
+        TestTransaction2.rsrc = SimSimpleResource("test")
+        self.eventProcessor = simevent.EventProcessor()        
+        self.txn1 = TestTransaction2(SimAgent(), timeout=0)
+        self.txn1.start()
+        self.txn2 = TestTransaction2(SimAgent(), timeout=0)
+        self.txn2.start()
+        self.eventProcessor.process_events()
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimStaticObject.elements = {}
+
+    def testTimeout1(self):
+        """
+        Test: After running all events, both transactions are done executing
+        """
+        self.eventProcessor.process_events()
+        self.assertFalse(self.txn1.is_executing or self.txn2.is_executing)
+
+    def testTimeout2(self):
+        """
+        Test: After running all events,txn1 DID complete
+        """
+        self.assertTrue(self.txn1.completed)
+
+    def testTimeout3(self):
+        """
+        Test: After running all events,txn2 did NOT complete
+        """
+        self.assertFalse(self.txn2.completed)
+
+    def testTimeout4(self):
+        """
+        Test: After running all events, the timed-out txn2 stopped waiting at zero 
+        """
+        self.assertEqual(self.txn2.waitdone_time, 0)
+
+    def testTimeout5(self):
+        """
+        Test: After running all events, the timed-out txn2.run() raised a SimTimeOutException
+        """
+        self.eventProcessor.process_events()
+        self.assertTrue(isinstance(self.txn2.exception, SimTimeOutException))
+        
+        
 def makeTestSuite():
     suite = unittest.TestSuite()
     suite.addTest(unittest.makeSuite(SimTransactionTests))
     suite.addTest(unittest.makeSuite(SimTransactionInterruptTests))
+    suite.addTest(unittest.makeSuite(SimTransactionBasicTimeoutTests))
     suite.addTest(unittest.makeSuite(SimTransactionTimeoutTests))
     suite.addTest(unittest.makeSuite(SimTransactionTimeoutTests2))
+    suite.addTest(unittest.makeSuite(SimTransactionZeroTimeoutTests))
     return suite
         
 if __name__ == '__main__':
