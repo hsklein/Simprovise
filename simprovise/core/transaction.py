@@ -458,8 +458,14 @@ class SimTransaction(object):
     def acquire(self, resource, numrequested=1, *, timeout=None):
         """
         Acquires a specified resource (or resources) on behalf of this
-        transaction, blocking until the resource(s) are acquired, and
-        returning a resource assignment.
+        transaction, blocking until either the resource(s) are acquired,
+        or the request times out.
+        
+        If the resource(s) are acquired, a resource assignment is returned.
+        If `acquire` times out, a :class:`~.simexception.SimTimeOutException`
+        is raised. If the timeout parameter value is `None`, `acquire` will
+        not time out. If the timeout is zero, the request times out if the
+        requested resource(s) are not immediately available and assigned.
         
         Note that default behavior typically guarantees that all of
         the requested resources will be acquired; client code can
@@ -473,6 +479,15 @@ class SimTransaction(object):
                              Can be more than 1 if resource has capacity greater
                              than 1. Defaults to 1
         :type numrequested:   `int`
+
+        :param timeout:      If not None, the length of simulated time
+                             after which the request times out. If None,
+                             the request never times out (unless interrupted by
+                             the assignment agent) Defaults to `None`.
+        :type timeout:       :class:`~.simtime.SimTime` or `None`.
+        
+        :raises:             :class:`~.simexception.SimTimeOutException`
+                             Raised if acquire() request time out.
         
         :return:             Assignment object that specifies assigned resource(s)
         :rtype:              :class:`~.resource.SimResourceAssignment`
@@ -498,6 +513,12 @@ class SimTransaction(object):
         used when acquiring resource(s) managed by a
         :class:`.resource.SimResourcePool`.
         
+        As with :meth:`~SimTransaction.acquire`, the request can time out
+        if a `timeout` parameter value other than `None` is supplied. If
+        the request times out, a :class:`~.simexception.SimTimeOutException`
+        is raised. If the timeout is zero, the request times out if the
+        requested resource(s) are not immediately available and assigned.
+        
         Note that default behavior typically guarantees that all of
         the requested resources will be acquired; client code can
         customize this behavior, possibly providing some but not all
@@ -517,6 +538,18 @@ class SimTransaction(object):
                              resources (or a resource with capacity > 1).
                              Defaults to 1
         :type numrequested:   `int`
+
+        :param timeout:      If not None, the length of simulated time
+                             after which the request times out. If None,
+                             the request never times out (unless interrupted by
+                             the assignment agent) Defaults to `None`.
+        :type timeout:       :class:`~.simtime.SimTime` or `None`.
+        
+        :raises:             :class:`~.simexception.SimTimeOutException`
+                             Raised if acquire() request time out.
+        
+        :return:             Assignment object that specifies assigned resource(s)
+        :rtype:              :class:`~.resource.SimResourceAssignment`
         
         """
         assert isinstance(rsrcClass, type), "acquireFrom() rsrcClass parameter is not a class"
