@@ -171,18 +171,20 @@ class TestTransaction2(TestTransaction1):
         self.completed = True
 
 class TestNoReleaseTransaction(TestTransaction2):
-    rsrc = None
-    
-    def __init__(self, agent, timeout=None):
-        super().__init__(agent)
-        self.timeout = timeout
-        self.completed = False
-    
     def runimpl(self):
         assignment = self.acquire(TestTransaction2.rsrc, timeout=self.timeout)
         self.wait_for(TWO_MINS)
         #self.release(assignment)
         self.completed = True        
+
+class TestPartialReleaseTransaction(TestTransaction2):
+    def runimpl(self):
+        # Acquire two resources, but release only one
+        assignment = self.acquire(TestTransaction2.rsrc, 2)
+        self.wait_for(TWO_MINS)
+        self.release(assignment, 1)
+        self.completed = True
+        
         
 class SimTransactionBasicTimeoutTests(unittest.TestCase):
     """
@@ -193,13 +195,32 @@ class SimTransactionBasicTimeoutTests(unittest.TestCase):
     def setUp( self ):
         simevent.initialize()
         SimClock.initialize()
-        TestTransaction2.rsrc = SimSimpleResource("test")
+        TestTransaction2.rsrc = SimSimpleResource("test", capacity=2)
         self.eventProcessor = simevent.EventProcessor()        
 
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
         SimStaticObject.elements = {}
+        
+    def testStartNotExecuting(self):
+        """
+        Test: After start(), transaction is still not exception
+        """
+        txn = TestTransaction2(SimAgent())
+        txn.start()
+        self.assertFalse(txn.is_executing)
+        
+    def testIsExecuting(self):
+        """
+        Test: start a transaction that waits for two minutes;
+              process_events() for one minute. The transaction is
+              still executing
+        """
+        txn = TestTransaction2(SimAgent())
+        txn.start()
+        self.eventProcessor.process_events(until_time=ONE_MIN)
+        self.assertTrue(txn.is_executing)
         
     def testNegativeTimeout(self):
         """
@@ -232,6 +253,22 @@ class SimTransactionBasicTimeoutTests(unittest.TestCase):
         with self.assertRaises(SimError):
             self.eventProcessor.process_events()
         
+    def testPartialResourceRelease(self):
+        """
+        Test: Failing to release SOME acquired resources when run() ends raises a SimError
+        In this case, we acquire two resources but only release one of them.
+        Raises the same error when there is no release.
+        
+        Note that this error is caught outside of run() (in execute()), so the
+        exception leaks out to here. (Unlike the exceptions generated with invalid
+        timeout values)
+        """
+        txn = TestPartialReleaseTransaction(SimAgent())
+        txn.start()
+        with self.assertRaises(SimError):
+            self.eventProcessor.process_events()
+            
+            
 class SimTransactionTimeoutTests(unittest.TestCase):
     """
     Tests conditions after completion of the following actions:
