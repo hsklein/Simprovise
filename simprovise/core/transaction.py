@@ -339,7 +339,8 @@ class SimTransaction(object):
         interrupts are implementing resource preemption (quit the job in the
         middle and assign the resource elsewhere); it might also be used to
         implement "go to Plan B" if the wait for resource acquisition takes too
-        long.
+        long. (Though that would typically be done via the timeout parameter
+        on :meth:`SimTransaction.acquire` or :meth:`SimTransaction.acquire_from`)
 
         This is the method that should be called by to restart a waiting
         transaction - NOT _wakeup_and_interrupt()
