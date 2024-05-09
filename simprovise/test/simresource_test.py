@@ -60,16 +60,16 @@ class MockProcess(SimProcess):
             self.executing(True)
         #mockEntity = MockEntity(self)
         
-    def waitForResponse(self, msg):
-        self.waitUntilNotified()
+    #def waitForResponse(self, msg):
+        #self.waitUntilNotified()
         
-    def waitUntilNotified(self):
-        self.waitStart = SimClock.now()
-        self.waiting = True
+    #def waitUntilNotified(self):
+        #self.waitStart = SimClock.now()
+        #self.waiting = True
         
-    def resume(self):
-        MockProcess.resumedProcess = self
-        self.waiting = False
+    #def resume(self):
+        #MockProcess.resumedProcess = self
+        #self.waiting = False
         
     def executing(self, flag):
         self._executing = flag
@@ -121,7 +121,7 @@ class MockProcessAgent(SimAgent):
         MockProcessAgent.count += 1
         self.pid = MockProcessAgent.count
         self.assignment = None
-        self.register_handler(SimMsgType.RSRC_ASSIGNMENT, self.handleResourceAssignment)
+        self.register_handler(SimMsgType.RSRC_ASSIGNMENT, self.handle_resource_assignment)
         
     @property
     def waiting(self): 
@@ -136,12 +136,12 @@ class MockProcessAgent(SimAgent):
         msg, responses = self.send_message(resource.assignment_agent,
                                           msgType, msgData)
         if responses:
-            self.handleResourceAssignment(responses[0])
+            self.handle_resource_assignment(responses[0])
             return True
         else:
             return False
         
-    def acquireFrom(self, agent, rsrcClass, numrequested=1):
+    def acquire_from(self, agent, rsrcClass, numrequested=1):
         """
         Mimics SimTransaction.acquireFrom()
         """
@@ -149,12 +149,12 @@ class MockProcessAgent(SimAgent):
         msgData = (self, numrequested, rsrcClass)
         msg, responses = self.send_message(agent, msgType, msgData)
         if responses:
-            self.handleResourceAssignment(responses[0])
+            self.handle_resource_assignment(responses[0])
             return True
         else:
             return False
             
-    def handleResourceAssignment(self, msg):
+    def handle_resource_assignment(self, msg):
         """
         Handle an assignment message from a resource assignment agent by:
         - setting the assignment attribute (a non-None value indicates that an
@@ -275,7 +275,7 @@ class ResourceAssignmentSubtractTests(RATestCaseBase):
 
 
 class ResourceAssignmentContainsTests(RATestCaseBase):
-    "Tests ResourceAssignment subtract and subtractAll methods"
+    "Tests ResourceAssignment contains() method"
     def setUp(self):
         super().setUp()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location, capacity=1)
@@ -410,11 +410,18 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         self.assertEqual(self.rsrc2.down, 0)
         
     def testCurrentAssignments(self):
-        "Test: two acquisitions of a resource, both assignments returned by currentAssignments"
+        "Test: two acquisitions of a resource, both assignments returned by current_assignments"
         assignment1 = self.process.acquire(self.rsrc2, 1)
         assignment2 = self.process.acquire(self.rsrc2, 1)
-        assignments = set(self.rsrc2.current_assignments)
+        assignments = set(self.rsrc2.current_assignments())
         self.assertEqual(assignments, set((assignment1, assignment2)))
+        
+    def testCurrentTransactions(self):
+        "Test: two processes acquire a resource, both processes returned by current_transactions"
+        assignment1 = self.process1.acquire(self.rsrc2, 1)
+        assignment2 = self.process2.acquire(self.rsrc2, 1)
+        txns = set(self.rsrc2.current_transactions())
+        self.assertEqual(txns, set((self.process1, self.process2)))
    
         
 class SimpleResourceBasicAcquireTests(RATestCaseBase):
@@ -468,7 +475,7 @@ class SimpleResourceBasicReleaseTests(RATestCaseBase):
     "Tests basic (no running simulation required) SimpleResource class release() functionality"
     def setUp(self):
         super().setUp()
-        MockProcessAgent.assignedAgents.clear()
+        #MockProcessAgent.assignedAgents.clear()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location, capacity=3)
@@ -955,11 +962,11 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         Test: Acquire two resources for each process. Without any releases,
         the first three process will be assigned
         """
-        self.process1.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process2.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process3.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process4.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process5.acquireFrom(self.pool, SimSimpleResource, 2)
+        self.process1.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process2.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process3.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process4.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process5.acquire_from(self.pool, SimSimpleResource, 2)
         self.assertEqual(MockProcessAgent.pids(), [1,2,3])
              
     def testacquireFIFOrelease1(self):
@@ -967,11 +974,11 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         Test: Acquire two resources for each process. Release the
         first process's assignment; four process requests are fulfilled
         """
-        self.process1.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process2.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process3.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process4.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process5.acquireFrom(self.pool, SimSimpleResource, 2)
+        self.process1.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process2.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process3.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process4.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process5.acquire_from(self.pool, SimSimpleResource, 2)
         self.process1.release()
         self.assertEqual(MockProcessAgent.pids(), [1,2,3,4])
              
@@ -981,11 +988,11 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         resources for the first process's assignment; four process requests
         are fulfilled
         """
-        self.process1.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process2.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process3.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process4.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process5.acquireFrom(self.pool, SimSimpleResource, 2)
+        self.process1.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process2.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process3.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process4.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process5.acquire_from(self.pool, SimSimpleResource, 2)
         self.process1.release(1)
         self.assertEqual(MockProcessAgent.pids(), [1,2,3,4])
              
@@ -994,11 +1001,11 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         Test: Acquire two resources for each process. Release one of the
         resources for the processes 1-3; all requests are fulfilled
         """
-        self.process1.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process2.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process3.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process4.acquireFrom(self.pool, SimSimpleResource, 2)
-        self.process5.acquireFrom(self.pool, SimSimpleResource, 2)
+        self.process1.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process2.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process3.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process4.acquire_from(self.pool, SimSimpleResource, 2)
+        self.process5.acquire_from(self.pool, SimSimpleResource, 2)
         self.process1.release(1)
         self.process2.release(1)
         self.process3.release(1)
@@ -1011,11 +1018,11 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         though there are such resources available) Since the last TestResource
         request is ahead in line.
         """
-        self.process1.acquireFrom(self.pool, SimSimpleResource, 1)
-        self.process2.acquireFrom(self.pool, TestResource, 2)
-        self.process3.acquireFrom(self.pool, SimSimpleResource, 1)
-        self.process4.acquireFrom(self.pool, TestResource, 1)
-        self.process5.acquireFrom(self.pool, SimSimpleResource, 1)
+        self.process1.acquire_from(self.pool, SimSimpleResource, 1)
+        self.process2.acquire_from(self.pool, TestResource, 2)
+        self.process3.acquire_from(self.pool, SimSimpleResource, 1)
+        self.process4.acquire_from(self.pool, TestResource, 1)
+        self.process5.acquire_from(self.pool, SimSimpleResource, 1)
         self.assertEqual(MockProcessAgent.pids(), [1,2,3])
              
     def testacquirePriorityrelease1(self):
@@ -1025,11 +1032,11 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         """
         self.pool.register_priority_func(SimMsgType.RSRC_REQUEST, 
                                        MockProcessAgent.getPriority)
-        self.process1.acquireFrom(self.pool, TestResource, 2)
-        self.process2.acquireFrom(self.pool, TestResource)
-        self.process3.acquireFrom(self.pool, TestResource)
-        self.process4.acquireFrom(self.pool, TestResource)
-        self.process5.acquireFrom(self.pool, TestResource)
+        self.process1.acquire_from(self.pool, TestResource, 2)
+        self.process2.acquire_from(self.pool, TestResource)
+        self.process3.acquire_from(self.pool, TestResource)
+        self.process4.acquire_from(self.pool, TestResource)
+        self.process5.acquire_from(self.pool, TestResource)
         self.process1.release()
         self.assertEqual(MockProcessAgent.pids(), [1,3,5])
              
@@ -1042,15 +1049,15 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         """
         self.pool.register_priority_func(SimMsgType.RSRC_REQUEST, 
                                        MockProcessAgent.getPriority)
-        self.process1.acquireFrom(self.pool, TestResource, 2)
-        self.process2.acquireFrom(self.pool, TestResource)
-        self.process3.acquireFrom(self.pool, TestResource)
-        self.process4.acquireFrom(self.pool, SimSimpleResource)
+        self.process1.acquire_from(self.pool, TestResource, 2)
+        self.process2.acquire_from(self.pool, TestResource)
+        self.process3.acquire_from(self.pool, TestResource)
+        self.process4.acquire_from(self.pool, SimSimpleResource)
         
         # After process1 releases, process3 is assigned a TestResource,
         # but process5 (the next in the priority queue) is not. So the
         # request from process4 is not fulfilled.
-        self.process5.acquireFrom(self.pool, TestResource, 2) 
+        self.process5.acquire_from(self.pool, TestResource, 2) 
         self.process1.release()
         self.assertEqual(MockProcessAgent.pids(), [1,3])
 

@@ -4,15 +4,14 @@
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
 # Defines the SimResource-related classes - SimResourceAssignment,
-# SimResource, SimSimpleResource, SimResourceAssignmentAgent and
-# SimAssignmentAgentMixin.
+# SimResource, SimSimpleResource, SimResourceAssignmentAgent,
+# SimAssignmentAgentMixin and SimResourcePool.
 #===============================================================================
 __all__ = ['SimResource', 'SimSimpleResource', 'SimResourcePool', 
            'SimResourceAssignment', 'SimResourceAssignmentAgent']
 
 from itertools import chain
 from inspect import isclass
-#from abc import ABCMeta, abstractmethod, abstractproperty
 
 from simprovise.core import (SimCounter, SimUnweightedDataCollector, SimError,
                             SimTime, SimClock, SimLogging)
@@ -26,11 +25,6 @@ _RESOURCE_ERROR = "Resource Error"
 _REQUEST_ERROR = "Resource Request Error"
 _RELEASE_ERROR = "Resource Release Error"
 _POOL_ERROR = "Resource Pool Error"
-
-def _resourceNameList(resourceSeq):
-    """
-    """
-    return [resource.element_id for resource in resourceSeq]
 
 @apidoc
 class SimResourceAssignment(object):
@@ -631,7 +625,6 @@ class SimResource(SimStaticObject):
         else:
             self._currentTxnAssignments[txn] = [SimClock.now(), number]
 
-    @property
     def current_assignments(self):
         """
         Return a list of all resource assignments involving this resource.
@@ -644,7 +637,6 @@ class SimResource(SimStaticObject):
         # (since transactions can have multiple resources assigned to them at once)
         return [assg for assg in assgIter if self in assg.resources]
 
-    @property
     def current_transactions(self):
         """
         Returns a list of transactions (processes) currently using this resource.
@@ -901,7 +893,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
         assignments for every resource in the pool, if the specified
         rsrcClass is None)
         """
-        return chain.from_iterable(r.current_assignments
+        return chain.from_iterable(r.current_assignments()
                                    for r in self.resources(rsrcClass))
 
     def current_transactions(self, rsrcClass=None):
