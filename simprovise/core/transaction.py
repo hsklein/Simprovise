@@ -15,7 +15,7 @@
 from greenlet import greenlet           # pylint: disable=E0611
 
 from simprovise.core import (SimClock, SimError, SimTime, simevent,
-                            SimInterruptException, SimTimeOutException)
+                             SimInterruptException, SimTimeOutException)
 
 from simprovise.core.simevent import SimEvent
 from simprovise.core.agent import SimMsgType
@@ -623,6 +623,10 @@ class SimTransaction(object):
 
         The default release spec value of None indicates that all resources
         in the assignment are to be released.
+        
+        The release is actually accomplished by sending a RSRC_RELEASE message
+        to the resource asssignment agent, which also subtracts the released
+        resources from the resource assignment object.
 
         :param rsrcAssignment: The resource assignment that is to be fully or
                                partially released.
@@ -647,8 +651,7 @@ class SimTransaction(object):
         if rsrcAssignment.count == 0:
             self._resourceAssignments.remove(rsrcAssignment)
 
-    @property
-    def resourceAssignments(self):
+    def resource_assignments(self):
         """
         Returns a list of current resource assignments
         (:class:`~.resource.SimResourceAssignment`) for the transaction;

@@ -477,6 +477,7 @@ class ResourceAssignmentAgentMixin(object):
         assert msg.msgType == SimMsgType.RSRC_REQUEST, "Invalid message type passed to handleResourceRequest()"
         self.msgQueue.remove(msg)
 
+
 @apidoc
 class SimResource(SimStaticObject):
     """
@@ -631,7 +632,7 @@ class SimResource(SimStaticObject):
         """
         # Create a iterator over all resource assignments for each transaction
         # to which this resource is assigned
-        assgIter = chain.from_iterable([txn.resourceAssignments
+        assgIter = chain.from_iterable([txn.resource_assignments()
                                         for txn in self._currentTxnAssignments])
         # return only those assignments that actually refer to this resource
         # (since transactions can have multiple resources assigned to them at once)
