@@ -10,7 +10,7 @@ from simprovise.test import simlocation_test
 from simprovise.test import simresource_test
 from simprovise.test import simentity_test
 from simprovise.test import simtransaction_test
-#from simprovise.test import simelement_test
+from simprovise.test import simprocess_test
 
 # Note that running the system test creates too much state, and
 # effs up itself and other tests - for now, it has to run
@@ -37,7 +37,7 @@ def run_tests():
     suite.addTest(simresource_test.makeTestSuite())
     suite.addTest(simentity_test.makeTestSuite())
     suite.addTest(simtransaction_test.makeTestSuite())
-    #suite.addTest(simelement_test.makeTestSuite())
+    suite.addTest(simprocess_test.makeTestSuite())
 
     unittest.TextTestRunner(verbosity=1).run(suite)
 
