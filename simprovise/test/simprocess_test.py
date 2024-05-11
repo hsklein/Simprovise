@@ -3,7 +3,7 @@
 #
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
-# Unit tests for the SimTransaction and related classes
+# Unit tests for the SimProcess and related classes
 #===============================================================================
 #from simprovise.core import (simevent, simtime, SimClock, SimTime, SimProcess, 
                              #SimSimpleResource, SimResourceAssignmentAgent, SimError)
@@ -29,23 +29,6 @@ class MockSource(SimEntitySource):
 
 class MockEntity(SimEntity):
     ""
-    
-#class TestTransaction1(SimTransaction):
-    #def __init__(self, agent):
-        #super().__init__(agent)
-        #self.exception = None
-        #self.waitdone_time = None
-        
-    #def run(self):
-        #try:
-            #self.runimpl()
-        #except Exception as e:
-            #self.exception = e
-        #finally:
-            #self.waitdone_time = SimClock.now()
-            
-    #def runimpl(self):
-        #self.wait_for(TWO_MINS)
         
 
 class TestProcess(SimProcess):
