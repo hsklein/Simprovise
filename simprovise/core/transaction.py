@@ -25,7 +25,6 @@ from simprovise.core.apidoc import apidoc, apidocskip
 from simprovise.core import SimLogging
 logger = SimLogging.get_logger(__name__)
 
-_ACQUIRE_ERROR = "Resource Acquisition Error"
 _TXN_ERROR = "SimTransaction Error"
 
 class SimTransactionStartEvent(SimEvent):

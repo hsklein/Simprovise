@@ -18,6 +18,7 @@ from simprovise.core import SimLogging, SimError, SimTimeOutException
 logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "SimProcessError"
+_ACQUIRE_ERROR = "Resource Acquisition Error"
 
 
 class SimTimeOutEvent(SimTransactionInterruptEvent):
