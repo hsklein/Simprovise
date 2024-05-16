@@ -17,6 +17,7 @@ from simprovise.core import (SimCounter, SimUnweightedDataCollector, SimError,
                             SimTime, SimClock, SimLogging)
 from simprovise.core.agent import SimAgent, SimMsgType
 from simprovise.core.location import SimStaticObject
+from simprovise.core.simevent import SimEvent
 from simprovise.core.apidoc import apidoc, apidocskip
 
 logger = SimLogging.get_logger(__name__)
@@ -147,6 +148,23 @@ class SimResourceAssignment(object):
     def subtract_all(self):
         "Remove all of the assignment's resources"
         self._resources = tuple()
+        
+@apidocskip
+class SimAssignResourcesEvent(SimEvent):  
+    """
+    """
+    __slots__ = ('assignmentAgent')
+    
+    def __init__(self, assignmentAgent):
+        super().__init__(SimClock.now(), priority=3)
+        self.assignmentAgent = assignmentAgent
+        
+    def process_impl(self):
+        """
+        """
+        self.assignmentAgent._process_queued_requests()
+        self.assignmentAgent.assignmentEvent = None
+    
 
 @apidoc
 class ResourceAssignmentAgentMixin(object):
@@ -163,8 +181,11 @@ class ResourceAssignmentAgentMixin(object):
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
+        self.assignmentEvent = None
         self.register_handler(SimMsgType.RSRC_REQUEST, self._handle_resource_request)
         self.register_handler(SimMsgType.RSRC_RELEASE, self._handle_resource_release)
+        self.register_handler(SimMsgType.RSRC_TAKEDOWN, self._handle_resource_takedown)
+        self.register_handler(SimMsgType.RSRC_BRINGUP, self._handle_resource_bringup)
 
     @property
     def request_priority_func(self):
@@ -241,15 +262,18 @@ class ResourceAssignmentAgentMixin(object):
     def _handle_resource_request(self, msg):
         """
         The handler registered to handle resource request messages.
-
-        Handle a resource request as it comes in. If all of the resources
-        requested are available - and there is no other request (presumably
-        needing more resources than currently available) ahead of it, fulfill
-        the request by responding with a resource assignment message, and
-        marking the request message as "handled" by returning True.
-
-        If the requested cannot be fulfilled, just return False, which should
-        place the request on the message queue for later processing/fulfillment.
+        
+        Resource requests are handled by:
+        1. Validating the request
+        2. Scheduling assignment request processing for the current simulated
+           time, but after all other events have been processed.
+        3. Returning False, since the request is not processed immediately.
+           This places the request in the message queue for later processing.
+           
+        We do NOT attempt to respond immediately in order to avoid race
+        conditions with other resource-related events that may be processed
+        after this but at the same simulated time - e.g., a higher priority
+        request for the same resource or pool.
 
         :param msg: Resource Request message (SimMsgType RSRC_REQUEST)
         :type msg:  :class:`~.agent.SimMessage`
@@ -263,25 +287,15 @@ class ResourceAssignmentAgentMixin(object):
 
         # Validate the message, raising an exception if there is a problem.
         self._validate_request(msg)
-
-        # Determine if there is an earlier request on the queue that we
-        # should attempt to fulfill first - if so, we'll defer processing of
-        # this message and return False. If not, we will attempt to fulfill
-        # this request via a call to _processRequest().
-        #
-        # If the requests are being handled FIFO (the default, no priority
-        # function specified) than we should defer to any message on the
-        # queue. If we have a priority function, defer if the next request is
-        # a higher (lower-valued) priority as compared to the request we are
-        # handling.
-        nextRequest = self._next_request_message()
-        if nextRequest and (self.message_priority(msg) is None or
-                            self.message_priority(nextRequest) <= self.message_priority(msg)):
-            return False
-        else:
-            return self._process_request(msg)
-
-
+        
+        # schedule resource assignment to occur after all other messages
+        # arriving at the current simulated time are (at least initially)
+        # processed. _schedule_assignment_request_processing() ensures that
+        # this only happens once for the current simulated time.
+        # Since we don't yet completely handle the request, return False
+        self._schedule_assignment_request_processing()
+        return False
+ 
     def _validate_request(self, requestMsg):
         """
         Validate request message data.
@@ -302,8 +316,75 @@ class ResourceAssignmentAgentMixin(object):
             errorMsg = "Number requested ({0}) is higher than than resource {1}'s capacity ({2})"
             raise SimError(_REQUEST_ERROR, errorMsg, numRequested,
                            resource.element_id, resource.capacity)
+        
+    def _schedule_assignment_request_processing(self):
+        """
+        If we have not already done so, create and register a SimAssignResourcesEvent
+        for this agent and now() that will fire after we have finished processing events
+        for the current simulated time. This event will invoke _process_queued_events()
+        to assign-resources/respond-to-requests based on on the prioritized request
+        message queue and the resources available once all othe processing completes
+        for thecurrent simulated time. It should be called any time there is a need
+        or opportunity to fulfill resource requests.
+        
+        By postponing resource assignment, we should avoid simulated race conditions.
+        """
+        if self.assignmentEvent is None:
+            self.assignmentEvent = SimAssignResourcesEvent(self)
+            self.assignmentEvent.register()
 
+    def _process_queued_requests(self):
+        """
+        This method should be called only by SimAssignResourcesEvent.process_impl().
+        It is responsible for (at least attempting) to fulfill resource requests in
+        the message queue.
 
+        This (default) implementation loops through the request queue until
+        it either:
+
+        a) Cannot handle that request (i.e., assign resources to the requestor)
+           or
+        b) Empties the queue
+
+        Note that if this implementation cannot fulfill the first/highest
+        priority request remaining, it does NOT allow a later/lower priority
+        request to "jump the queue". Subclassed agents (resource pools in
+        particular) may choose to modify this behavior.
+        """
+        nextRequest = self._next_request_message()
+        while nextRequest and self._process_request(nextRequest):
+            self.msgQueue.remove(nextRequest)
+            nextRequest = self._next_request_message()
+
+    def _next_request_message(self):
+        """
+        Returns the next request message (type SimResource.REQUEST_MSGTYPE)
+        in the resource's message queue, or None if there aren't any.
+        Applies priority function, if any.
+
+        Does NOT remove the message from the queue
+                
+        :return: SimMessage or None: Next request message in queue (based
+                 on priority) or None if there are no request messages in
+                 the queue
+        :rtype:  :class:`~.agent.SimMessage` or None
+
+        """
+        return self.next_queued_message(SimMsgType.RSRC_REQUEST)
+    
+    def request_timed_out(self, msg):
+        """
+        Process a timed out resource request by removing the request from
+        the message queue and making sure a request queue is reprocessed in
+        case other requests can now be fulfilled. (e.g., if another, lower
+        priority request is asking for the same resources, but fewer)
+        
+        Should be called only by SimTimeOutEvent.process_impl()
+        """
+        assert msg.msgType == SimMsgType.RSRC_REQUEST, "Invalid message type passed to handleResourceRequest()"
+        self.msgQueue.remove(msg)
+        self._schedule_assignment_request_processing()
+        
     def _process_request(self, requestMsg):
         """
         Attempt to process a resource request, returning True if successful (and
@@ -352,7 +433,6 @@ class ResourceAssignmentAgentMixin(object):
         
         assert numRequested > 0, "number of resources requested not greater than zero"
         assert isinstance(resource, SimResource), "Resource request data does not specify an instance of class SimResource"
-
 
         if numRequested <= resource.available:
             return self._create_resource_assignment(txn, resource, numRequested)
@@ -423,59 +503,67 @@ class ResourceAssignmentAgentMixin(object):
             resource.release_from(assignment.transaction, 1)
 
         assignment.subtract(resourcesToRelease)
-
-        # Now that we have one or more available resources, attempt to
-        # respond to outstanding (queued) resource requests.
-        self._process_queued_requests()
+        
+        # We now have available resources, but defer scheduling until all
+        # other messages for the current simulated time are processed.
+        self._schedule_assignment_request_processing()
 
         # Since we handled the release message, return True
         return True
 
-    def _process_queued_requests(self):
+    def _handle_resource_takedown(self, msg):
         """
-        This method is called by handleResourceRelease() after resource
-        release; it is responsible for (at least attempting) to fulfill
-        resource requests in the queue, now that there are one or more
-        resources newly available.
+        The handler registered to handle resource takedown messages.
 
-        This (default) implementation loops through the request queue until
-        it either:
+        Handles each resource takedown notification as it comes in, returning
+        ``True`` to indicate that it was, in fact handled. 
 
-        a) Cannot handle that request (i.e., assign resources to the requestor)
-           or
-        b) Empties the queue
-
-        Note that if this implementation cannot fulfill the first/highest
-        priority request remaining, it does NOT allow a later/lower priority
-        request to "jump the queue". Subclassed agents may choose to modify this
-        behavior.
-        """
-        nextRequest = self._next_request_message()
-        while nextRequest and self._process_request(nextRequest):
-            self.msgQueue.remove(nextRequest)
-            nextRequest = self._next_request_message()
-
-    def _next_request_message(self):
-        """
-        Returns the next request message (type SimResource.REQUEST_MSGTYPE)
-        in the resource's message queue, or None if there aren't any.
-        Applies priority function, if any.
-
-        Does NOT remove the message from the queue
+        If the taken-down resource is currently assigned to a process,
+        the handler will interrupt the process with a SimResourceDownException.
+        At this point, it is up to the process to appropriately handle the
+        takedown - e.g.  releasing the resource, possibly acquiring a different
+        resource, possibly reacquiring this resource. This method could/should
+        release the resource for the process, passing the modified resource
+        assignment and/or down resource as part of the exception data - having
+        the process hold onto the down resource _might_ be problematic. It probably
+        would involve another interrupt when the resource comes back up.
+        
+        TODO: implement this. Implement resource.takedown() Implement a
+        SimAvailabilityAgent with takedown() and bringup() methods that send messages
+        to this assignment agent.
+        
+        :param msg: Resource Request message (SimMsgType RSRC_RELEASE)
+        :type msg:  :class:`~.agent.SimMessage`
                 
-        :return: SimMessage or None: Next request message in queue (based
-                 on priority) or None if there are no request messages in
-                 the queue
-        :rtype:  :class:`~.agent.SimMessage` or None
+        :return:    ``True`` always, as the message is always handled
+        :rtype:     bool
 
         """
-        return self.next_queued_message(SimMsgType.RSRC_REQUEST)
-    
-    def remove_request_message(self, msg):
+        assert msg.msgType == SimMsgType.RSRC_TAKEDOWN, "Invalid message type passed to handleResourceRelease()"
+
+    def _handle_resource_bringup(self, msg):
         """
+        The handler registered to handle resource bringup messages.
+
+        Handles each resource bringup notification as it comes in, returning
+        ``True`` to indicate that it was, in fact handled.
+        
+        If the resource is currently assigned to a process, interrupt that
+        process with a 
+
+        After bringing up the resource, this handler will attempt to respond
+        to one or more request messages in the message queue if they can now
+        be fulfilled using the newly available resource.
+
+        :param msg: Resource bringup message (SimMsgType RSRC_BRINGUPRSRC_BRINGUP)
+        :type msg:  :class:`~.agent.SimMessage`
+                
+        :return:    ``True`` always, as the message is always handled
+        :rtype:     bool
+
         """
-        assert msg.msgType == SimMsgType.RSRC_REQUEST, "Invalid message type passed to handleResourceRequest()"
-        self.msgQueue.remove(msg)
+        assert msg.msgType == SimMsgType.RSRC_BRINGUP, "Invalid message type passed to handleResourceRelease()"
+
 
 
 @apidoc
@@ -822,6 +910,9 @@ class SimResourcePool(SimResourceAssignmentAgent):
     #TODO: currentAssignments(rsrcClass) method, maybe currentTransactions(rsrcClass)
     #TODO: think about optional pre-emption logic, either here and/or
     #      SimResourceAssignmentAgent.
+    # TODO Override _process_queued_requests() so that higher priority/earlier
+    # requests don't block non-overlapping assignments in a heterogenous resource
+    # pool - see ResourcePoolQueueingTests.testacquirePriorityrelease2()
 
     def __init__(self, *resources):
         super().__init__()

@@ -63,6 +63,8 @@ class SimMsgType(object):
     RSRC_REQUEST = "ResourceRequest"
     RSRC_ASSIGNMENT = "ResourceAssignment"
     RSRC_RELEASE = "ResourceRelease"
+    RSRC_TAKEDOWN = "ResourceTakeDown"
+    RSRC_BRINGUP = "ResourceBringUp"
     LOC_REQUEST = "LocationRequest"
     LOC_ASSIGNMENT = "LocationAssignment"
     LOC_RELEASE = "LocationRelease"

@@ -40,10 +40,10 @@ class SimTimeOutEvent(SimTransactionInterruptEvent):
         """
         Event processing wakes up the timed-out resource request via
         base class implementation, and  then asks the assignment agent
-        to remove the assignment request from the queue.
+        to handle the timeout and remove the request
         """
         super().process_impl()
-        self.assignmentAgent.remove_request_message(self.requestMsg)
+        self.assignmentAgent.request_timed_out(self.requestMsg)
 
         
 @apidoc

@@ -46,6 +46,10 @@ class SimEntityTests(unittest.TestCase):
         SimClock.advance_to(simtime.SimTime(5))
         self.entity = TestEntity(self.source, self.process)
         self.entityElement = SimModel.model().get_entity_element(TestEntity)
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimStaticObject.elements = {}
     
     def testCreateTime(self):
         "Test: createTime value equals time that the entity was instantiated"
@@ -98,6 +102,10 @@ class SimEntitySourceTests(unittest.TestCase):
         MockProcess.processTime = SimTime(1, simtime.MINUTES)
         self.eventProcessor = EventProcessor() # also calls simevent.initialize()
         self.source = MockSource()
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimStaticObject.elements = {}
     
     def testOneEntityGenerator(self):
         """

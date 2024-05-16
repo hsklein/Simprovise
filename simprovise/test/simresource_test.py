@@ -13,6 +13,12 @@ from simprovise.core.location import SimStaticObject
 
 #print(globals().keys())
 #print(locals().keys())
+
+ONE_MIN = simtime.SimTime(1, simtime.MINUTES)
+TWO_MINS = simtime.SimTime(2, simtime.MINUTES)
+THREE_MINS = simtime.SimTime(3, simtime.MINUTES)
+FOUR_MINS = simtime.SimTime(4, simtime.MINUTES)
+EIGHT_MINS = simtime.SimTime(8, simtime.MINUTES)
             
 
 class RATestCaseBase(unittest.TestCase):
@@ -22,6 +28,8 @@ class RATestCaseBase(unittest.TestCase):
     def setUp(self):
         SimDataCollector.reinitialize()
         SimClock.initialize()
+        simevent.initialize()
+        self.eventProcessor = simevent.EventProcessor()
         MockProcess.resumedProcess = None
         # Hack to allow recreation of static objects for each test case
         SimStaticObject.elements = {}
@@ -42,6 +50,10 @@ class RATestCaseBase(unittest.TestCase):
         self.process2 = self.processes[2]
         self.process3 = self.processes[3]
         self.process4 = self.processes[4]
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimStaticObject.elements = {}
     
         
 class MockSource(SimEntitySource):
@@ -60,51 +72,21 @@ class MockProcess(SimProcess):
             self.executing(True)
         #mockEntity = MockEntity(self)
         
-    #def waitForResponse(self, msg):
-        #self.waitUntilNotified()
-        
-    #def waitUntilNotified(self):
-        #self.waitStart = SimClock.now()
-        #self.waiting = True
-        
-    #def resume(self):
-        #MockProcess.resumedProcess = self
-        #self.waiting = False
-        
     def executing(self, flag):
         self._executing = flag
  
-class MockProcessAgent(SimAgent):
+        
+class TestProcess1(SimProcess):
     """
-    An agent class that interacts with a resource assignment agent like a
-    SimProcess (by sending ResourceRequests and receiving
-    ResourceAssignments) without invoking any waits like a real SimProcess.
-    This facilitates a mock object that can mimic/test resource request
-    queueing without the blocking infrastructure of an actual simulation run.
-    
-    The class assignedAgents attribute is a list of MockProcessAgent
-    instances that have received assignments (in the same order as they
-    were received); it's used by tests to validate that requests are
-    fulfilled in the correct order. To make tracking a bit easier, each
-    MockProcessAgent is assigned an id attribute (pid), which is just a
-    sequence number incremented for each instance created.
-    
-    Static method initialize should be called by test setups to clear the
-    assignedAgents list and reset the pid counter.
-    
-    Note a limitation - this class is not currently designed to allow
-    a single instance to make multiple acquire() (or acquireFrom()) calls;
-    only a single resource assignment is held. For testing a sequence of
-    acquire/acquireFroms, we'd typically use separate MockProcessAgent
-    instances.
     """
-    assignedAgents = []
+    assignedProcesses = []
     count = 0
+    source = MockSource()
     
     @staticmethod
     def initialize():
-        MockProcessAgent.assignedAgents.clear()
-        MockProcessAgent.count = 0
+        TestProcess1.assignedProcesses.clear()
+        TestProcess1.count = 0
         
     @staticmethod
     def getPriority(msg):
@@ -113,68 +95,36 @@ class MockProcessAgent(SimAgent):
     
     @staticmethod
     def pids():
-        return [mpa.pid for mpa in MockProcessAgent.assignedAgents]
+        return [p.pid for p in TestProcess1.assignedProcesses]
+    
+    @staticmethod
+    def assignmentTimes():
+        return [p.assignmentTime for p in TestProcess1.assignedProcesses]
         
-    def __init__(self, priority=1):
-        super().__init__() 
+    def __init__(self, testcase, priority=1):
+        super().__init__()
+        self.testcase = testcase
         self.priority = priority
-        MockProcessAgent.count += 1
-        self.pid = MockProcessAgent.count
-        self.assignment = None
-        self.register_handler(SimMsgType.RSRC_ASSIGNMENT, self.handle_resource_assignment)
+        TestProcess1.count += 1
+        self.pid = TestProcess1.count
+        self._assignment = None
+        self.assignmentTime = None
+        entity = MockEntity(TestProcess1.source, self)
+        
+    @property
+    def assignment(self):
+        return self._assignment
+    
+    @assignment.setter
+    def assignment(self, value):
+        self._assignment = value
+        self.assignmentTime = SimClock.now()
+        if value is not None:
+            TestProcess1.assignedProcesses.append(self)
         
     @property
     def waiting(self): 
         return self.assignment is None
-                
-    def acquire(self, resource, numrequested=1):
-        """
-        Mimics SimTransaction.acquire()
-        """
-        msgType = SimMsgType.RSRC_REQUEST
-        msgData = (self, numrequested, resource)
-        msg, responses = self.send_message(resource.assignment_agent,
-                                          msgType, msgData)
-        if responses:
-            self.handle_resource_assignment(responses[0])
-            return True
-        else:
-            return False
-        
-    def acquire_from(self, agent, rsrcClass, numrequested=1):
-        """
-        Mimics SimTransaction.acquireFrom()
-        """
-        msgType = SimMsgType.RSRC_REQUEST
-        msgData = (self, numrequested, rsrcClass)
-        msg, responses = self.send_message(agent, msgType, msgData)
-        if responses:
-            self.handle_resource_assignment(responses[0])
-            return True
-        else:
-            return False
-            
-    def handle_resource_assignment(self, msg):
-        """
-        Handle an assignment message from a resource assignment agent by:
-        - setting the assignment attribute (a non-None value indicates that an
-          assignment has been received), and
-        - Adding this MockProcessAgent to the end of the assignedAgents list
-        """
-        assert msg.msgType == SimMsgType.RSRC_ASSIGNMENT, "Invalid message type passed to handleResourceAssignment()"
-        self.assignment = msg.msgData
-        MockProcessAgent.assignedAgents.append(self)
-        
-    def release(self, releaseSpec=None):
-        """
-        Mimic a SimTransaction.release()
-        """
-        assert self.assignment, "Cannot release prior to assignment"
-        assignmentAgent = self.assignment.assignment_agent
-        msgType = SimMsgType.RSRC_RELEASE
-        msgData = (self.assignment, releaseSpec)
-        self.send_message(assignmentAgent, msgType, msgData)
-
        
 class MockLocation(SimLocation):
     def __init__(self):
@@ -336,7 +286,19 @@ class ResourceAssignmentContainsTests(RATestCaseBase):
         "Test:  assignment with two different resource does not contain two of the same"
         ra = SimResourceAssignment(self.process, self.rsrc1, (self.rsrc1, self.rsrc2))
         self.assertFalse(ra.contains((self.rsrc1, self.rsrc1)))
-          
+ 
+class TestProcessSRP(TestProcess1):
+    """
+    """
+    def __init__(self, rsrc, numrequested=1):
+        super().__init__(SimpleResourcePropertyTests)
+        self.rsrc = rsrc
+        self.numrequested = numrequested
+        
+    def run(self):
+        self.assignment = self.acquire(self.rsrc, self.numrequested)
+        self.wait_for(1)
+        self.release(self.assignment)
         
 class SimpleResourcePropertyTests(RATestCaseBase):
     "Tests SimpleResource class properties"
@@ -356,7 +318,9 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         
     def testInUse1b(self):
         "Test:  Resource 1 has inUse property value of one after a single acquire() call"
-        self.process.acquire(self.rsrc1, 1)
+        self.process = TestProcessSRP(self.rsrc1, 1)
+        self.process.start()
+        self.eventProcessor.process_events(0)
         self.assertEqual(self.rsrc1.inUse, 1)
         
     def testAvailable1a(self):
@@ -365,12 +329,14 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         
     def testAvailable1b(self):
         "Test:  Resource 1 has available property value of zero after a single acquire() call"
-        self.process.acquire(self.rsrc1, 1)
+        self.process = TestProcessSRP(self.rsrc1, 1)
+        self.process.start()
+        self.eventProcessor.process_events(0)
         self.assertEqual(self.rsrc1.available, 0)
         
     def testDown1(self):
         "Test:  Resource 1 has initial down property value of zero"
-        self.assertEqual(self.rsrc1.down, 0)
+        self.assertFalse(self.rsrc1.down)
     
     def testCapacity2(self):
         "Test:  Resource 2 has capacity of two"
@@ -382,87 +348,109 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         
     def testInUse2b(self):
         "Test:  Resource 2 has inUse property value of two after a two acquire() calls"
-        self.process.acquire(self.rsrc2, 1)
-        self.process.acquire(self.rsrc2, 1)
+        self.process1 = TestProcessSRP(self.rsrc2, 1)
+        self.process1.start()
+        self.process2 = TestProcessSRP(self.rsrc2, 1)
+        self.process2.start()
+        self.eventProcessor.process_events(0)
         self.assertEqual(self.rsrc2.inUse, 2)
         
     def testInUse2c(self):
         "Test:  Resource 2 has inUse property value of two after an acquire(2) call"
-        self.process.acquire(self.rsrc2, 2)
+        self.process = TestProcessSRP(self.rsrc2, 2)
+        self.process.start()
+        self.eventProcessor.process_events(0)
         self.assertEqual(self.rsrc2.inUse, 2)
 
     def testAvailable2a(self):
-        "Test:  Resource 1 has initial available property value of two"
+        "Test:  Resource 2 has initial available property value of two"
         self.assertEqual(self.rsrc2.available, 2)
 
     def testAvailable2b(self):
         "Test:  Resource 2 has available property value of one after an acquire call"
-        self.process.acquire(self.rsrc2, 1)
+        self.process = TestProcessSRP(self.rsrc2, 1)
+        self.process.start()
+        self.eventProcessor.process_events(0)
         self.assertTrue(self.rsrc2.available, 1)
 
     def testAvailable2c(self):
         "Test:  Resource 2 has available property value of zero after acquire(2) call"
-        self.process.acquire(self.rsrc2, 2)
+        self.process = TestProcessSRP(self.rsrc2, 2)
+        self.process.start()
+        self.eventProcessor.process_events(0)
         self.assertEqual(self.rsrc2.available, 0)
         
     def testDown2(self):
-        "Test:  Resource 1 has initial down property value of zero"
-        self.assertEqual(self.rsrc2.down, 0)
+        "Test:  Resource 2 has initial down property value of zero"
+        self.assertFalse(self.rsrc2.down)
         
     def testCurrentAssignments(self):
         "Test: two acquisitions of a resource, both assignments returned by current_assignments"
-        assignment1 = self.process.acquire(self.rsrc2, 1)
-        assignment2 = self.process.acquire(self.rsrc2, 1)
+        self.process1 = TestProcessSRP(self.rsrc2, 1)
+        self.process1.start()
+        self.process2 = TestProcessSRP(self.rsrc2, 1)
+        self.process2.start()
+        self.eventProcessor.process_events(0)
+        assignment1 = self.process1.assignment
+        assignment2 = self.process2.assignment
         assignments = set(self.rsrc2.current_assignments())
         self.assertEqual(assignments, set((assignment1, assignment2)))
         
     def testCurrentTransactions(self):
         "Test: two processes acquire a resource, both processes returned by current_transactions"
-        assignment1 = self.process1.acquire(self.rsrc2, 1)
-        assignment2 = self.process2.acquire(self.rsrc2, 1)
+        self.process1 = TestProcessSRP(self.rsrc2, 1)
+        self.process1.start()
+        self.process2 = TestProcessSRP(self.rsrc2, 1)
+        self.process2.start()
+        self.eventProcessor.process_events(0)
         txns = set(self.rsrc2.current_transactions())
         self.assertEqual(txns, set((self.process1, self.process2)))
    
         
 class SimpleResourceBasicAcquireTests(RATestCaseBase):
-    "Tests basic (no running simulation required) SimpleResource class acquire() functionality"
+    "Tests basic SimpleResource class acquire() functionality"
     def setUp(self):
         super().setUp()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location, capacity=3)
+        self.process1 = TestProcessSRP(self.rsrc1, 1)
+        self.process1.start()
+        self.process2 = TestProcessSRP(self.rsrc2, 2)
+        self.process2.start()
+        self.eventProcessor.process_events(0)
         
     def testAssignment1(self):
         "Test: acquire() returns a resource assignment with correct process"
-        ra = self.process.acquire(self.rsrc1)
-        self.assertEqual(ra.transaction, self.process)
+        ra = self.process1.assignment
+        self.assertEqual(ra.transaction, self.process1)
         
     def testAssignment1a(self):
         "Test: acquire(1) returns a resource assignment with correct count"
-        ra = self.process.acquire(self.rsrc1)
+        ra = self.process1.assignment
         self.assertEqual(ra.count, 1)
         
     def testAssignment1b(self):
         "Test: acquire(1) returns a resource assignment with correct resource"
-        ra = self.process.acquire(self.rsrc1)
+        ra = self.process1.assignment
         self.assertEqual(ra.resource, self.rsrc1)
         
     def testAssignment2(self):
         "Test: acquire(2) returns a resource assignment with correct count"
-        ra = self.process.acquire(self.rsrc2, 2)
+        ra = self.process2.assignment
         self.assertEqual(ra.count, 2)
         
     def testAcquireGreaterThanCapacity(self):
         "Test: acquire(3) on a resource of capacity two raises an Error"
-        self.assertRaises(SimError, lambda:  self.process.acquire(self.rsrc2, 3))
+        self.assertRaises(SimError, lambda:  self.process3.acquire(self.rsrc2, 3))
         
     def testAcquireZero(self):
         "Test: acquire(0) raises an Error"
-        self.assertRaises(SimError, lambda:  self.process.acquire(self.rsrc2, 0))
+        self.assertRaises(SimError, lambda:  self.process3.acquire(self.rsrc2, 0))
         
     def testAcquireNonInt(self):
         "Test: acquire for a non-integer numRequested raises an Error"
-        self.assertRaises(SimError, lambda:  self.process.acquire(self.rsrc2, 2.4))
+        self.assertRaises(SimError, lambda:  self.process3.acquire(self.rsrc2, 2.4))
         
     def testAcquireWhileNotExecuting(self):
         "Test: acquire() for a process that is not currently executing raises an Error"
@@ -470,232 +458,226 @@ class SimpleResourceBasicAcquireTests(RATestCaseBase):
         self.assertRaises(AssertionError, lambda:  self.process.acquire(self.rsrc2, 1))
 
         
+ 
+class TestProcessBasicRelease(TestProcess1):
+    """
+    """
+    def __init__(self, rsrc, nacquire, nrelease=None):
+        super().__init__(SimpleResourcePropertyTests)
+        self.rsrc = rsrc
+        self.nacquire = nacquire
+        self.nrelease = nrelease
+        
+    def run(self):
+        self.assignment = self.acquire(self.rsrc, self.nacquire)
+        self.wait_for(ONE_MIN)
+        self.release(self.assignment, self.nrelease)
+        self.wait_for(EIGHT_MINS)
+ 
+class TestProcessBasicRelease2(TestProcessBasicRelease):
+    """
+    """    
+    def run(self):
+        self.assignment = self.acquire(self.rsrc, self.nacquire)
+        self.wait_for(ONE_MIN)
+        for i in range(self.nrelease):
+            self.release(self.assignment, 1)
+        self.wait_for(EIGHT_MINS)
+        
         
 class SimpleResourceBasicReleaseTests(RATestCaseBase):
-    "Tests basic (no running simulation required) SimpleResource class release() functionality"
+    "Tests basic SimpleResource class release() functionality"
     def setUp(self):
         super().setUp()
-        #MockProcessAgent.assignedAgents.clear()
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location, capacity=3)
         
     def testReleaseAll1(self):
         "Test: acquire() followed by release results in resource inUse property value of zero"
-        ra = self.process.acquire(self.rsrc1)
-        self.process.release(ra)
+        self.process1 = TestProcessBasicRelease(self.rsrc1, 1, 1)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
         self.assertEqual(self.rsrc1.inUse, 0)
         
     def testReleaseAll2(self):
         "Test: acquire() followed by release results in resource available property value equal to capacity"
-        ra = self.process.acquire(self.rsrc2, 2)
-        self.process.release(ra)
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 2)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
         self.assertEqual(self.rsrc2.available, self.rsrc2.capacity)
        
-    #============================================================================================
-    # TODO Tests commented out pending (re) implementation of partial resource assignment release 
-    #============================================================================================
     def testAssignment2(self):
         "Test: acquire(2) followed by release(1) results in resource assignment with count of one"
-        ra = self.process.acquire(self.rsrc2, 2)
-        self.process.release(ra, self.rsrc2)
-        self.assertEqual(ra.count, 1)
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 2, self.rsrc2)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
+        self.assertEqual(self.process1.assignment.count, 1)
     
     def testAssignment2a(self):
         "Test: acquire(2) followed by release(1) (int argument) results in resource assignment with count of one"
-        ra = self.process.acquire(self.rsrc2, 2)
-        self.process.release(ra, 1)
-        self.assertEqual(ra.count, 1)
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 2, 1)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
+        self.assertEqual(self.process1.assignment.count, 1)
         
     def testAcquire2Release1(self):
         "Test: acquire(2) followed by a release(1) results in resource with inUse of 1"
-        ra = self.process.acquire(self.rsrc2, 2)
-        self.process.release(ra, self.rsrc2)
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 2, self.rsrc2)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
         self.assertEqual(self.rsrc2.inUse, 1)
         
     def testAcquire2Release2A(self):
-        "Test: acquire(2) followed by twp release(1) calls results in resource with inUse of 0"
-        ra = self.process.acquire(self.rsrc2, 2)
-        self.process.release(ra, self.rsrc2)
-        self.process.release(ra, self.rsrc2)
+        "Test: acquire(2) followed by tw0 release(1) calls results in resource with inUse of 0"
+        self.process1 = TestProcessBasicRelease2(self.rsrc2, 2, 2)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
         self.assertEqual(self.rsrc2.inUse, 0)
         
     def testAcquire2Release2B(self):
         "Test: acquire(2) followed by release(2) calls results in resource with inUse of 0"
-        ra = self.process.acquire(self.rsrc2, 2)
-        self.process.release(ra, 2)
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 2, 2)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
         self.assertEqual(self.rsrc2.inUse, 0)
         
     def testAcquire2Release2C(self):
         "Test: acquire(2) followed by release(rsrc, rsrc) calls results in resource with inUse of 0"
-        ra = self.process.acquire(self.rsrc2, 2)
-        self.process.release(ra, (self.rsrc2, self.rsrc2))
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 2, (self.rsrc2, self.rsrc2))
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
         self.assertEqual(self.rsrc2.inUse, 0)
         
     def testAcquire2Release2Assignment(self):
-        "Test: acquire(2) followed by twp release(1) (resource instance) calls results in resource with count of 0"
-        ra = self.process.acquire(self.rsrc2, 2)
-        self.process.release(ra, self.rsrc2)
-        self.process.release(ra, self.rsrc2)
-        self.assertEqual(ra.count, 0)
+        "Test: acquire(2) followed by tw release(1) (resource instance) calls results in resource with count of 0"
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 2, (self.rsrc2, self.rsrc2))
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
+        self.assertEqual(self.process1.assignment.count, 0)
         
     def testAcquire2Release2AssignmentA(self):
         "Test: acquire(2) followed by twp release(1) calls results in resource with count of 0"
-        ra = self.process.acquire(self.rsrc2, 2)
-        self.process.release(ra, 1)
-        self.process.release(ra, 1)
-        self.assertEqual(ra.count, 0)
+        self.process1 = TestProcessBasicRelease2(self.rsrc2, 2, 2)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
+        self.assertEqual(self.process1.assignment.count, 0)
         
     def testReleaseMoreThanAssigned(self):
         "Test: acquire(1) followed by release(2) raises an error"
-        ra = self.process.acquire(self.rsrc2, 1)
-        self.assertRaises(SimError, lambda:  self.process.release(ra, 2))
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 1)
+        self.process1.start()
+        self.eventProcessor.process_events(0)
+        ra = self.process1.assignment
+        self.assertRaises(SimError, lambda:  self.process1.release(ra, 2))
         
     def testReleaseMoreThanAssigned2(self):
         "Test: acquire(1) followed by two release(1) calls raises an error"
-        ra = self.process.acquire(self.rsrc2, 1)
-        self.process.release(ra, 1)
-        self.assertRaises(SimError, lambda:  self.process.release(ra, 1))
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 1, 1)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
+        self.assertRaises(SimError, lambda: self.process1.release(self.process1.assignment, 1))
         
     def testReleaseMoreThanAssigned3(self):
         "Test: acquire(1) followed by release(2) raises an error"
-        ra = self.process.acquire(self.rsrc2, 1)
-        self.assertRaises(SimError, lambda:  self.process.release(ra, (self.rsrc2, self.rsrc2)))
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 1)
+        self.process1.start()
+        self.eventProcessor.process_events(0)
+        ra = self.process1.assignment
+        self.assertRaises(SimError, lambda:  self.process1.release(ra, (self.rsrc2, self.rsrc2)))
         
     def testReleaseWrongResource(self):
         "Test: acquire(1) followed by release() on wrong resource raises an error"
-        ra = self.process.acquire(self.rsrc1, 1)
-        self.assertRaises(SimError, lambda:  self.process.release(ra, self.rsrc2))
-        
+        self.process1 = TestProcessBasicRelease(self.rsrc2, 1)
+        self.process1.start()
+        self.eventProcessor.process_events(0)
+        ra = self.process1.assignment
+        self.assertRaises(SimError, lambda:  self.process1.release(ra, self.rsrc1))
+
+class TestProcess1a(TestProcess1):
+    """
+    """
+    def run(self):
+        self.assignment = self.acquire(self.testcase.rsrc)
+        self.wait_for(TWO_MINS)
+        self.release(self.assignment)
+
         
 class SimpleResourceAcquireQueueingTests(RATestCaseBase):
     """
     Tests SimpleResource class acquisition from multiple processes, including
-    queued (unfulfilled) acquisition requests. Uses the MockProcessAgent to
-    simulate queueing without any actual simulation or other blocking of
-    queued requests.
+    queued (unfulfilled) acquisition requests. 
     
     If SimpleResource acquire() requests are fulfilled in priority (as
     opposed to FIFO) order, they should end up in the following order:
-    1,3,5,4,2.
+    3, 5, 1, 4, 2
     """
     def setUp(self):
         super().setUp()
-        MockProcessAgent.initialize()
-        self.process1 = MockProcessAgent(2)
-        self.process2 = MockProcessAgent(3)
-        self.process3 = MockProcessAgent(1)
-        self.process4 = MockProcessAgent(2)
-        self.process5 = MockProcessAgent(1)
+        #simevent.initialize()
+        #self.eventProcessor = simevent.EventProcessor()        
+        TestProcess1.initialize()
+        self.process1 = TestProcess1a(self, 2)
+        self.process2 = TestProcess1a(self, 3)
+        self.process3 = TestProcess1a(self, 1)
+        self.process4 = TestProcess1a(self, 2)
+        self.process5 = TestProcess1a(self, 1)
         self.rsrc = SimSimpleResource("TestResource1", self.location)
+        self.process1.start()
+        self.process2.start()
+        self.process3.start()
+        self.process4.start()
+        self.process5.start()
              
     def testAccquire1(self):
         "Test: first acquire() on resource with capacity 1 does not result in a wait"
-        self.process1.acquire(self.rsrc)
+        self.eventProcessor.process_events(0)
         self.assertFalse(self.process1.waiting)
         
     def testAccquire2(self):
         "Test: second acquire() on resource with capacity 1 does result in a wait"
-        self.process1.acquire(self.rsrc)
-        self.process2.acquire(self.rsrc)
+        self.eventProcessor.process_events(0)
         self.assertTrue(self.process2.waiting)
         
     def testAccquire3(self):
         "Test: 3 acquires, one release, process2 is not waiting"
-        self.process1.acquire(self.rsrc)
-        self.process2.acquire(self.rsrc)
-        self.process3.acquire(self.rsrc)
-        self.process1.release()
+        self.eventProcessor.process_events(TWO_MINS)
         self.assertFalse(self.process2.waiting)
         
     def testAccquire4(self):
-        "Test: 4 acquires, one release, assigned processes are [1, 2]"
-        self.process1.acquire(self.rsrc)
-        self.process2.acquire(self.rsrc)
-        self.process3.acquire(self.rsrc)
-        self.process1.release()
-        self.assertEqual(MockProcessAgent.pids(), [1,2])
+        "Test: 4 acquires, one release at 2 mimic, assigned processes are [1, 2]"
+        self.eventProcessor.process_events(TWO_MINS)
+        self.assertEqual(TestProcess1.pids(), [1,2])
         
     def testAccquire5(self):
         "Test: 5 acquires, 4 releases, assigned processes are [1,2,3,4,5]"
-        self.process1.acquire(self.rsrc)
-        self.process2.acquire(self.rsrc)
-        self.process3.acquire(self.rsrc)
-        self.process4.acquire(self.rsrc)
-        self.process5.acquire(self.rsrc)
-        self.process1.release()
-        self.process2.release()
-        self.process3.release()
-        self.process4.release()
-        self.assertEqual(MockProcessAgent.pids(), [1,2,3,4,5])
+        self.eventProcessor.process_events(EIGHT_MINS)
+        self.assertEqual(TestProcess1.pids(), [1,2,3,4,5])
         
     def testAccquire6(self):
-        "Test: using priority 5 acquires, 4 releases, assigned processes are [1,3,5,4,2]"
+        "Test: using priority 5 acquires, 4 releases, assigned processes are [3,5,1,4,2]"
         self.rsrc.register_priority_func(SimMsgType.RSRC_REQUEST, 
-                                       MockProcessAgent.getPriority)
-        self.process1.acquire(self.rsrc)
-        self.process2.acquire(self.rsrc)
-        self.process3.acquire(self.rsrc)
-        self.process4.acquire(self.rsrc)
-        self.process5.acquire(self.rsrc)
-        MockProcessAgent.assignedAgents[-1].release()
-        MockProcessAgent.assignedAgents[-1].release()
-        MockProcessAgent.assignedAgents[-1].release()
-        MockProcessAgent.assignedAgents[-1].release()
-        self.assertEqual(MockProcessAgent.pids(), [1,3,5,4,2])
+                                       TestProcess1.getPriority)
+        self.eventProcessor.process_events(EIGHT_MINS)
+        self.assertEqual(TestProcess1.pids(), [3,5,1,4,2])
         
     def testAccquire7(self):
         "Test: resource capacity 3: 5 acquires, 2 releases, assigned processes are [1,2,3,4,5]"
         self.rsrc = SimSimpleResource("TestResource2", self.location, capacity=3)
-        self.process1.acquire(self.rsrc)
-        self.process2.acquire(self.rsrc)
-        self.process3.acquire(self.rsrc)
-        self.process4.acquire(self.rsrc)
-        self.process5.acquire(self.rsrc)
-        self.process1.release()
-        self.process2.release()
-        self.assertEqual(MockProcessAgent.pids(), [1,2,3,4,5])
+        self.eventProcessor.process_events(FOUR_MINS)
+        self.assertEqual(TestProcess1.pids(), [1,2,3,4,5])
         
-    def testAccquire8(self):
-        "Test: resource capacity 3: acquires with num requested up to 2"
-        self.rsrc = SimSimpleResource("TestResource2", self.location, capacity=3)
-        self.process1.acquire(self.rsrc)
-        self.process2.acquire(self.rsrc, 2)
-        self.process3.acquire(self.rsrc, 2)
-        self.process4.acquire(self.rsrc)
-        self.process5.acquire(self.rsrc)
-        self.process1.release()
-        self.assertEqual(MockProcessAgent.pids(), [1,2])
-        
-    def testAccquire9(self):
-        "Test: resource capacity 3: acquires with num requested up to 2, one more release"
-        self.rsrc = SimSimpleResource("TestResource2", self.location, capacity=3)
-        self.process1.acquire(self.rsrc)
-        self.process2.acquire(self.rsrc, 2)
-        self.process3.acquire(self.rsrc, 2)
-        self.process4.acquire(self.rsrc)
-        self.process5.acquire(self.rsrc)
-        self.process1.release()
-        self.process2.release()
-        self.assertEqual(MockProcessAgent.pids(), [1,2,3,4])
-        
-    def testAccquire10(self):
-        "Test: using priority 5 acquires, 1 release, capacity 4 resource"
-        self.rsrc = SimSimpleResource("TestResource2", self.location, capacity=4)
-        self.rsrc.register_priority_func(SimMsgType.RSRC_REQUEST, 
-                                       MockProcessAgent.getPriority)
-        self.process1.acquire(self.rsrc, 4)
-        self.process2.acquire(self.rsrc, 1)
-        self.process3.acquire(self.rsrc, 2)
-        self.process4.acquire(self.rsrc, 2)
-        self.process5.acquire(self.rsrc, 1)
-        MockProcessAgent.assignedAgents[0].release() # 1
-        self.assertEqual(MockProcessAgent.pids(), [1,3,5])
+
+class TestProcess1b(TestProcess1):
+    """
+    """
+    def run(self):
+        self.runfunc()
 
 
 class BasicResourcePoolTests(RATestCaseBase):
     """
-    Tests basic usage of a resource pool, without any simulated queueing
+    Tests basic usage of a resource pool
     """
     def setUp(self):
         super().setUp()
@@ -704,6 +686,10 @@ class BasicResourcePoolTests(RATestCaseBase):
         self.rsrc3 = TestResource("TestResource3", self.location, capacity=2)
         self.rsrc4 = SimSimpleResource("TestResource4", self.location, capacity=2)
         self.pool = SimResourcePool(self.rsrc1, self.rsrc2, self.rsrc3, self.rsrc4)
+        TestProcess1.initialize()
+        self.process1 = TestProcess1b(BasicResourcePoolTests)
+        self.process2 = TestProcess1b(BasicResourcePoolTests)
+        
         
     def testadd1(self):
         "Test: add a resource to the pool, confirm new pool size"
@@ -788,73 +774,174 @@ class BasicResourcePoolTests(RATestCaseBase):
              
     def testacquire1(self):
         "Test: Acquire one of any resource from the pool - should be the first"
-        ra = self.process1.acquire_from(self.pool, SimResource)
-        self.assertEqual(ra.resource, self.rsrc1)
+        def runfunc():
+            process = self.process1
+            process.assignment = process.acquire_from(self.pool, SimResource)
+            process.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.eventProcessor.process_events(0)        
+        self.assertEqual(self.process1.assignment.resource, self.rsrc1)
              
     def testacquire2(self):
         "Test: Acquire three of any resource from the pool, followed by 2"
-        self.process1.acquire_from(self.pool, SimResource, 3)
-        ra = self.process1.acquire_from(self.pool, SimResource, 2)
+        def runfunc():
+            process = self.process1
+            process.assignment = process.acquire_from(self.pool, SimResource, 3)
+            process.assignment = process.acquire_from(self.pool, SimResource, 2)
+            process.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.eventProcessor.process_events(0)        
         expected = (self.rsrc3, self.rsrc3)
-        self.assertEqual(ra.resources, expected)
+        self.assertEqual(self.process1.assignment.resources, expected)
              
     def testacquire3(self):
         "Test: Acquire all seven resources in the pool"
-        ra = self.process1.acquire_from(self.pool, SimResource, 7)
-        self.assertEqual(len(ra.resources), 7)
+        def runfunc():
+            process = self.process1
+            process.assignment = process.acquire_from(self.pool, SimResource, 7)
+            process.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.eventProcessor.process_events(0)        
+        self.assertEqual(len(self.process1.assignment.resources), 7)
              
     def testacquire4(self):
         "Test: Acquire a TestResource"
-        ra = self.process1.acquire_from(self.pool, TestResource, 1)
-        expected = (self.rsrc3,)
-        self.assertEqual(ra.resources, expected)
+        def runfunc():
+            process = self.process1
+            process.assignment = process.acquire_from(self.pool, TestResource, 1)
+            process.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.eventProcessor.process_events(0)
+        expected = (self.rsrc3, )
+        self.assertEqual(self.process1.assignment.resources, expected)
              
     def testavailable2(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - available "
-        self.process1.acquire_from(self.pool, SimResource, 3)
-        self.process2.acquire_from(self.pool, SimResource, 2)
+        def runfunc():
+            process = self.process1
+            process.assignment = process.acquire_from(self.pool, SimResource, 3)
+            process.assignment = process.acquire_from(self.pool, SimResource, 2)
+            process.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.eventProcessor.process_events(0)        
         self.assertEqual(self.pool.available(), 2)
              
     def testavailable3(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - available TestResources "
-        self.process1.acquire_from(self.pool, SimResource, 3)
-        self.process2.acquire_from(self.pool, SimResource, 2)
+        def runfunc():
+            process = self.process1
+            process.assignment = process.acquire_from(self.pool, SimResource, 3)
+            process.assignment = process.acquire_from(self.pool, SimResource, 2)
+            process.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.eventProcessor.process_events(0)        
         self.assertEqual(self.pool.available(TestResource), 0)
              
     def testavailableresources32(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - availableResources "
-        self.process1.acquire_from(self.pool, SimResource, 3)
-        self.process2.acquire_from(self.pool, SimResource, 2)
+        def runfunc():
+            process = self.process1
+            process.assignment = process.acquire_from(self.pool, SimResource, 3)
+            process.assignment = process.acquire_from(self.pool, SimResource, 2)
+            process.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.eventProcessor.process_events(0)        
         self.assertEqual(self.pool.available_resources(), [self.rsrc4])
              
     def testcurrentAssignments32(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - currentAssignments "
-        ra1 = self.process1.acquire_from(self.pool, SimResource, 3)
-        ra2 = self.process2.acquire_from(self.pool, SimResource, 2)
+        def runfunc1():
+            process1 = self.process1
+            process1.assignment = process1.acquire_from(self.pool, SimResource, 3)
+            process1.wait_for(ONE_MIN)
+            
+        def runfunc2():
+            process2 = self.process2
+            process2.assignment = process2.acquire_from(self.pool, SimResource, 2)
+            process2.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc1
+        self.process2.runfunc = runfunc2
+        self.process1.start()
+        self.process2.start()
+        self.eventProcessor.process_events(0)        
+        ra1 = self.process1.assignment
+        ra2 = self.process2.assignment
         self.assertEqual(set(self.pool.current_assignments()), set([ra1, ra2]))
              
     def testcurrentTransactions32(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - currentTransactions "
-        ra1 = self.process1.acquire_from(self.pool, SimResource, 3)
-        ra2 = self.process2.acquire_from(self.pool, SimResource, 2)
+        def runfunc1():
+            process1 = self.process1
+            process1.assignment = process1.acquire_from(self.pool, SimResource, 3)
+            process1.wait_for(ONE_MIN)
+            
+        def runfunc2():
+            process2 = self.process2
+            process2.assignment = process2.acquire_from(self.pool, SimResource, 2)
+            process2.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc1
+        self.process2.runfunc = runfunc2
+        self.process1.start()
+        self.process2.start()
+        self.eventProcessor.process_events(0)        
+        ra1 = self.process1.assignment
+        ra2 = self.process2.assignment
         expected = (self.process1, self.process2)
         self.assertEqual(set(self.pool.current_transactions()), set(expected))
              
     def testacquiremorethanpoolsize1(self):
         "Test: Acquire 8 of any resource (bigger than the pool) raises "
-        self.assertRaises(SimError, 
-                          lambda: self.process1.acquire_from(self.pool, SimResource, 8))
+        def runfunc():
+            process = self.process1
+            process.exception = None
+            try:
+                process.assignment = process.acquire_from(self.pool, SimResource, 8)
+            except Exception as e:
+                process.exception = e
+            process.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.eventProcessor.process_events(0)        
+        self.assertTrue(isinstance(self.process1.exception, SimError))
              
     def testacquiremorethanpoolsize2(self):
         "Test: Acquire 3 of TestResource (bigger than the pool) raises "
-        self.assertRaises(SimError, 
-                          lambda: self.process1.acquire_from(self.pool, TestResource, 3))
+        def runfunc():
+            process = self.process1
+            process.exception = None
+            try:
+                process.assignment = process.acquire_from(self.pool, TestResource, 3)
+            except Exception as e:
+                process.exception = e
+            process.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.eventProcessor.process_events(0)        
+        self.assertTrue(isinstance(self.process1.exception, SimError))
 
 
 
 class BasicResourcePoolReleaseTests(RATestCaseBase):
     """
-    Tests basic usage of a resource pool, without any simulated queueing
+    Tests basic usage of a resource pool
     """
     def setUp(self):
         super().setUp()
@@ -863,9 +950,28 @@ class BasicResourcePoolReleaseTests(RATestCaseBase):
         self.rsrc3 = TestResource("TestResource3", self.location, capacity=2)
         self.rsrc4 = SimSimpleResource("TestResource4", self.location, capacity=2)
         self.pool = SimResourcePool(self.rsrc1, self.rsrc2, self.rsrc3, self.rsrc4)
-        self.ra1 = self.process1.acquire_from(self.pool, SimSimpleResource, 2)
-        self.ra2 = self.process2.acquire_from(self.pool, TestResource, 1)
-                          
+        TestProcess1.initialize()
+        self.process1 = TestProcess1b(self)
+        self.process2 = TestProcess1b(self)
+        
+        def runfunc1():
+            process1 = self.process1
+            process1.assignment = process1.acquire_from(self.pool, SimSimpleResource, 2)
+            process1.wait_for(ONE_MIN)
+            
+        def runfunc2():
+            process2 = self.process2
+            process2.assignment = process2.acquire_from(self.pool, TestResource, 1)
+            process2.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc1
+        self.process2.runfunc = runfunc2
+        self.process1.start()
+        self.process2.start()
+        self.eventProcessor.process_events(0)        
+        self.ra1 = self.process1.assignment
+        self.ra2 = self.process2.assignment        
+                           
     def testavailable1(self):
         "Test: Total available is 6 following release of assignment 1"
         self.process1.release(self.ra1)
@@ -933,6 +1039,21 @@ class BasicResourcePoolReleaseTests(RATestCaseBase):
         self.assertEqual(set(self.pool.current_transactions()), set(expected))
 
 
+class TestProcess1c(TestProcess1):
+    """
+    """
+    def run(self):
+        if self.runfunc is not None:
+            self.runfunc()
+        else:
+            if self.wait is None:
+                self.wait = TWO_MINS
+            self.assignment = self.acquire_from(self.testcase.pool, SimSimpleResource, 2)
+            self.wait_for(self.wait)
+            self.release(self.assignment)
+            
+            
+
 class ResourcePoolQueueingTests(RATestCaseBase):
     """
     Tests SimResourcePool resource acquisition from multiple processes,
@@ -945,12 +1066,25 @@ class ResourcePoolQueueingTests(RATestCaseBase):
     """
     def setUp(self):
         super().setUp()
-        MockProcessAgent.initialize()
-        self.process1 = MockProcessAgent(2)
-        self.process2 = MockProcessAgent(3)
-        self.process3 = MockProcessAgent(1)
-        self.process4 = MockProcessAgent(2)
-        self.process5 = MockProcessAgent(1)
+        TestProcess1.initialize()
+        self.process1 = TestProcess1c(self, 2)
+        self.process2 = TestProcess1c(self, 3)
+        self.process3 = TestProcess1c(self, 1)
+        self.process4 = TestProcess1c(self, 2)
+        self.process5 = TestProcess1c(self, 1)
+        
+        self.process1.runfunc = None
+        self.process2.runfunc = None
+        self.process3.runfunc = None
+        self.process4.runfunc = None
+        self.process5.runfunc = None
+        
+        self.process1.wait = None
+        self.process2.wait = None
+        self.process3.wait = None
+        self.process4.wait = None
+        self.process5.wait = None
+        
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location, capacity=2)
@@ -962,25 +1096,32 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         Test: Acquire two resources for each process. Without any releases,
         the first three process will be assigned
         """
-        self.process1.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process2.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process3.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process4.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process5.acquire_from(self.pool, SimSimpleResource, 2)
-        self.assertEqual(MockProcessAgent.pids(), [1,2,3])
+        self.process1.start()
+        self.process2.start()
+        self.process3.start()
+        self.process4.start()
+        self.process5.start()
+        self.eventProcessor.process_events(0)        
+        self.assertEqual(TestProcess1.pids(), [1,2,3])
              
     def testacquireFIFOrelease1(self):
         """
         Test: Acquire two resources for each process. Release the
         first process's assignment; four process requests are fulfilled
         """
-        self.process1.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process2.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process3.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process4.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process5.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process1.release()
-        self.assertEqual(MockProcessAgent.pids(), [1,2,3,4])
+        def runfunc1():
+            self.process1.assignment = self.process1.acquire_from(self.pool, SimSimpleResource, 2)
+            self.process1.wait_for(ONE_MIN)
+            self.process1.release(self.process1.assignment)
+            
+        self.process1.runfunc = runfunc1
+        self.process1.start()
+        self.process2.start()
+        self.process3.start()
+        self.process4.start()
+        self.process5.start()
+        self.eventProcessor.process_events(ONE_MIN)        
+        self.assertEqual(TestProcess1.pids(), [1,2,3,4])
              
     def testacquireFIFOrelease1a(self):
         """
@@ -988,57 +1129,111 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         resources for the first process's assignment; four process requests
         are fulfilled
         """
-        self.process1.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process2.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process3.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process4.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process5.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process1.release(1)
-        self.assertEqual(MockProcessAgent.pids(), [1,2,3,4])
+        def runfunc1():
+            self.process1.assignment = self.process1.acquire_from(self.pool, SimSimpleResource, 2)
+            self.process1.wait_for(ONE_MIN)
+            self.process1.release(self.process1.assignment, 1)
+            self.process1.wait_for(ONE_MIN)
+            self.process1.release(self.process1.assignment)
+            
+        self.process1.runfunc = runfunc1
+        self.process1.start()
+        self.process2.start()
+        self.process3.start()
+        self.process4.start()
+        self.process5.start()
+        self.eventProcessor.process_events(ONE_MIN)        
+        self.assertEqual(TestProcess1.pids(), [1,2,3,4])
              
     def testacquireFIFOrelease3(self):
         """
         Test: Acquire two resources for each process. Release one of the
         resources for the processes 1-3; all requests are fulfilled
         """
-        self.process1.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process2.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process3.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process4.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process5.acquire_from(self.pool, SimSimpleResource, 2)
-        self.process1.release(1)
-        self.process2.release(1)
-        self.process3.release(1)
-        self.assertEqual(MockProcessAgent.pids(), [1,2,3,4,5])
+        def runfunc(process):
+            process.assignment = process.acquire_from(self.pool, SimSimpleResource, 2)
+            process.wait_for(ONE_MIN)
+            process.release(process.assignment, 1)
+            process.wait_for(ONE_MIN)
+            process.release(process.assignment)
+            
+        def runfunc1(): runfunc(self.process1)
+        def runfunc2(): runfunc(self.process2)
+        def runfunc3(): runfunc(self.process3)
+            
+        self.process1.runfunc = runfunc1
+        self.process2.runfunc = runfunc2
+        self.process3.runfunc = runfunc3
+        self.process1.start()
+        self.process2.start()
+        self.process3.start()
+        self.process4.start()
+        self.process5.start()
+        self.eventProcessor.process_events(ONE_MIN)        
+        self.assertEqual(TestProcess1.pids(), [1,2,3,4,5])
              
     def testacquireFIFOTestResource(self):
         """
-        Test - acquireFrom() "blocks" on request for third Test Resource.
+        Test - acquire_from() blocks on request for third Test Resource.
         The last request for a SimSimpleResource is not fulfilled (even
         though there are such resources available) Since the last TestResource
         request is ahead in line.
         """
-        self.process1.acquire_from(self.pool, SimSimpleResource, 1)
-        self.process2.acquire_from(self.pool, TestResource, 2)
-        self.process3.acquire_from(self.pool, SimSimpleResource, 1)
-        self.process4.acquire_from(self.pool, TestResource, 1)
-        self.process5.acquire_from(self.pool, SimSimpleResource, 1)
-        self.assertEqual(MockProcessAgent.pids(), [1,2,3])
+        def runfunc(process, rsrc_cls, n):
+            process.assignment = process.acquire_from(self.pool, rsrc_cls, n)
+            process.wait_for(ONE_MIN)
+            
+        def f1(): runfunc(self.process1, SimSimpleResource, 1)
+        def f2(): runfunc(self.process2, TestResource,2)
+        def f3(): runfunc(self.process3, SimSimpleResource, 1)
+        def f4(): runfunc(self.process4, TestResource, 1)
+        def f5(): runfunc(self.process5, SimSimpleResource, 1)
+            
+        self.process1.runfunc = f1
+        self.process2.runfunc = f2
+        self.process3.runfunc = f3
+        self.process4.runfunc = f4
+        self.process5.runfunc = f5
+
+        self.process1.start()
+        self.process2.start()
+        self.process3.start()
+        self.process4.start()
+        self.process5.start()
+        self.eventProcessor.process_events(0)        
+        self.assertEqual(TestProcess1.pids(), [1,2,3])
              
     def testacquirePriorityrelease1(self):
         """
         Test: Using a priority queue, request TestResources; after the first
         request, requests are fulfilled in priority order
         """
+        def runfunc(process, rsrc_cls, n, wait=TWO_MINS):
+            process.assignment = process.acquire_from(self.pool, rsrc_cls, n)
+            process.wait_for(wait)
+            process.release(process.assignment)
+            
+        def f1(): runfunc(self.process1, TestResource, 2)
+        def f2(): runfunc(self.process2, TestResource, 1)
+        def f3(): runfunc(self.process3, TestResource, 1, ONE_MIN)
+        def f4(): runfunc(self.process4, TestResource, 1)
+        def f5(): runfunc(self.process5, TestResource, 1)
+            
+        self.process1.runfunc = f1
+        self.process2.runfunc = f2
+        self.process3.runfunc = f3
+        self.process4.runfunc = f4
+        self.process5.runfunc = f5
+            
         self.pool.register_priority_func(SimMsgType.RSRC_REQUEST, 
-                                       MockProcessAgent.getPriority)
-        self.process1.acquire_from(self.pool, TestResource, 2)
-        self.process2.acquire_from(self.pool, TestResource)
-        self.process3.acquire_from(self.pool, TestResource)
-        self.process4.acquire_from(self.pool, TestResource)
-        self.process5.acquire_from(self.pool, TestResource)
-        self.process1.release()
-        self.assertEqual(MockProcessAgent.pids(), [1,3,5])
+                                         TestProcess1.getPriority)
+        self.process1.start()
+        self.process2.start()
+        self.process3.start()
+        self.process4.start()
+        self.process5.start()
+        self.eventProcessor.process_events(ONE_MIN)        
+        self.assertEqual(TestProcess1.pids(), [3,5])
              
     def testacquirePriorityrelease2(self):
         """
@@ -1048,20 +1243,145 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         is not fulfilled.
         """
         self.pool.register_priority_func(SimMsgType.RSRC_REQUEST, 
-                                       MockProcessAgent.getPriority)
-        self.process1.acquire_from(self.pool, TestResource, 2)
-        self.process2.acquire_from(self.pool, TestResource)
-        self.process3.acquire_from(self.pool, TestResource)
-        self.process4.acquire_from(self.pool, SimSimpleResource)
+                                       TestProcess1.getPriority)
+                
+        def runfunc(process, rsrc_cls, n, wait=TWO_MINS):
+            process.assignment = process.acquire_from(self.pool, rsrc_cls, n)
+            process.wait_for(wait)
+            process.release(process.assignment)
+            
+        def f1(): runfunc(self.process1, TestResource, 1)
+        def f2(): runfunc(self.process2, TestResource, 1)
+        def f3(): runfunc(self.process3, TestResource, 1, ONE_MIN)
+        def f4(): runfunc(self.process4, SimSimpleResource, 1)
+        def f5(): runfunc(self.process5, TestResource, 2)
+            
+        self.process1.runfunc = f1
+        self.process2.runfunc = f2
+        self.process3.runfunc = f3
+        self.process4.runfunc = f4
+        self.process5.runfunc = f5
         
-        # After process1 releases, process3 is assigned a TestResource,
-        # but process5 (the next in the priority queue) is not. So the
-        # request from process4 is not fulfilled.
-        self.process5.acquire_from(self.pool, TestResource, 2) 
-        self.process1.release()
-        self.assertEqual(MockProcessAgent.pids(), [1,3])
+        # After process3 releases, process5 is assigned a TestResource,
+        # but process1 (the next in the priority queue, due to being
+        # queued before process4) is not. So the request from process4 is 
+        # not fulfilled. This might be considered a bug - if we start 
+        # process4 before process1, it gets assigned - but it is how
+        # the assignment algorithm works by default.
+        self.process1.start()
+        self.process2.start()
+        self.process3.start()
+        self.process4.start()
+        self.process5.start()
+        self.eventProcessor.process_events(ONE_MIN)        
+        
+        self.assertEqual(TestProcess1.pids(), [3, 5])
 
-              
+    
+
+class TestProcess2(SimProcess):
+    rsrc = None
+    #source = MockSource()
+    
+    def __init__(self, priority=1, timeout=None):
+        super().__init__()
+        self.priority = priority
+        self.wait_before_acquire = 0
+        self.exception = None
+        self.waitdone_time = None
+        self.timeout = timeout
+        self.has_resource = False
+        self.completed = False
+        entity = MockEntity(TestProcess1.source, self)
+        
+    def run(self):
+        try:
+            self.runimpl()
+        except Exception as e:
+            self.exception = e
+        finally:
+            self.waitdone_time = SimClock.now()
+    
+    def runimpl(self):
+        self.wait_for(self.wait_before_acquire)
+        assignment = self.acquire(TestProcess2.rsrc, timeout=self.timeout)
+        self.has_resource = True
+        self.wait_for(TWO_MINS)
+        self.release(assignment)
+        self.completed = True    
+                
+    @staticmethod
+    def getPriority(msg):
+        process = msg.msgData[0]
+        return process.priority
+
+
+class AssignmentRaceConditionTests(unittest.TestCase):
+    """
+    Test potential race conditions that occur with simulated simultaneous
+    events, e.g. that if two processes attempt to acquire the same resource
+    at the same simulated  time, the higher one gets it even if the lower
+    priority process called acquire() first
+    """
+    def setUp(self):
+        simevent.initialize()
+        SimClock.initialize()
+        SimStaticObject.elements = {}
+        
+        self.eventProcessor = simevent.EventProcessor()        
+        #self.location = MockLocation()
+        #self.source = MockSource()
+        self.processes = []
+        for i in range(5):
+            process = TestProcess2(priority=i)
+            self.processes.append(process)
+         
+        self.process0 = self.processes[0]
+        self.process1 = self.processes[1]
+        self.process2 = self.processes[2]
+        self.process3 = self.processes[3]
+        self.process4 = self.processes[4]
+        
+        rsrc = SimSimpleResource("TestResource")
+        rsrc.register_priority_func(SimMsgType.RSRC_REQUEST, 
+                                    TestProcess2.getPriority)
+        TestProcess2.rsrc = rsrc
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimStaticObject.elements = {}
+        
+    def testConcurrentRequests1(self):
+        """
+        Test start process 1 then 2, run < 2 minutes, both are executing
+        """
+        self.process1.start()
+        self.process0.start()
+        self.eventProcessor.process_events(until_time=ONE_MIN)
+        self.assertTrue(self.process0.is_executing and self.process1.is_executing)
+        
+    def testConcurrentRequests2(self):
+        """
+        Test start process 1 then 0, run < 2 minutes, higher priority process0 has
+        a resource, 1 does not
+        """
+        self.process1.start()
+        self.process0.start()
+        self.eventProcessor.process_events(until_time=ONE_MIN)
+        self.assertTrue(self.process0.has_resource and not self.process1.has_resource)
+        
+    def testConcurrentRequestsAfterRelease(self):
+        """
+        Test start process 2 then 1, run < 2 minutes, process2 has a resource, 1 does not
+        """
+        self.process1.wait_before_acquire = TWO_MINS
+        self.process2.wait_before_acquire = TWO_MINS
+        self.process2.start()
+        self.process1.start()
+        self.process0.start()
+        self.eventProcessor.process_events(until_time=TWO_MINS)
+        self.assertTrue(self.process1.has_resource and not self.process2.has_resource)
+       
         
 def makeTestSuite():
     suite = unittest.TestSuite()
@@ -1075,8 +1395,10 @@ def makeTestSuite():
     suite.addTest(unittest.makeSuite(BasicResourcePoolTests))
     suite.addTest(unittest.makeSuite(BasicResourcePoolReleaseTests))
     suite.addTest(unittest.makeSuite(ResourcePoolQueueingTests))
+    suite.addTest(unittest.makeSuite(AssignmentRaceConditionTests))
     return suite        
 
 if __name__ == '__main__':
+    suite = makeTestSuite()
     unittest.main()
  

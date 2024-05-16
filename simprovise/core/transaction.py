@@ -79,19 +79,30 @@ class SimTransactionInterruptEvent(SimEvent):
     Interrupt the waiting transaction by waking it and raising a supplied
     exception (expected to be derived from SimInterruptException)
     
-    The priority of the Interrupt event is set to 3, so that any resume
-    event (priority 1) for this transaction scheduled for the same time is
-    executed before (and instead of) the interrupt.
+    The priority of the Interrupt event is set to 4, so that any resume
+    event (priority 1) or assign-resources event (priority 3) for this transaction
+    scheduled for the same time is executed before (and potentially instead of) the
+    interrupt, which may be a SimTimeoutEvent (subclass of interrupt event). 
 
     If a concurrent "regular" resume has also been scheduled (i.e. for the
     same simulated time), that resume takes precedence and should be allowed
     to proceed by ignoring the interrupt.
+    
+    TODO: Prioritization needs more thought. Clearly, SimAssignResourcesEvents should
+    be prioritized over SimTimeOutEvents - when they are concurrent, we want the
+    resource to be assigned first and cancel the timeout. But we may want other
+    interrupts to come _before_ resource assignments, for example during
+    pre-emption. So this might be configurable.
+    Also, we don't support scheduling a second interrupt for the same transaction
+    before the first completes. More reason to not have SimTimeOutEvent inherit
+    from this event; regular interrupts arguably should always occur now()
     """
     __slots__ = ('transaction', 'exception')
     def __init__(self, transaction, exception, wait=0):
-        super().__init__(SimClock.now() + wait, priority=3)
+        super().__init__(SimClock.now() + wait, priority=4)
         self.transaction = transaction
         self.exception = exception
+        assert transaction.interruptEvent is None, "Attempt to interrupt the same transaction more than once"
         transaction.interruptEvent = self
 
     def process_impl(self):
