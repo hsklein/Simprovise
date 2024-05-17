@@ -9,7 +9,7 @@ from simprovise.core import (simevent, simtime, SimClock, SimTime,
                              SimSimpleResource, SimResourceAssignmentAgent, SimError)
 from simprovise.core.transaction import (SimTransaction,
                                          SimTransactionResumeEvent,
-                                         SimTransactionInterruptEvent)
+                                         SimInterruptEvent)
 from simprovise.core.agent import SimAgent
 from simprovise.core.simexception import SimInterruptException, SimTimeOutException
 import unittest
@@ -72,7 +72,7 @@ class SimTransactionTests(unittest.TestCase):
         SimClock.advance_to(ONE_MIN)
         self.txn.interrupt(SimInterruptException())
         tm, priority, seq, event = heappop(simevent.event_heap)
-        self.assertTrue(isinstance(event, SimTransactionInterruptEvent))
+        self.assertTrue(isinstance(event, SimInterruptEvent))
 
     def testInterruptWait2(self):
         """

@@ -10,7 +10,7 @@
 from simprovise.core import * 
 from simprovise.core.transaction import (SimTransaction,
                                          SimTransactionResumeEvent,
-                                         SimTransactionInterruptEvent)
+                                         SimInterruptEvent)
 from simprovise.core.agent import SimAgent
 from simprovise.core.simexception import SimInterruptException, SimTimeOutException
 import unittest

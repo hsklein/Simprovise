@@ -45,11 +45,11 @@ class SimTransactionStartEvent(SimEvent):
 
 class SimTransactionResumeEvent(SimEvent):
     """
-    Wake up the transaction and resume now.  If an interrupt has also been
-    scheduled, cancel the interrupt by deregistering the interrupt event.
-    In other words, if an there is both an interrupt and resume event
+    Wake up the transaction and resume now.  If any interrupts have also been
+    scheduled, cancel the interrupts by deregistering the interrupt event.
+    In other words, if there are both interrupt and resume events
     scheduled for this transaction, the resume takes precedence unless
-    the interrupt is scheduled for an earlier simulated time. The resume
+    an interrupt is scheduled for an earlier simulated time. The resume
     event is set to a higher priority to ensure that it executes first
     if the resume and interrupt are scheduled for the same simulated time.
     """
@@ -61,10 +61,14 @@ class SimTransactionResumeEvent(SimEvent):
 
     def process_impl(self):
         self.transaction.resumeEvent = None
-        interruptEvent = self.transaction.interruptEvent
-        if interruptEvent and interruptEvent.is_registered():
+        
+        # Deregister any scheduled interrupt/timeout events, and clear the list
+        events = (e for e in self.transaction.interruptEvents if e.is_registered())
+        for event in events:
             logger.debug("cancelling interrupt in favor of concurrently scheduled resume event")
-            interruptEvent.deregister()
+            event.deregister()
+        self.transaction.interruptEvents.clear()
+
         self.transaction._wakeup()
 
     def __str__(self):
@@ -74,49 +78,92 @@ class SimTransactionResumeEvent(SimEvent):
 # Alternatively, we could use a transaction scheduler of some sort, which would own the list of "waitingUntil" transactiones, checking them as required
 
 
-class SimTransactionInterruptEvent(SimEvent):
+class BaseInterruptEvent(SimEvent):
     """
-    Interrupt the waiting transaction by waking it and raising a supplied
-    exception (expected to be derived from SimInterruptException)
+    Base class for events that interrupt a waiting transaction/process by
+    waking up the transaction and raising and exception. Subclasses include
+    SimTimeOutEvent (for resource acquire timeouts) and SimInterruptEvent.
     
-    The priority of the Interrupt event is set to 4, so that any resume
-    event (priority 1) or assign-resources event (priority 3) for this transaction
-    scheduled for the same time is executed before (and potentially instead of) the
-    interrupt, which may be a SimTimeoutEvent (subclass of interrupt event). 
-
     If a concurrent "regular" resume has also been scheduled (i.e. for the
-    same simulated time), that resume takes precedence and should be allowed
-    to proceed by ignoring the interrupt.
+    same simulated time), that resume should have higher priority and
+    have already executed. Future resume events should be deregistered/
+    cancelled.
     
-    TODO: Prioritization needs more thought. Clearly, SimAssignResourcesEvents should
-    be prioritized over SimTimeOutEvents - when they are concurrent, we want the
-    resource to be assigned first and cancel the timeout. But we may want other
-    interrupts to come _before_ resource assignments, for example during
-    pre-emption. So this might be configurable.
-    Also, we don't support scheduling a second interrupt for the same transaction
-    before the first completes. More reason to not have SimTimeOutEvent inherit
-    from this event; regular interrupts arguably should always occur now()
+    Event Prioritization
+    
+    In order to (hopefully) avoid simulated race conditions, we set
+    event priority as follows:
+    Resume (and other normal flow-of-control) events - priority 1
+    Non-timeout-interrupt events - priority 2 
+    Assign Resources - priority 3
+    Resource Acquire Timeout events - priority 4
+    
+    These priorities should ensure that:
+    - resource releases and acquire requests, both normal and resulting
+      from interrupts, occur before concurrent resource assignment
+    - Resource assignments occur before concurrent acquire timeouts
+    
+    Multiple Interrupt Handling:
+    
+    Semantically, interrupts should only be requested on transactions/
+    processes that are currently waiting, and only apply to the current
+    wait. So if multiple interrupts are scheduled on the same transaction,
+    only one can actually execute. For example if it is currently time
+    10, we schedule an interrupt for time 20, and the transaction
+    resumes/wakes at time 15, the time 20 interrupt no longer applies
+    (and is in fact cancelled by the resume event processing) - even
+    if the transaction starts to wait again.
+    
+    Currently we allow multiple interrupt events, but the first one to
+    execute deregisters/cancels all of the others.
     """
     __slots__ = ('transaction', 'exception')
-    def __init__(self, transaction, exception, wait=0):
-        super().__init__(SimClock.now() + wait, priority=4)
+    def __init__(self, transaction, exception, tm, priority):
+        super().__init__(tm, priority=priority)
         self.transaction = transaction
         self.exception = exception
-        assert transaction.interruptEvent is None, "Attempt to interrupt the same transaction more than once"
-        transaction.interruptEvent = self
+        transaction.interruptEvents.append(self)
 
     def process_impl(self):
-        self.transaction.interruptEvent = None
+        # De-register any other interrupt events on this transaction, then 
+        # clear the transaction's list of interrupt events.
+        self.transaction.interruptEvents.remove(self)
+        events = (e for e in self.transaction.interruptEvents if e.is_registered())
+        for event in events:
+            event.deregister()
+        self.transaction.interruptEvents.clear()
+        
+        # If there is a future resume event scheduled, cancel it
         resumeEvent = self.transaction.resumeEvent
         if resumeEvent and resumeEvent.is_registered():
-            assert resumeEvent.time != self.time, "Concurrent resume event not executed before interrupt event"
+            # Any resume event scheduled for the same time as the interrupt should
+            # have had a higher priority and already executed
+            assert resumeEvent.time != SimClock.now(), "concurrent resume event did not execute first"
             resumeEvent.deregister()
             self.transaction.resumeEvent = None
+            
+        
+        # Finally, wake up the transaction an raise the designated exception
         self.transaction._wakeup_and_interrupt(self.exception)
 
     def __str__(self):
         return super().__str__() + \
             " Transaction: {0}, reason: {1}".format(self.transaction, self.exception)
+
+class SimInterruptEvent(BaseInterruptEvent):
+    """
+    Interrupt a waiting transaction/process for reasons other than a resource
+    acquire timeout, and raising a supplied exception.
+    
+    This event has priority 2 so that it occurs before assign-resource events,
+    but after all other non-interrupt events (scheduled for the same simulated
+    time).
+    
+    At least for now, interrupts always occur at SimClock.now() (current
+    simulated time).
+    """
+    def __init__(self, transaction, exception):
+        super().__init__(transaction, exception, SimClock.now(), priority=2)
 
 
 @apidoc
@@ -137,14 +184,14 @@ class SimTransaction(object):
     for a base class name that is different from both "process" and "task".
     """
     __slots__ = ('_greenlet', '_executing', '_agent', 'resumeEvent',
-                 'interruptEvent')
+                 'interruptEvents')
 
     def __init__(self, agent):
         self._greenlet = None
         self._executing = False
         self._agent = agent
         self.resumeEvent = None
-        self.interruptEvent = None
+        self.interruptEvents = []
 
     @property
     @apidocskip
@@ -342,7 +389,7 @@ class SimTransaction(object):
 
         # Now schedule the interrupt event
         logger.debug("scheduling interrupt on transaction %s on greenlet %s", self, self._greenlet)
-        interruptEvent = SimTransactionInterruptEvent(self, exception)
+        interruptEvent = SimInterruptEvent(self, exception)
         interruptEvent.register()
 
     # methods used by run()

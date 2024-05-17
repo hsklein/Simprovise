@@ -7,7 +7,8 @@
 #===============================================================================
 __all__ = ['SimProcess']
 
-from simprovise.core.transaction import SimTransaction, SimTransactionInterruptEvent
+from simprovise.core.transaction import SimTransaction, BaseInterruptEvent
+from simprovise.core.simevent import SimEvent
 from simprovise.core.simelement import SimClassElement 
 from simprovise.core.agent import SimMsgType
 from simprovise.core.apidoc import apidoc, apidocskip
@@ -21,7 +22,7 @@ _ERROR_NAME = "SimProcessError"
 _ACQUIRE_ERROR = "Resource Acquisition Error"
 
 
-class SimTimeOutEvent(SimTransactionInterruptEvent):
+class SimTimeOutEvent(BaseInterruptEvent):
     """
     Timeout a resource acquisition request. As with the base class
     Interrupt event, we rely on the higher priority of Resume events
@@ -30,9 +31,9 @@ class SimTimeOutEvent(SimTransactionInterruptEvent):
     deregister this event.
     """
     __slots__ = ('assignmentAgent', 'requestMsg')
-    def __init__(self, transaction, agent, msg, timeout=0):
-        super().__init__(transaction, SimTimeOutException('timeout'),
-                         SimClock.now() + timeout)
+    def __init__(self, process, agent, msg, timeout=0):
+        super().__init__(process, SimTimeOutException(),
+                         SimClock.now() + timeout, priority=4)
         self.assignmentAgent = agent
         self.requestMsg = msg
         
@@ -52,7 +53,8 @@ class SimProcess(SimTransaction):
     SimProcess is a subclass of SimTransaction, where entities are the agents.
     As such it is the base class for all simulation processes.
     """
-    __slots__ = ('__executing', '__entity', '__element', '__resource_assignments')
+    __slots__ = ('__executing', '__entity', '__element',
+                 '__resource_assignments')
     
     elements = {}
     
