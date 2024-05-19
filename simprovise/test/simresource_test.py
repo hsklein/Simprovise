@@ -1281,11 +1281,15 @@ class ResourcePoolQueueingTests(RATestCaseBase):
 
 class TestProcess2(SimProcess):
     rsrc = None
+    rsrc2 = None
     #source = MockSource()
     
-    def __init__(self, priority=1, timeout=None):
+    def __init__(self, priority=1, rsrc=None, *, timeout=None):
         super().__init__()
         self.priority = priority
+        self.rsrc = rsrc
+        if rsrc is None:
+            self.rsrc = TestProcess2.rsrc
         self.wait_before_acquire = 0
         self.exception = None
         self.waitdone_time = None
@@ -1303,8 +1307,11 @@ class TestProcess2(SimProcess):
             self.waitdone_time = SimClock.now()
     
     def runimpl(self):
-        self.wait_for(self.wait_before_acquire)
-        assignment = self.acquire(TestProcess2.rsrc, timeout=self.timeout)
+        if self.wait_before_acquire > 0:         
+            self.wait_for(self.wait_before_acquire)
+        print("Process2 acquire(), priority", self.priority)
+        assignment = self.acquire(self.rsrc, timeout=self.timeout)
+        print("Process2 acquire() successful, priority", self.priority)
         self.has_resource = True
         self.wait_for(TWO_MINS)
         self.release(assignment)
@@ -1314,6 +1321,215 @@ class TestProcess2(SimProcess):
     def getPriority(msg):
         process = msg.msgData[0]
         return process.priority
+
+
+class TestProcess2a(TestProcess2):
+    def runimpl(self):
+        try:
+            assignment = self.acquire(TestProcess2.rsrc, timeout=self.timeout)
+            self.has_resource = True
+            self.rsrc = TestProcess2.rsrc
+            self.wait_for(TWO_MINS)
+            self.release(assignment)
+            self.completed = True
+        except SimTimeOutException:
+            assignment = self.acquire(TestProcess2.rsrc2, timeout=0)
+            self.has_resource = True
+            self.rsrc = TestProcess2.rsrc2
+            self.wait_for(TWO_MINS)
+            self.release(assignment)
+            self.completed = True
+    
+class AcquireTimeoutTests(unittest.TestCase):
+    """
+    Test potential race conditions that occur with simulated simultaneous
+    events, e.g. that if two processes attempt to acquire the same resource
+    at the same simulated  time, the higher one gets it even if the lower
+    priority process called acquire() first
+    """
+    def setUp(self):
+        simevent.initialize()
+        SimClock.initialize()
+        SimStaticObject.elements = {}        
+        self.eventProcessor = simevent.EventProcessor()        
+                 
+        rsrc = SimSimpleResource("TestResource")
+        rsrc.register_priority_func(SimMsgType.RSRC_REQUEST, 
+                                    TestProcess2.getPriority)
+        TestProcess2.rsrc = rsrc
+        
+        rsrc2 = SimSimpleResource("TestResource2")
+        rsrc2.register_priority_func(SimMsgType.RSRC_REQUEST, 
+                                    TestProcess2.getPriority)
+        TestProcess2.rsrc2 = rsrc2
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimStaticObject.elements = {}
+        
+    def testNoTimeout1(self):
+        """
+        Test: process with timeout of zero doesn't timeout if it acquires resource right away
+        """
+        p = TestProcess2(priority=2, timeout=0)
+        p.start()
+        self.eventProcessor.process_events(until_time=ONE_MIN)
+        self.assertEqual(p.exception, None)
+        
+    def testNoTimeout2(self):
+        """
+        Test: process with timeout > 0 doesn't timeout if it acquires resource right away
+        """
+        p = TestProcess2(priority=2, timeout=ONE_MIN)
+        p.start()
+        self.eventProcessor.process_events(until_time=ONE_MIN)
+        self.assertEqual(p.exception, None)
+        
+    def testNoTimeout3(self):
+        """
+        Test: Advancing clock doesn't effect same test as NoTimeout2
+        """
+        p = TestProcess2(priority=2, timeout=ONE_MIN)
+        SimClock.advance_to(TWO_MINS)
+        p.start()
+        self.eventProcessor.process_events(until_time=FOUR_MINS)
+        self.assertEqual(p.exception, None)
+        
+    def testTimeout1(self):
+        """
+        Test: low priority process with timeout 0 times out when not acquiring resource
+        """
+        p1 = TestProcess2(priority=2, timeout=0)
+        p1.start()
+        p2 = TestProcess2(priority=1, timeout=0)
+        p2.start()
+        self.eventProcessor.process_events(until_time=ONE_MIN)
+        self.assertIsInstance(p1.exception, SimTimeOutException)
+        
+    def testTimeout2(self):
+        """
+        Test: low priority process with timeout > 0 times out when not acquiring resource
+        """
+        p1 = TestProcess2(priority=2, timeout=ONE_MIN)
+        p1.start()
+        p2 = TestProcess2(priority=1, timeout=0)
+        p2.start()
+        self.eventProcessor.process_events(until_time=ONE_MIN)
+        self.assertIsInstance(p1.exception, SimTimeOutException)
+        
+    def testNoTimeout4(self):
+        """
+        Test: low priority process doesn't time out with timeout = service time of higher priority procsss
+        """
+        p1 = TestProcess2(priority=2, timeout=TWO_MINS)
+        p1.start()
+        p2 = TestProcess2(priority=1, timeout=0)
+        p2.start()
+        self.eventProcessor.process_events(until_time=EIGHT_MINS)
+        self.assertEqual(p1.exception, None)
+        
+    def testNoTimeout5(self):
+        """
+        Test: NoTimeout4 with clock advance before process starts
+        """
+        SimClock.advance_to(TWO_MINS)
+        p1 = TestProcess2(priority=2, timeout=TWO_MINS)
+        p1.start()
+        p2 = TestProcess2(priority=1, timeout=0)
+        p2.start()
+        self.eventProcessor.process_events(until_time=EIGHT_MINS)
+        self.assertEqual(p1.exception, None)
+        
+    def testTimeout3(self):
+        """
+        Test: priority one process p3 times out due to p2
+        """
+        p1 = TestProcess2(priority=2, timeout=TWO_MINS)
+        p1.start()
+        p2 = TestProcess2(priority=1, timeout=0)
+        p2.start()
+        p3 = TestProcess2(priority=1, timeout=ONE_MIN)
+        p3.start()
+        self.eventProcessor.process_events(until_time=EIGHT_MINS)
+        self.assertIsInstance(p3.exception, SimTimeOutException)
+        
+    def testTimeout4(self):
+        """
+        Test: Same scenario as timeout3 - p1 does not timeout
+        """
+        p1 = TestProcess2(priority=2, timeout=TWO_MINS)
+        p1.start()
+        p2 = TestProcess2(priority=1, timeout=0)
+        p2.start()
+        p3 = TestProcess2(priority=1, timeout=ONE_MIN)
+        p3.start()
+        self.eventProcessor.process_events(until_time=EIGHT_MINS)
+        self.assertEqual(p1.exception, None)
+        
+    def testTimeout5(self):
+        """
+        Test: Same scenario as timeout3, but p2 has two minute TO - p1 does timeout
+        """
+        p1 = TestProcess2(priority=2, timeout=TWO_MINS)
+        p1.start()
+        p2 = TestProcess2(priority=1, timeout=0)
+        p2.start()
+        p3 = TestProcess2(priority=1, timeout=TWO_MINS)
+        p3.start()
+        self.eventProcessor.process_events(until_time=EIGHT_MINS)
+        self.assertIsInstance(p1.exception, SimTimeOutException)
+    
+    def testTimeoutAlternateRsrc1(self):
+        """
+        Test: p1 handles timeout by acquiring alternate resource
+        """
+        p1 = TestProcess2a(priority=2, timeout=0)
+        p1.start()
+        p2 = TestProcess2(priority=1, timeout=0)
+        p2.start()
+        self.eventProcessor.process_events(until_time=EIGHT_MINS)
+        self.assertIs(p1.rsrc, TestProcess2.rsrc2)
+   
+    def testTimeoutAlternateRsrc2(self):
+        """
+        Test: Priority 1 process (p2) gets rsrc; priority 2 process (p1) times out
+        immediately attempting to acquire rsrc, acquires rsrc2 instead; priority 3
+        process (p3) attempts to acquire rsrc2 straight away, but times out
+        because p2 got it first.
+        (This is the race condition not handled by initial implementation with
+        timeout event of lower priority than resource assign event)
+        """
+        #print("******** test timeout alt rsrc2 *********")
+        p1 = TestProcess2a(priority=2, timeout=0)
+        p1.start()
+        p2 = TestProcess2(priority=1, timeout=0)
+        p2.start()
+        p3 = TestProcess2(priority=3, rsrc=TestProcess2.rsrc2, timeout=0)
+        p3.start()
+        
+        self.eventProcessor.process_events(until_time=EIGHT_MINS)
+        self.assertIsInstance(p3.exception, SimTimeOutException)
+   
+    def testTimeoutAlternateRsrc3(self):
+        """
+        Test: Priority 1 process (p2) gets rsrc; priority 2 process (p1) times out
+        immediately attempting to acquire rsrc, acquires rsrc2 instead; priority 3
+        process (p3) attempts to acquire rsrc2 straight away, but times out
+        because p2 got it first.
+        (This is the race condition not handled by initial implementation with
+        timeout event of lower priority than resource assign event)
+        """
+        #print("******** test timeout alt rsrc2 *********")
+        p1 = TestProcess2a(priority=2, timeout=ONE_MIN)
+        p1.start()
+        p2 = TestProcess2(priority=1, timeout=0)
+        p2.start()
+        p3 = TestProcess2(priority=3, rsrc=TestProcess2.rsrc2, timeout=0)
+        p3.wait_before_acquire = ONE_MIN
+        p3.start()
+        
+        self.eventProcessor.process_events(until_time=EIGHT_MINS)
+        self.assertIsInstance(p3.exception, SimTimeOutException)
 
 
 class AssignmentRaceConditionTests(unittest.TestCase):
@@ -1384,18 +1600,20 @@ class AssignmentRaceConditionTests(unittest.TestCase):
        
         
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(ResourceAssignmentTests))
-    suite.addTest(unittest.makeSuite(ResourceAssignmentSubtractTests))
-    suite.addTest(unittest.makeSuite(ResourceAssignmentContainsTests))
-    suite.addTest(unittest.makeSuite(SimpleResourcePropertyTests))
-    suite.addTest(unittest.makeSuite(SimpleResourceBasicAcquireTests))
-    suite.addTest(unittest.makeSuite(SimpleResourceBasicReleaseTests))
-    suite.addTest(unittest.makeSuite(SimpleResourceAcquireQueueingTests))
-    suite.addTest(unittest.makeSuite(BasicResourcePoolTests))
-    suite.addTest(unittest.makeSuite(BasicResourcePoolReleaseTests))
-    suite.addTest(unittest.makeSuite(ResourcePoolQueueingTests))
-    suite.addTest(unittest.makeSuite(AssignmentRaceConditionTests))
+    suite.addTest(loader.loadTestsFromTestCase(ResourceAssignmentTests))
+    suite.addTest(loader.loadTestsFromTestCase(ResourceAssignmentSubtractTests))
+    suite.addTest(loader.loadTestsFromTestCase(ResourceAssignmentContainsTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimpleResourcePropertyTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimpleResourceBasicAcquireTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimpleResourceBasicReleaseTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimpleResourceAcquireQueueingTests))
+    suite.addTest(loader.loadTestsFromTestCase(BasicResourcePoolTests))
+    suite.addTest(loader.loadTestsFromTestCase(BasicResourcePoolReleaseTests))
+    suite.addTest(loader.loadTestsFromTestCase(ResourcePoolQueueingTests))
+    suite.addTest(loader.loadTestsFromTestCase(AcquireTimeoutTests))
+    suite.addTests(loader.loadTestsFromTestCase(AssignmentRaceConditionTests))
     return suite        
 
 if __name__ == '__main__':
