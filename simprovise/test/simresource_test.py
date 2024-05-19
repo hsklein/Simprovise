@@ -1512,12 +1512,10 @@ class AcquireTimeoutTests(unittest.TestCase):
    
     def testTimeoutAlternateRsrc3(self):
         """
-        Test: Priority 1 process (p2) gets rsrc; priority 2 process (p1) times out
-        immediately attempting to acquire rsrc, acquires rsrc2 instead; priority 3
-        process (p3) attempts to acquire rsrc2 straight away, but times out
-        because p2 got it first.
-        (This is the race condition not handled by initial implementation with
-        timeout event of lower priority than resource assign event)
+        Test: Variation on testTimeoutAlternateRsrc2(self) - p1 times out
+        on attempt to acquire rsrc at one minute, p3 waits one minute
+        before attempting to acquire rsrc2. Should behave identically to
+        the above.
         """
         #print("******** test timeout alt rsrc2 *********")
         p1 = TestProcess2a(priority=2, timeout=ONE_MIN)

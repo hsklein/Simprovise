@@ -22,29 +22,53 @@ _ERROR_NAME = "SimProcessError"
 _ACQUIRE_ERROR = "Resource Acquisition Error"
 
 
+@apidocskip
 class SimTimeOutEvent(BaseInterruptEvent):
     """
     Timeout a resource acquisition request. As with the base class
     Interrupt event, we rely on the higher priority of Resume events
-    to ensure that if the assignment/resume and timeout occur at the
+    to ensure that if the resume and timeout occur at the
     same simulated time, the resume will be processed first and
     deregister this event.
     """
     __slots__ = ('assignmentAgent', 'requestMsg')
     def __init__(self, process, agent, msg, timeout=0):
         super().__init__(process, SimTimeOutException(),
-                         SimClock.now() + timeout, priority=4)
+                         SimClock.now() + timeout, priority=3)
         self.assignmentAgent = agent
         self.requestMsg = msg
         
     def process_impl(self):
         """
-        Event processing wakes up the timed-out resource request via
-        base class implementation, and  then asks the assignment agent
-        to handle the timeout and remove the request
+        This event has a higher priority than SimAssignResourcesEvents
+        in order to prevent a race condition where the process handles
+        the timeout exception by requesting a different resource while
+        a lower priority resource concurrently requests that same resource.
+        The higher priority timedout process should win, but won't if a
+        SimAssignResourcesEvent is processed before the SimTimeOutEvent.
+        (See simresource_test.AcquireTimeoutTests.testTimeoutAlternateRsrc2)
+        
+        But we also have to handle the case where the originally requested
+        resource becomes available at the same time as the timeout. So
+        we start by doing a partial rssource assignment, starting with
+        the highest priority requests and going through (if we get that far)
+        to this about-to-timeout request. We don't attempt to process
+        requests of lower priority than this one, because by doing so we
+        might inadvertently assign a resource that this process is about
+        to request after timing out.
+        
+        The call to _process_queued_requests will only return True
+        if this request was fulfilled; if it was not, we go ahead and
+        wake up and raise an exception in the timed-out resource request via
+        base class implementation (which also cancels events rendered moot
+        by the timeout/interrupt), and  then asks the assignment agent
+        to handle the timeout by remove the request and scheduling another
+        round of resource assignments
         """
-        super().process_impl()
-        self.assignmentAgent.request_timed_out(self.requestMsg)
+        handled = self.assignmentAgent._process_queued_requests(self.requestMsg)
+        if not handled:
+            super().process_impl()
+            self.assignmentAgent.request_timed_out(self.requestMsg)
 
         
 @apidoc

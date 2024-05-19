@@ -313,6 +313,30 @@ class SimAgent(object):
         else:
             return None
 
+    def queued_messages(self, msgType):
+        """
+        Returns a list of messages of the specified type from the agent's
+        message queue. If a priority function is specified for that message
+        type, the returned list is sorted in priority order (ties are FIFO).
+        Does NOT remove any messages from the queue.
+
+        If there are NO queued messages of the specified type, returns an
+        empty list.
+
+        :param msgType: The type of message desired
+        :type msgType: :class:`SimMsgType`
+
+        :return:       A new list of queued message of type msgType, 
+                       sorted by priority, or FIFO, if no priority
+                       function has been registered for msgType. e)
+        :rtype:        `list` of :class:`SimMessage`
+                        
+        """
+        msgs = [msg for msg in self.msgQueue if msg.msgType == msgType]
+        if msgType in self._msgPriorityFunc:
+            msgs.sort(key=self._msgPriorityFunc[msgType])
+        return msgs
+
     def next_queued_message(self, msgType):
         """
         Returns the next request message of the specified type from the agent's

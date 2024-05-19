@@ -153,14 +153,14 @@ class SimResourceAssignment(object):
 class SimAssignResourcesEvent(SimEvent):  
     """
     An event that schedules a resource assignment agent to process
-    resource assignment requests. Set to priority 3 so that concurrent
-    resource acquire, resource release, and transaction interrupt
+    resource assignment requests. Set to priority 4 so that concurrent
+    resource acquire, resource release, timeout and transaction interrupt
     messages are processed first.
     """
     __slots__ = ('assignmentAgent')
     
     def __init__(self, assignmentAgent):
-        super().__init__(SimClock.now(), priority=3)
+        super().__init__(SimClock.now(), priority=4)
         self.assignmentAgent = assignmentAgent
         
     def process_impl(self):
@@ -337,45 +337,59 @@ class ResourceAssignmentAgentMixin(object):
             self.assignmentEvent = SimAssignResourcesEvent(self)
             self.assignmentEvent.register()
 
-    def _process_queued_requests(self):
+    def _process_queued_requests(self, throughRequest=None):
         """
         This method should be called only by SimAssignResourcesEvent.process_impl().
         It is responsible for (at least attempting) to fulfill resource requests in
         the message queue.
 
-        This (default) implementation loops through the request queue until
-        it either:
+        This (default) implementation loops through the request queue in
+        priority order until it either:
 
-        a) Cannot handle that request (i.e., assign resources to the requestor)
+        a) Cannot handle a request (i.e., assign resources to the requestor)
+        b) Attempts to handle a passed throughRequest (!= None)
            or
-        b) Empties the queue
-
-        Note that if this implementation cannot fulfill the first/highest
-        priority request remaining, it does NOT allow a later/lower priority
-        request to "jump the queue". Subclassed agents (resource pools in
-        particular) may choose to modify this behavior.
-        """
-        nextRequest = self._next_request_message()
-        while nextRequest and self._process_request(nextRequest):
-            self.msgQueue.remove(nextRequest)
-            nextRequest = self._next_request_message()
-
-    def _next_request_message(self):
-        """
-        Returns the next request message (type SimResource.REQUEST_MSGTYPE)
-        in the resource's message queue, or None if there aren't any.
-        Applies priority function, if any.
-
-        Does NOT remove the message from the queue
-                
-        :return: SimMessage or None: Next request message in queue (based
-                 on priority) or None if there are no request messages in
-                 the queue
-        :rtype:  :class:`~.agent.SimMessage` or None
-
-        """
-        return self.next_queued_message(SimMsgType.RSRC_REQUEST)
+        c) Empties the queue
+        
+        A non-None throughRequest is typically passed by SimTimeOutEvent
+        processing, which wants to make a last ditch effort to fulfill the
+        request before raising the timeout exception - without fulfilling
+        lower priority requests that a higher priority timing out process
+        might request as a response to the timeout.
     
+        Note that if this implementation cannot fulfill an earlier/higher
+        priority request remaining, it does NOT allow a later/lower priority
+        request to "jump the queue". Some subclassed agents (resource pools in
+        particular) should probably choose to modify this behavior.
+        """
+        
+        for request in self.queued_messages(SimMsgType.RSRC_REQUEST):
+            handled = self._process_request(request)
+            if not handled:
+                return False
+            self.msgQueue.remove(request)
+            if throughRequest is not None and request is throughRequest:
+                return True
+            
+        return True
+ 
+    #def _next_request_message(self):
+        #"""
+        #Returns the next request message (type SimResource.REQUEST_MSGTYPE)
+        #in the resource's message queue, or None if there aren't any.
+        #Applies priority function, if any.
+
+        #Does NOT remove the message from the queue
+                
+        #:return: SimMessage or None: Next request message in queue (based
+                 #on priority) or None if there are no request messages in
+                 #the queue
+        #:rtype:  :class:`~.agent.SimMessage` or None
+
+        #"""
+        #return self.next_queued_message(SimMsgType.RSRC_REQUEST)
+    
+    @apidocskip
     def request_timed_out(self, msg):
         """
         Process a timed out resource request by removing the request from

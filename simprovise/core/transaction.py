@@ -27,6 +27,7 @@ logger = SimLogging.get_logger(__name__)
 
 _TXN_ERROR = "SimTransaction Error"
 
+@apidocskip
 class SimTransactionStartEvent(SimEvent):
     """
     Start a transaction by switching to it's greenlet (which should be setup to
@@ -43,6 +44,7 @@ class SimTransactionStartEvent(SimEvent):
 
     def __str__(self): return super().__str__() + " Transaction: " + str(self.transaction) + " Greenlet: " + str(self._greenlet)
 
+@apidocskip
 class SimTransactionResumeEvent(SimEvent):
     """
     Wake up the transaction and resume now.  If any interrupts have also been
@@ -74,14 +76,12 @@ class SimTransactionResumeEvent(SimEvent):
     def __str__(self):
         return super().__str__() + " Transaction: " + str(self.transaction)
 
-# TODO consider a SimTransactionWaitUntilEvent, which could be passed either a lambda or a function to evaluate (the "until" condition)
-# Alternatively, we could use a transaction scheduler of some sort, which would own the list of "waitingUntil" transactiones, checking them as required
 
-
+@apidocskip
 class BaseInterruptEvent(SimEvent):
     """
     Base class for events that interrupt a waiting transaction/process by
-    waking up the transaction and raising and exception. Subclasses include
+    waking up the transaction and raising an exception. Subclasses include
     SimTimeOutEvent (for resource acquire timeouts) and SimInterruptEvent.
     
     If a concurrent "regular" resume has also been scheduled (i.e. for the
@@ -95,13 +95,20 @@ class BaseInterruptEvent(SimEvent):
     event priority as follows:
     Resume (and other normal flow-of-control) events - priority 1
     Non-timeout-interrupt events - priority 2 
-    Assign Resources - priority 3
-    Resource Acquire Timeout events - priority 4
+    Resource Acquire Timeout events - priority 3
+    Assign Resources - priority 4
     
     These priorities should ensure that:
     - resource releases and acquire requests, both normal and resulting
       from interrupts, occur before concurrent resource assignment
-    - Resource assignments occur before concurrent acquire timeouts
+    - Process interrupts and  timeouts can make new resource requests
+      before concurrent resource assignment
+    
+    Timeout events do have to handle the possibility that the resource
+    requested (that is timing out) could now be available as a result
+    of a concurrent resource release. The Timeout event handles that by
+    doing a partial resource assignment. (There are possible race
+    conditions there that have to be handled carefully)
     
     Multiple Interrupt Handling:
     
@@ -150,6 +157,7 @@ class BaseInterruptEvent(SimEvent):
         return super().__str__() + \
             " Transaction: {0}, reason: {1}".format(self.transaction, self.exception)
 
+@apidocskip
 class SimInterruptEvent(BaseInterruptEvent):
     """
     Interrupt a waiting transaction/process for reasons other than a resource
@@ -160,7 +168,8 @@ class SimInterruptEvent(BaseInterruptEvent):
     time).
     
     At least for now, interrupts always occur at SimClock.now() (current
-    simulated time).
+    simulated time) - i.e., it is not possible to schedule an interrupt for some
+    future simulated time.
     """
     def __init__(self, transaction, exception):
         super().__init__(transaction, exception, SimClock.now(), priority=2)
