@@ -152,6 +152,10 @@ class SimResourceAssignment(object):
 @apidocskip
 class SimAssignResourcesEvent(SimEvent):  
     """
+    An event that schedules a resource assignment agent to process
+    resource assignment requests. Set to priority 3 so that concurrent
+    resource acquire, resource release, and transaction interrupt
+    messages are processed first.
     """
     __slots__ = ('assignmentAgent')
     
