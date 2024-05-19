@@ -954,18 +954,19 @@ class SimLocationEntryPointTests2(unittest.TestCase):
 
         
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(SimEmptyLocationTests))
-    suite.addTest(unittest.makeSuite(SimParentLocationEntryTests))
-    suite.addTest(unittest.makeSuite(SimParentLocationExitTests))
-    suite.addTest(unittest.makeSuite(SimChildLocationEntryTests1))
-    suite.addTest(unittest.makeSuite(SimChildLocationEntryTests2))
-    suite.addTest(unittest.makeSuite(SimChildLocationExitTests1))
-    suite.addTest(unittest.makeSuite(SimStaticLocatableBaseTests))
-    suite.addTest(unittest.makeSuite(SimLocatableBaseTests))
-    suite.addTest(unittest.makeSuite(SimLocatableMoveTests))
-    suite.addTest(unittest.makeSuite(SimLocationEntryPointTests1))
-    suite.addTest(unittest.makeSuite(SimLocationEntryPointTests2))
+    suite.addTest(loader.loadTestsFromTestCase(SimEmptyLocationTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimParentLocationEntryTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimParentLocationExitTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimChildLocationEntryTests1))
+    suite.addTest(loader.loadTestsFromTestCase(SimChildLocationEntryTests2))
+    suite.addTest(loader.loadTestsFromTestCase(SimChildLocationExitTests1))
+    suite.addTest(loader.loadTestsFromTestCase(SimStaticLocatableBaseTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimLocatableBaseTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimLocatableMoveTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimLocationEntryPointTests1))
+    suite.addTest(loader.loadTestsFromTestCase(SimLocationEntryPointTests2))
     return suite            
 
         

@@ -187,9 +187,10 @@ class TestPartialReleaseTransaction(TestTransaction2):
         
         
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(SimTransactionTests))
-    suite.addTest(unittest.makeSuite(SimTransactionInterruptTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimTransactionTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimTransactionInterruptTests))
     return suite
         
 if __name__ == '__main__':

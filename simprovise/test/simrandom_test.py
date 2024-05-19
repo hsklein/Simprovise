@@ -409,11 +409,12 @@ class SimDistributionInvalidParameterTests(SimDistributionTestsBase):
        
         
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(RandomInitializationTests))
-    suite.addTest(unittest.makeSuite(SimDistributionSmokeTests))
-    suite.addTest(unittest.makeSuite(SimDistributionSimTimeTests))
-    suite.addTest(unittest.makeSuite(SimDistributionInvalidParameterTests))
+    suite.addTest(loader.loadTestsFromTestCase(RandomInitializationTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimDistributionSmokeTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimDistributionSimTimeTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimDistributionInvalidParameterTests))
     return suite
 
 

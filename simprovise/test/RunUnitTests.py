@@ -33,7 +33,7 @@ def run_tests():
     suite.addTest(simdatacollector_test.makeTestSuite())
     suite.addTest(simcounter_test.makeTestSuite() )
     suite.addTest(simlocation_test.makeTestSuite())
-    #suite.addTest(unittest.makeSuite(SimTime_test.SimTimeIntervalTests))
+    #suite.addTest(loader.loadTestsFromTestCase(SimTime_test.SimTimeIntervalTests))
     suite.addTest(simresource_test.makeTestSuite())
     suite.addTest(simentity_test.makeTestSuite())
     suite.addTest(simtransaction_test.makeTestSuite())

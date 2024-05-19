@@ -319,11 +319,12 @@ class SimEventProcessorTests( unittest.TestCase ):
         
         
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(SimEventTests1))
-    suite.addTest(unittest.makeSuite(SimEventTests2))
-    suite.addTest(unittest.makeSuite(SimEventPriorityTests))
-    suite.addTest(unittest.makeSuite(SimEventProcessorTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimEventTests1))
+    suite.addTest(loader.loadTestsFromTestCase(SimEventTests2))
+    suite.addTest(loader.loadTestsFromTestCase(SimEventPriorityTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimEventProcessorTests))
     return suite
         
 if __name__ == '__main__':

@@ -1309,9 +1309,7 @@ class TestProcess2(SimProcess):
     def runimpl(self):
         if self.wait_before_acquire > 0:         
             self.wait_for(self.wait_before_acquire)
-        print("Process2 acquire(), priority", self.priority)
         assignment = self.acquire(self.rsrc, timeout=self.timeout)
-        print("Process2 acquire() successful, priority", self.priority)
         self.has_resource = True
         self.wait_for(TWO_MINS)
         self.release(assignment)

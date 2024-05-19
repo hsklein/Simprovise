@@ -49,8 +49,9 @@ class simclockTests( unittest.TestCase ):
         self.assertNotEqual( t1, SimClock.now() )
         
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite( simclockTests ))
+    suite.addTest(loader.loadTestsFromTestCase(simclockTests))
     return suite
         
 if __name__ == '__main__':

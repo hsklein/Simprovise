@@ -514,16 +514,17 @@ class SimElementRegistryRegisterScriptTests(unittest.TestCase):
 
 
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(SimElementDefinitionGraphicFileTests))
-    suite.addTest(unittest.makeSuite(SimElementDefinitionCoreLocationAttributeTests))
-    suite.addTest(unittest.makeSuite(SimElementDefinitionDerivedLocationAttributeTests))
-    suite.addTest(unittest.makeSuite(SimElementDefinitionCoreEntityAttributeTests))
-    suite.addTest(unittest.makeSuite(SimElementDefinitionMergeTests))
-    suite.addTest(unittest.makeSuite(SimElementRegistryCoreTests))
-    suite.addTest(unittest.makeSuite(SimElementRegistryExtendedTests))
-    suite.addTest(unittest.makeSuite(SimElementRegistryRegisterModuleTests))
-    suite.addTest(unittest.makeSuite(SimElementRegistryRegisterScriptTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimElementDefinitionGraphicFileTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimElementDefinitionCoreLocationAttributeTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimElementDefinitionDerivedLocationAttributeTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimElementDefinitionCoreEntityAttributeTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimElementDefinitionMergeTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimElementRegistryCoreTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimElementRegistryExtendedTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimElementRegistryRegisterModuleTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimElementRegistryRegisterScriptTests))
     return suite
 
 if __name__ == '__main__':

@@ -146,14 +146,11 @@ class SimEntitySourceTests(unittest.TestCase):
         eventsProcessed = self.eventProcessor.process_events(SimTime(10))
         self.assertEqual(eventsProcessed, 6)
 
-
-
-
-
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(SimEntityTests))
-    suite.addTest(unittest.makeSuite(SimEntitySourceTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimEntityTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimEntitySourceTests))
     return suite   
 
 if __name__ == '__main__':

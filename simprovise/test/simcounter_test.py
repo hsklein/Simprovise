@@ -582,10 +582,11 @@ class SimProcessResumeCounterTests(unittest.TestCase):
 
 
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(SimInfiniteCounterTests))
-    suite.addTest(unittest.makeSuite(SimFiniteCapacityCounterTests))
-    suite.addTest(unittest.makeSuite(SimSetFiniteCapacityCounterTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimInfiniteCounterTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimFiniteCapacityCounterTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimSetFiniteCapacityCounterTests))
     return suite
 
 if __name__ == '__main__':

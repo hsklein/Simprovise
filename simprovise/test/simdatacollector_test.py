@@ -111,10 +111,11 @@ class SimTimeDataCollectionTests(unittest.TestCase):
 
 
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(SimDataCollectorTests))
-    suite.addTest(unittest.makeSuite(SimDataCollectionClassMethodTests))
-    suite.addTest(unittest.makeSuite(SimTimeDataCollectionTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimDataCollectorTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimDataCollectionClassMethodTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimTimeDataCollectionTests))
     return suite        
 
         

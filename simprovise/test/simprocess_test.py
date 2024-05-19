@@ -355,11 +355,12 @@ class ZeroTimeoutTests(unittest.TestCase):
         
         
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(BasicTimeoutTests))
-    suite.addTest(unittest.makeSuite(TimeoutTests1))
-    suite.addTest(unittest.makeSuite(TimeoutTests2))
-    suite.addTest(unittest.makeSuite(ZeroTimeoutTests))
+    suite.addTest(loader.loadTestsFromTestCase(BasicTimeoutTests))
+    suite.addTest(loader.loadTestsFromTestCase(TimeoutTests1))
+    suite.addTest(loader.loadTestsFromTestCase(TimeoutTests2))
+    suite.addTest(loader.loadTestsFromTestCase(ZeroTimeoutTests))
     return suite
         
 if __name__ == '__main__':

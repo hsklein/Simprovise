@@ -346,11 +346,12 @@ class SimDimensionlessBaseTimeTests(unittest.TestCase):
     
         
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(SimTimeTests))
-    suite.addTest(unittest.makeSuite(SimMinuteBaseTimeTests))
-    suite.addTest(unittest.makeSuite(SimHourBaseTimeTests))
-    suite.addTest(unittest.makeSuite(SimDimensionlessBaseTimeTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimTimeTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimMinuteBaseTimeTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimHourBaseTimeTests))
+    suite.addTest(loader.loadTestsFromTestCase(SimDimensionlessBaseTimeTests))
     return suite
         
 if __name__ == '__main__':

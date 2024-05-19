@@ -618,9 +618,10 @@ class ReplicatorTests(unittest.TestCase):
 
 
 def makeTestSuite():
+    loader = unittest.TestLoader()
     suite = unittest.TestSuite()
-    suite.addTest(unittest.makeSuite(ReplicatorTests))
-    #suite.addTest(unittest.makeSuite(SimulationTests))
+    suite.addTest(loader.loadTestsFromTestCase(ReplicatorTests))
+    #suite.addTest(loader.loadTestsFromTestCase(SimulationTests))
     return suite
 
 
