@@ -823,6 +823,20 @@ class BasicResourcePoolTests(RATestCaseBase):
         expected = (self.rsrc3, )
         self.assertEqual(self.process1.assignment.resources, expected)
              
+             
+    def testacquire5(self):
+        "Test: Acquire a specific resource from the pool"
+        def runfunc():
+            process = self.process1
+            process.assignment = process.acquire(self.rsrc1)
+            process.wait_for(ONE_MIN)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.eventProcessor.process_events(0)
+        expected = (self.rsrc1, )
+        self.assertEqual(self.process1.assignment.resources, expected)
+
     def testavailable2(self):
         "Test: Acquire three of any resource from the pool, followed by 2 - available "
         def runfunc():
@@ -1278,6 +1292,32 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         self.assertEqual(TestProcess1.pids(), [3, 5])
 
     
+class ResourcePoolRequestProcessingTests(unittest.TestCase):
+    """
+    Test potential race conditions that occur with simulated simultaneous
+    events, e.g. that if two processes attempt to acquire the same resource
+    at the same simulated  time, the higher one gets it even if the lower
+    priority process called acquire() first
+    """
+    def setUp(self):
+        simevent.initialize()
+        SimClock.initialize()
+        SimStaticObject.elements = {}        
+        self.eventProcessor = simevent.EventProcessor()        
+                 
+        rsrc = SimSimpleResource("TestResource")
+        rsrc.register_priority_func(SimMsgType.RSRC_REQUEST, 
+                                    TestProcess2.getPriority)
+        TestProcess2.rsrc = rsrc
+        
+        rsrc2 = SimSimpleResource("TestResource2")
+        rsrc2.register_priority_func(SimMsgType.RSRC_REQUEST, 
+                                    TestProcess2.getPriority)
+        TestProcess2.rsrc2 = rsrc2
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimStaticObject.elements = {}    
 
 class TestProcess2(SimProcess):
     rsrc = None

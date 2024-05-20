@@ -372,22 +372,6 @@ class ResourceAssignmentAgentMixin(object):
                 return True
             
         return True
- 
-    #def _next_request_message(self):
-        #"""
-        #Returns the next request message (type SimResource.REQUEST_MSGTYPE)
-        #in the resource's message queue, or None if there aren't any.
-        #Applies priority function, if any.
-
-        #Does NOT remove the message from the queue
-                
-        #:return: SimMessage or None: Next request message in queue (based
-                 #on priority) or None if there are no request messages in
-                 #the queue
-        #:rtype:  :class:`~.agent.SimMessage` or None
-
-        #"""
-        #return self.next_queued_message(SimMsgType.RSRC_REQUEST)
     
     @apidocskip
     def request_timed_out(self, msg):
@@ -916,6 +900,10 @@ class SimResourcePool(SimResourceAssignmentAgent):
     resource requested. (That specified class could be a base class.) This
     facilitates models with heterogeneous resource pools, and processes that
     request from a sub-pool based on resource class.
+    
+    Client code can still request a specific resource object that belongs
+    to the pool; in that case, the request processing (validation and
+    assignment) is delegated to the base class implementations.
 
     The pool class defines a set of convenience methods that facilitate
     the identification of pool resources and attributes by resource class.
@@ -1013,13 +1001,31 @@ class SimResourcePool(SimResourceAssignmentAgent):
         the pool's resources if rsrcClass is None.
         """
         return [assg.transaction for assg in self.current_assignments(rsrcClass)]
-
+    
+    def _is_request_for_specific_resource(self, requestMsg):
+        """
+        Returns True if the request is actually for a specific resource object
+        (not a a resource class or any resource in the pool)
+        """
+        txn, numRequested, *otherparms = requestMsg.msgData
+        if not otherparms:
+            return False
+        else:
+            return isinstance(otherparms[0], SimResource)
+         
     def _validate_request(self, requestMsg):
         """
         Validate request message data. Specialization for resource pools,
         which assumes that last message parameter (if any) is either None
         or the class of a resource managed by the pool.
+        
+        If the message is in fact for a specific resource, use the
+        superclass implementation.
         """
+        if self._is_request_for_specific_resource(requestMsg):
+            super()._validate_request(requestMsg)
+            return
+            
         txn, numRequested, *otherparms = requestMsg.msgData
 
         assert numRequested > 0, "number of resources requested not greater than zero"
@@ -1047,7 +1053,13 @@ class SimResourcePool(SimResourceAssignmentAgent):
         """
         Overridden method that will, if possible, create and return
         a resource assignment that meets the passed resource request.
+        
+        If the message is in fact for a specific resource, use the
+        superclass implementation.
         """
+        if self._is_request_for_specific_resource(requestMsg):
+            return super()._assign_from_request(requestMsg)
+            
         # Extract the message data.
         txn, numRequested, *otherparms = requestMsg.msgData
 
