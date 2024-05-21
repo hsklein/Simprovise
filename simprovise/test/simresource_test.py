@@ -1071,9 +1071,7 @@ class TestProcess1c(TestProcess1):
 class ResourcePoolQueueingTests(RATestCaseBase):
     """
     Tests SimResourcePool resource acquisition from multiple processes,
-    including queued (unfulfilled) acquisition requests. Uses the
-    MockProcessAgent to simulate queueing without any actual simulation or
-    other blocking of queued requests.
+    including queued (unfulfilled) acquisition requests.
     
     If acquireFrom() requests are fulfilled in priority (as opposed to FIFO)
     order, they should end up in the following order: 1,3,5,4,2.
@@ -1086,23 +1084,17 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         self.process3 = TestProcess1c(self, 1)
         self.process4 = TestProcess1c(self, 2)
         self.process5 = TestProcess1c(self, 1)
+        self.process = [self.process1, self.process2, self.process3, self.process4, self.process5]
         
-        self.process1.runfunc = None
-        self.process2.runfunc = None
-        self.process3.runfunc = None
-        self.process4.runfunc = None
-        self.process5.runfunc = None
-        
-        self.process1.wait = None
-        self.process2.wait = None
-        self.process3.wait = None
-        self.process4.wait = None
-        self.process5.wait = None
-        
+        for i in range(5):
+            self.process[i].runfunc = None
+            self.process[i].wait = None
+                
         self.rsrc1 = SimSimpleResource("TestResource1", self.location)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location, capacity=2)
         self.rsrc4 = TestResource("TestResource4", self.location, capacity=2)
+        self.rsrc = [self.rsrc1, self.rsrc2, self.rsrc3, self.rsrc4]
         self.pool = SimResourcePool(self.rsrc1, self.rsrc2, self.rsrc3, self.rsrc4)
              
     def testacquireFIFOnorelease(self):
@@ -1117,6 +1109,25 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         self.process5.start()
         self.eventProcessor.process_events(0)        
         self.assertEqual(TestProcess1.pids(), [1,2,3])
+             
+    def testacquireFIFOnorelease2(self):
+        """
+        Test: Acquire one SimSimpleResource for process1, 2 for the rest, no releases: first 4 assigned
+        """
+        def runfunc():
+            p = self.process1
+            p.assignment = p.acquire_from(self.pool, SimSimpleResource, 1)
+            p.wait_for(TWO_MINS)
+            p.release(p.assignment)
+            
+        self.process1.runfunc = runfunc
+        self.process1.start()
+        self.process2.start()
+        self.process3.start()
+        self.process4.start()
+        self.process5.start()
+        self.eventProcessor.process_events(0)        
+        self.assertEqual(TestProcess1.pids(), [1,2,3, 4])
              
     def testacquireFIFOrelease1(self):
         """
@@ -1189,9 +1200,9 @@ class ResourcePoolQueueingTests(RATestCaseBase):
     def testacquireFIFOTestResource(self):
         """
         Test - acquire_from() blocks on request for third Test Resource.
-        The last request for a SimSimpleResource is not fulfilled (even
-        though there are such resources available) Since the last TestResource
-        request is ahead in line.
+        Since the last request is for a superclass of TestResource (and
+        such a resource is available) it is assigned, since the higher
+        priority process wants just the TestResource subclass.
         """
         def runfunc(process, rsrc_cls, n):
             process.assignment = process.acquire_from(self.pool, rsrc_cls, n)
@@ -1202,20 +1213,14 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         def f3(): runfunc(self.process3, SimSimpleResource, 1)
         def f4(): runfunc(self.process4, TestResource, 1)
         def f5(): runfunc(self.process5, SimSimpleResource, 1)
+        
+        runfuncs = [f1, f2, f3, f4, f5]
+        for i in range(5):
+            self.process[i].runfunc = runfuncs[i]
+            self.process[i].start()
             
-        self.process1.runfunc = f1
-        self.process2.runfunc = f2
-        self.process3.runfunc = f3
-        self.process4.runfunc = f4
-        self.process5.runfunc = f5
-
-        self.process1.start()
-        self.process2.start()
-        self.process3.start()
-        self.process4.start()
-        self.process5.start()
         self.eventProcessor.process_events(0)        
-        self.assertEqual(TestProcess1.pids(), [1,2,3])
+        self.assertEqual(TestProcess1.pids(), [1,2,3,5])
              
     def testacquirePriorityrelease1(self):
         """
@@ -1231,22 +1236,16 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         def f2(): runfunc(self.process2, TestResource, 1)
         def f3(): runfunc(self.process3, TestResource, 1, ONE_MIN)
         def f4(): runfunc(self.process4, TestResource, 1)
-        def f5(): runfunc(self.process5, TestResource, 1)
-            
-        self.process1.runfunc = f1
-        self.process2.runfunc = f2
-        self.process3.runfunc = f3
-        self.process4.runfunc = f4
-        self.process5.runfunc = f5
-            
+        def f5(): runfunc(self.process5, TestResource, 1)           
+        runfuncs = [f1, f2, f3, f4, f5]
+        
         self.pool.register_priority_func(SimMsgType.RSRC_REQUEST, 
                                          TestProcess1.getPriority)
-        self.process1.start()
-        self.process2.start()
-        self.process3.start()
-        self.process4.start()
-        self.process5.start()
-        self.eventProcessor.process_events(ONE_MIN)        
+        for i in range(5):
+            self.process[i].runfunc = runfuncs[i]
+            self.process[i].start()
+            
+        self.eventProcessor.process_events(ONE_MIN)
         self.assertEqual(TestProcess1.pids(), [3,5])
              
     def testacquirePriorityrelease2(self):
@@ -1269,27 +1268,94 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         def f3(): runfunc(self.process3, TestResource, 1, ONE_MIN)
         def f4(): runfunc(self.process4, SimSimpleResource, 1)
         def f5(): runfunc(self.process5, TestResource, 2)
+        
+        runfuncs = [f1, f2, f3, f4, f5]
+        for i in range(5):
+            self.process[i].runfunc = runfuncs[i]
+            self.process[i].start()
             
-        self.process1.runfunc = f1
-        self.process2.runfunc = f2
-        self.process3.runfunc = f3
-        self.process4.runfunc = f4
-        self.process5.runfunc = f5
+        self.eventProcessor.process_events(ONE_MIN)
         
         # After process3 releases, process5 is assigned a TestResource,
         # but process1 (the next in the priority queue, due to being
-        # queued before process4) is not. So the request from process4 is 
-        # not fulfilled. This might be considered a bug - if we start 
-        # process4 before process1, it gets assigned - but it is how
-        # the assignment algorithm works by default.
+        # queued before process4) is not. Because process4 requested a
+        # class for which resources are available (SimSimpleResource),
+        # it is assigned, thanks to the process_queued_requests()
+        # algorithm implemented by SimResourcePool.      
+        self.assertEqual(TestProcess1.pids(), [3, 4, 5]) 
+ 
+    def testacquireSpecificResource1(self):
+        """
+        Test: A specified resource can be acquired from a pool
+        """
+        def runfunc(process, rsrc, wait):
+            process.assignment = process.acquire(rsrc)
+            process.wait_for(wait)
+            process.release(process.assignment)
+            
+        def f1(): runfunc(self.process1, self.rsrc1, TWO_MINS)
+        self.process1.runfunc = f1
         self.process1.start()
-        self.process2.start()
-        self.process3.start()
-        self.process4.start()
-        self.process5.start()
         self.eventProcessor.process_events(ONE_MIN)        
         
-        self.assertEqual(TestProcess1.pids(), [3, 5])
+        self.assertIs(self.process1.assignment.resource, self.rsrc1)
+ 
+    def testacquireSpecificResource2(self):
+        """
+        Test: acquisition of specific TestResource for process5 fails because higher priority process blocked acquiring superclass
+        """
+        def runfunc5():
+            process = self.process5
+            process.assignment = process.acquire(self.rsrc4)
+            process.wait_for(TWO_MINS)
+            process.release(process.assignment)
+            
+        self.process5.runfunc = runfunc5
+        for i in range(5):           
+            self.process[i].start()
+            
+        self.eventProcessor.process_events(0)        
+        self.assertEqual(TestProcess1.pids(), [1,2,3])
+ 
+    def testacquireResourceSubclass1(self):
+        """
+        Test: acquisition of any TestResource for process5 fails because higher priority process blocked acquiring superclass
+        """
+        def runfunc5():
+            process = self.process5
+            process.assignment = process.acquire_from(self.pool, TestResource)
+            process.release(process.assignment)
+            
+        self.process5.runfunc = runfunc5
+        for i in range(5):           
+            self.process[i].start()
+            
+        self.eventProcessor.process_events(0)        
+        self.assertEqual(TestProcess1.pids(), [1,2,3])
+ 
+    def testacquireResourceSubclass2(self):
+        """
+        Test: acquisition of any superclass SimSimpleResource not blocked higher priority processes blocked acquiring subclass TestResource
+        """
+        def runfunc(process):
+            process.assignment = process.acquire_from(self.pool, TestResource)
+            process.wait_for(TWO_MINS)
+            process.release(process.assignment)
+            
+        def f1(): runfunc(self.process1)
+        def f2(): runfunc(self.process2)
+        def f3(): runfunc(self.process3)
+        def f4(): runfunc(self.process4)
+        f = [f1, f2, f3, f4]
+                      
+        for i in range(4):
+            self.process[i].runfunc = f[i]
+            self.process[i].start()
+        
+        self.process5.start()
+                        
+        self.eventProcessor.process_events(0)        
+        self.assertEqual(TestProcess1.pids(), [1,2,5])
 
     
 class ResourcePoolRequestProcessingTests(unittest.TestCase):

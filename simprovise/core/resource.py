@@ -351,6 +351,12 @@ class ResourceAssignmentAgentMixin(object):
            or
         c) Empties the queue
         
+        Returns False if either:
+           a) It was not able to handle (assign resources to) a non-None
+              throughReqest, or
+           b) if throughRequest is None, it was not able to handle (assign
+              resources to) every request in the queue (i.e., empty the queue)
+                  
         A non-None throughRequest is typically passed by SimTimeOutEvent
         processing, which wants to make a last ditch effort to fulfill the
         request before raising the timeout exception - without fulfilling
@@ -904,6 +910,17 @@ class SimResourcePool(SimResourceAssignmentAgent):
     Client code can still request a specific resource object that belongs
     to the pool; in that case, the request processing (validation and
     assignment) is delegated to the base class implementations.
+    
+    The pool provides its own implementation of _process_queued_requests()
+    which allows sufficiently heterogenous requests of lower priority to
+    be process and potentially assigned even after a higher priority
+    request is not handled/assigned. The base class implementation assumes
+    that all requests in its queue are competing for the same resource(s);
+    for a pool, they may not be. If a pool resource request is not fulfilled
+    (because the resource(s) requested are not all available), lower
+    priority/later requests will be processed for potential assignment only
+    if they don't compete - that is, the resource(s) requested don't overlap
+    with any higher priority request that could not be fulfilled.
 
     The pool class defines a set of convenience methods that facilitate
     the identification of pool resources and attributes by resource class.
@@ -1012,6 +1029,73 @@ class SimResourcePool(SimResourceAssignmentAgent):
             return False
         else:
             return isinstance(otherparms[0], SimResource)
+        
+    def _process_queued_requests(self, throughRequest=None):
+        """
+        Resource Pool specific implementation.
+        
+        Unlike the default ResourceAssignmentAgent implementation, if no
+        throughRequest is specified, tthe pool continues to process requests
+        after encountering a request that could not be processed/assigned resources.
+        
+        As long as the request does not involve a resource or resource class
+        that was specified by an earlier (higher priority) unfulfilled request,
+        we attempt to process it - if the resources aren't available to fulfill it
+        (_process_request() returns False) the requested resource or resource
+        class is added to the set defining which later requests should be blocked
+        from processing.
+        
+        Note that if an earlier/higher priority request specified a resource
+        class, later requests that specify a subclass of that resource class
+        will be blocked as well.
+        """
+        blocked_rsrc_classes = set()
+        blocked_resources = set()
+        
+        def is_blocked(rsrc, rsrc_class):
+            if rsrc is not None and rsrc in blocked_resources:
+                return True
+            if [cls for cls in blocked_rsrc_classes if issubclass(rsrc_class, cls)]:
+                return True
+            return False
+                         
+        def get_request_data(request):
+            if self._is_request_for_specific_resource(request):
+                txn, numRequested, resource = request.msgData
+                return resource, resource.__class__, numRequested
+            else:
+                txn, numRequested, rsrc_class = request.msgData
+                return None, rsrc_class, numRequested
+           
+        # Start by running the base class algorithm.
+        # If we handle every request in the queue successfully, we're done
+        # If the caller specified a throughRequest (i.e, the caller is 
+        # processing a SimTimeOutEvent), we're done regardless
+        handled = super()._process_queued_requests(throughRequest)
+        if handled:
+            return True
+        elif throughRequest is not None:
+            return False
+             
+        # Starting with the first request that could not be assigned, go through
+        # the entire queue in priority order. For each request, check for any 
+        # overlap with earlier requests via is_blocked(). If there is no overlap,
+        # attempt to process the request. If the request cannot be assigned,
+        # update the blocked_resources/blocked_rsrc_classes sets as required.
+        for request in self.queued_messages(SimMsgType.RSRC_REQUEST):
+            resource, rsrc_class, numRequested = get_request_data(request)
+            if not is_blocked(resource, rsrc_class):
+                handled = self._process_request(request)
+                if handled:
+                    self.msgQueue.remove(request)
+                else:
+                    if resource is not None:
+                        blocked_resources.add(resource)
+                    else:
+                        blocked_rsrc_classes.add(rsrc_class)                
+             
+        return False
+              
          
     def _validate_request(self, requestMsg):
         """
