@@ -93,10 +93,8 @@ class SimEntitySource(SimLocation):
 
         Sample Usage::
 
-            source.addEntityGenerator(SimEntity, MyProcess,
-                                      SimDistribution.exponential,
-                                      mean=SimTime(42, simtime.MINUTES),
-                                      rnStream=18)
+            generator = SimDistribution.exponential(mean=SimTime(42, simtime.MINUTES)
+            source.addEntityGenerator(SimEntity, MyProcess, generator, rnStream=18)
 
         This method requires the entity class initializer to take the same
         two arguments as :class:`.SimEntity` (entitySource and process), and the
