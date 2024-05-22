@@ -276,7 +276,7 @@ class SimDistribution(object):
         choices, cycling through them deterministically. For example, to
         create a generator that yields the sequence (2,4,6,2,4,6,2...)::
 
-            SimDistribution.roundRobin((2,4,6))
+            SimDistribution.round_robin((2,4,6))
 
         :param choices: A sequence of values to be returned, one at a time,
                         by the function/generator.
