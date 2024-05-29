@@ -9,27 +9,10 @@ from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
 
 from simprovise.simulation import Simulation
 from simprovise.models.queuing_theory_calc import theory_results
-    
-#from simprovise.configuration import simelement, SimElement
-#from simprovise.runcontrol import SimReplicator, SimReplicationParameters
-
-from simprovise.models.testprocess import TestProcess
-#from Simalytix.RunControl import SimReplication
-#from Simalytix.Database import SimDatabaseManager, SimSummaryData
-
 
 serverCapacity = 4
 meanServiceTime = SimTime(8 * serverCapacity)
 meanInterarrivalTime = SimTime(10)
-
-#Simulation.initialize()
-
-warmupLength = SimTime(1000)
-batchLength = SimTime(10000)
-
-#Simulation.model().simulationWarmup = warmupLength
-#Simulation.model().simulationBatchLength = batchLength
-#Simulation.model().simulationBatchCount = 1
 
 queue = SimQueue("Queue")
 server = SimSimpleResource("Server", capacity=serverCapacity)
@@ -62,10 +45,10 @@ source.add_entity_generator(SimEntity, mm1Process,
 if __name__ == '__main__':
     print("================ main=================")
     warmupLength = SimTime(4000)
-    batchLength = SimTime(20000)
-    #bl = SimTime(1000)
+    batchLength = SimTime(10000)
+    #bl = SimTime(10000)
     print("Running single execution...")
-    with Simulation.execute(warmupLength, batchLength, 2,
+    with Simulation.execute(warmupLength, batchLength, 5,
                             outputpath=None, overwrite=False) as simResult:
         simResult.print_summary()
 
