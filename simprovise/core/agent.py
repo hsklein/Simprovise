@@ -88,6 +88,16 @@ class SimAgent(object):
     :class:`~.resource.SimResource` or :class:`~.process.SimProcess`.
 
     """
+    agents = set()
+    
+    @staticmethod
+    def final_initialize_all():
+        """
+        Invoke :meth:`final_initialize` on all agents
+        """
+        for agent in SimAgent.agents:
+            agent.final_initialize()
+    
     def __init__(self):
         """
         """
@@ -106,8 +116,22 @@ class SimAgent(object):
         # _msgPriorityFunc is a dictionary of functions that determine and
         # return a priority for message of a specified message type or types.
         # The dictionary is keyed by message type, and used by
-        #nextQueuedMessage()
+        # nextQueuedMessage()
         self._msgPriorityFunc = {}
+        
+        # Add this agent to the class-maintained set of agents
+        SimAgent.agents.add(self)
+        
+    def final_initialize(self):
+        """
+        Do any last-minute initialization as simulation execution is about
+        to begin. Typically implemented for agents that require initialization
+        after the SimClock SimEventProcessor, and/or random number streams
+        are created/initialized.
+        
+        Default is a no-op
+        """
+        pass
 
     def send_message(self, toAgent, msgType, msgData):
         """

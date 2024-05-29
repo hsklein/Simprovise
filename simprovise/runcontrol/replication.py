@@ -146,10 +146,17 @@ class SimReplication(QObject):
             # (and model static initialization adds source generation events to
             # the chain)
             eventProcessor = EventProcessor()
-            
-            # Invoke staticInitialize on all static objects in the model
-            #for staticobj in self.__model.static_objects:
-            for e in self.__model.elements:
+                           
+            # Invoke final_initialize() on all agents in the model
+            for agent in self.__model.agents:
+                agent.final_initialize()
+                
+            # Invoke final_initialize() on all process and entity elements in 
+            # the model. Skip static objects, since they are also agents and
+            # were therefore final_initialized() in the previous step.
+            for e in self.__model.process_elements:
+                e.final_initialize()
+            for e in self.__model.entity_elements:
                 e.final_initialize()
             
             # Do any model initialization functions (a TODO)

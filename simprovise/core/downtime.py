@@ -160,7 +160,7 @@ class DowntimeAgentMixin(object):
 class SimDowntimeAgent(DowntimeAgentMixin, SimAgent):
     """
     Useful base class for a stand-alone downtime agent.
-    """
+    """        
     def _resource_down_impl(self, resource, takedown_successful):
         """
         Called by RSRC_DOWN message handler. no-op default implementation
@@ -217,8 +217,12 @@ class SimResourceFailureAgent(SimDowntimeAgent):
         self._resource = resource
         self._timeToFailureGenerator = timeToFailureGenerator
         self._timeToRepairGenerator = timeToRepairGenerator
+               
+    def final_initialize(self):
+        """
+        """
         initialTakedownTime = SimClock.now() + next(self._timeToFailureGenerator)
-        initialEvent = TakeDownResourceEvent(self, resource, 
+        initialEvent = TakeDownResourceEvent(self, self._resource, 
                                              initialTakedownTime)
         initialEvent.register()
         
@@ -307,6 +311,8 @@ if __name__ == '__main__':
     timeToFailureGenerator = SimDistribution.constant(SimTime(4, simtime.MINUTES))
     timeToRepairGenerator = SimDistribution.constant(SimTime(2, simtime.MINUTES))
     failureAgent = SimResourceFailureAgent(rsrc, timeToFailureGenerator, timeToRepairGenerator)
+            
+    SimAgent.final_initialize_all()
   
     for i in range(10):
         n = eventProcessor.process_events(SimTime(i, simtime.MINUTES))

@@ -402,10 +402,13 @@ class FailureAgentTests(unittest.TestCase):
         self.failureAgent2 = SimResourceFailureAgent(self.rsrc2,
                                                      timeToFailureGenerator2,
                                                      timeToRepairGenerator2)
+        
+        SimAgent.final_initialize_all()
                  
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
         SimStaticObject.elements = {}
+        SimAgent.agents.clear()
         
     def testResourceNotAcquiredFromDownResource1(self):
         "Test: acquire blocks if requested resource is down one minute before and still down"
@@ -488,6 +491,8 @@ class ExtendThroughDowntimeTests(unittest.TestCase):
                                                      timeToFailureGenerator2,
                                                      timeToRepairGenerator2)
         
+        SimAgent.final_initialize_all()
+        
         self.process1 = TestProcess1(self, wait_before_start=THREE_MINS,
                                      extend_through_downtime=True)
         self.process2 = TestProcess1(self, wait_before_start=TWO_MINS,
@@ -497,6 +502,7 @@ class ExtendThroughDowntimeTests(unittest.TestCase):
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
         SimStaticObject.elements = {}
+        SimAgent.agents.clear()
         
     def testProcessCompletesWithoutException(self):
         "Test: acquire blocks if requested resource is down"

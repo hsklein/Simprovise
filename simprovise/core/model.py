@@ -12,6 +12,7 @@ from simprovise.core import SimError, SimLogging, SimEntity, SimProcess
 from simprovise.core.location import SimStaticObject
 from simprovise.core.utility import SimUtility
 from simprovise.core.simelement import SimElement
+from simprovise.core.agent import SimAgent
 
 logger = SimLogging.get_logger(__name__)
 
@@ -128,6 +129,15 @@ class SimModel(object):
             yield e
         for e in SimStaticObject.elements.values():
             yield e
+            
+    @property
+    def agents(self):
+        """
+        A generator returning all :class:`~.agent.SimAgent` objects in the
+        model.
+        """
+        for agent in SimAgent.agents:
+            yield agent
                
     @property
     def static_objects(self):
