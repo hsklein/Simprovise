@@ -15,3 +15,4 @@ from .entitysource import *
 from .entitysink import *
 from .model import *
 from .resource import *
+from .downtime import *

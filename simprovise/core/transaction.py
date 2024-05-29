@@ -163,7 +163,7 @@ class SimInterruptEvent(BaseInterruptEvent):
     Interrupt a waiting transaction/process for reasons other than a resource
     acquire timeout, and raising a supplied exception.
     
-    This event has priority 2 so that it occurs before assign-resource events,
+    This event has priority 3 so that it occurs before assign-resource events,
     but after all other non-interrupt events (scheduled for the same simulated
     time).
     
@@ -172,7 +172,7 @@ class SimInterruptEvent(BaseInterruptEvent):
     future simulated time.
     """
     def __init__(self, transaction, exception):
-        super().__init__(transaction, exception, SimClock.now(), priority=2)
+        super().__init__(transaction, exception, SimClock.now(), priority=3)
 
 
 @apidoc
@@ -353,7 +353,7 @@ class SimTransaction(object):
     @apidocskip
     def wait_until_notified(self):
         """
-        Wait indefinitely, until woken up via a Resume event.
+        Wait indefinitely, until woken up via a Resume or Interrupt event.
         Generally not to be invoked directly by client modeling code.
         """
         logger.debug("waitUntilNotified on transaction %s on greenlet %s", self, self._greenlet)

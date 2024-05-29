@@ -29,15 +29,70 @@ class MockSource(SimEntitySource):
 
 class MockEntity(SimEntity):
     ""
+ 
+class DataMethodsTestProcess(SimProcess):
+    
+    def __init__(self, testcase):
+        super().__init__()
+        self.testcase = testcase
+        self.assignmentset = None
+        self.resources = None
+        entity = MockEntity(testcase.source, self)
         
+    def run(self):
+        assignment1 = self.acquire(self.testcase.rsrc1, 1)
+        assignment2 = self.acquire(self.testcase.rsrc2, 2)
+        self.assignmentset = set([assignment1, assignment2])
+        self.resources = assignment1.resources + assignment2.resources
+        self.wait_for(SimTime(5, simtime.MINUTES))
+        self.release(assignment1)
+        self.release(assignment2)
+        
+class SimProcessDataMethodsTests(unittest.TestCase):
+    """
+    Test case for SimProcess resource_assignments() and resources() methods
+    """
+    def setUp(self):
+        SimClock.initialize()
+        simevent.initialize()
+        self.eventProcessor = simevent.EventProcessor()
+        self.source = MockSource()
+        self.rsrc1 = SimSimpleResource("TestResource1")
+        self.rsrc2 = SimSimpleResource("TestResource2", capacity=2)
+        self.process = DataMethodsTestProcess(self)
+        self.process.start()
+        # execute process, but not long enough for completion/resource release
+        self.eventProcessor.process_events(SimTime(1, simtime.MINUTES))
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimStaticObject.elements = {}
+        
+    def testResourceAssignments1(self):
+        "test: results of SimProcess.resource_assignments"
+        self.assertEqual(self.process.assignmentset, set(self.process.resource_assignments()))
+        
+    def testResources1(self):
+        "test: resources in assignments are (rsrc1, rsrc2, rsrc2)"
+        resourceset = set(self.process.resources)
+        expected_resourceset = set((self.rsrc1, self.rsrc2, self.rsrc2))
+        self.assertEqual(resourceset, expected_resourceset)
+        
+    def testResources2(self):
+        "test: resources returned by SimProcess.assigned_resources() are (rsrc1, rsrc2, rsrc2)"
+        resources = self.process.assigned_resources()
+        expected_resources = [self.rsrc1, self.rsrc2, self.rsrc2]
+        self.assertEqual(resources, expected_resources)
+        
+    
 
 class TestProcess(SimProcess):
     rsrc = None
     source = None
     
     @staticmethod
-    def initialize():
-        TestProcess.source = MockSource()
+    def initialize(testcase):
+        TestProcess.source = testcase.source
     
     def __init__(self, timeout=None):
         super().__init__()
@@ -88,7 +143,8 @@ class BasicTimeoutTests(unittest.TestCase):
         #SimStaticObject.elements = {}
         simevent.initialize()
         SimClock.initialize()
-        TestProcess.initialize()
+        self.source = MockSource()
+        TestProcess.initialize(self)
         TestProcess.rsrc = SimSimpleResource("test", capacity=2)
         self.eventProcessor = simevent.EventProcessor()        
 
@@ -170,9 +226,11 @@ class TimeoutTests1(unittest.TestCase):
     - starting a second transaction, same run() with a acquire timeout of 1 min
     """
     def setUp( self ):
+        SimStaticObject.elements = {}
         simevent.initialize()
         SimClock.initialize()
-        TestProcess.initialize()
+        self.source = MockSource()
+        TestProcess.initialize(self)
         TestProcess.rsrc = SimSimpleResource("test")
         self.eventProcessor = simevent.EventProcessor()        
         self.process1 = TestProcess()
@@ -234,7 +292,8 @@ class TimeoutTests2(unittest.TestCase):
     def setUp( self ):
         simevent.initialize()
         SimClock.initialize()
-        TestProcess.initialize()
+        self.source = MockSource()
+        TestProcess.initialize(self)
         TestProcess.rsrc = SimSimpleResource("test")
         self.eventProcessor = simevent.EventProcessor()        
         self.process1 = TestProcess()
@@ -308,7 +367,8 @@ class ZeroTimeoutTests(unittest.TestCase):
     def setUp( self ):
         simevent.initialize()
         SimClock.initialize()
-        TestProcess.initialize()
+        self.source = MockSource()
+        TestProcess.initialize(self)
         TestProcess.rsrc = SimSimpleResource("test")
         self.eventProcessor = simevent.EventProcessor()        
         self.process1 = TestProcess(timeout=0)
@@ -357,6 +417,7 @@ class ZeroTimeoutTests(unittest.TestCase):
 def makeTestSuite():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
+    suite.addTest(loader.loadTestsFromTestCase(SimProcessDataMethodsTests))
     suite.addTest(loader.loadTestsFromTestCase(BasicTimeoutTests))
     suite.addTest(loader.loadTestsFromTestCase(TimeoutTests1))
     suite.addTest(loader.loadTestsFromTestCase(TimeoutTests2))

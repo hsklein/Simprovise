@@ -7,10 +7,12 @@
 #===============================================================================
 __all__ = ['SimProcess']
 
+import itertools
 from simprovise.core.transaction import SimTransaction, BaseInterruptEvent
 from simprovise.core.simevent import SimEvent
 from simprovise.core.simelement import SimClassElement 
 from simprovise.core.agent import SimMsgType
+from simprovise.core.resource import SimResourceDownException, SimResourceUpException
 from simprovise.core.apidoc import apidoc, apidocskip
 
 from simprovise.core import (SimEntity, SimCounter, SimTime, SimClock,
@@ -34,7 +36,7 @@ class SimTimeOutEvent(BaseInterruptEvent):
     __slots__ = ('assignmentAgent', 'requestMsg')
     def __init__(self, process, agent, msg, timeout=0):
         super().__init__(process, SimTimeOutException(),
-                         SimClock.now() + timeout, priority=3)
+                         SimClock.now() + timeout, priority=4)
         self.assignmentAgent = agent
         self.requestMsg = msg
         
@@ -68,7 +70,7 @@ class SimTimeOutEvent(BaseInterruptEvent):
         handled = self.assignmentAgent._process_queued_requests(self.requestMsg)
         if not handled:
             super().process_impl()
-            self.assignmentAgent.request_timed_out(self.requestMsg)
+            #self.assignmentAgent.request_timed_out(self.requestMsg)
 
         
 @apidoc
@@ -249,10 +251,14 @@ class SimProcess(SimTransaction):
         is raised. If the timeout is zero, the request times out if the
         requested resource(s) are not immediately available and assigned.
         
-        Note that default behavior typically guarantees that all of
-        the requested resources will be acquired; client code can
-        customize this behavior, possibly providing some but not all
-        of the requested resource if the number requested is > 1.
+        Note that default behavior typically guarantees (absent a timeout or
+        other exception) that all of the requested resources will be acquired;
+        client code can customize this behavior, possibly providing some but
+        not all of the requested resource if the number requested is > 1.
+        
+        Note on exception handling: If an exception is raised while waiting
+        for the resource(s) to be acquired, the resource request is cancelled;
+        the exception is then allowed to propagate to the caller.
 
         :param agent:        The assignment agent managing the desired
                              resource(s)
@@ -310,6 +316,7 @@ class SimProcess(SimTransaction):
          
 
         msgType = SimMsgType.RSRC_REQUEST
+        response = None
         msg, responses = self.agent.send_message(assignmentAgent,
                                                 msgType, msgData)
         if responses:
@@ -326,13 +333,20 @@ class SimProcess(SimTransaction):
             if timeout is not None:
                 timeoutEvent = SimTimeOutEvent(self, assignmentAgent, msg, timeout)
                 timeoutEvent.register()
-            response = self.wait_for_response(msg)
+            try:                
+                response = self.wait_for_response(msg)
+            finally:
+                # If an exception is raised while waiting for are response, cancel
+                # the request before allowing the exception to propagate up the stack
+                if response is None:
+                    assignmentAgent.cancel_request(msg)
+                    
             assert response, "No response from waitForRespoonse"
             assert response.msgType == SimMsgType.RSRC_ASSIGNMENT, "Response to Resource request was not a resource assignment"
 
         # Extract the assignment from the response message and register it
         assignment = response.msgData
-        assert assignment.transaction is self, "Resource assignment does not specify this transaction"
+        assert assignment.process is self, "Resource assignment does not specify this transaction"
         self.__resource_assignments.append(assignment)
 
         # Finally, return the assignment
@@ -371,7 +385,7 @@ class SimProcess(SimTransaction):
         assert self.is_executing, "Resources can only be released by executing transactions"
         assert rsrcAssignment, "Null assignment passed to release()"
         assert rsrcAssignment.assignment_agent, "Resource assignment has no agent"
-        assert rsrcAssignment.transaction == self, "Resource assignment transaction is not this transaction"
+        assert rsrcAssignment.process == self, "Resource assignment transaction is not this transaction"
 
         assignmentAgent = rsrcAssignment.assignment_agent
         msgType = SimMsgType.RSRC_RELEASE
@@ -379,15 +393,93 @@ class SimProcess(SimTransaction):
         self.agent.send_message(assignmentAgent, msgType, msgData)
         if rsrcAssignment.count == 0:
             self.__resource_assignments.remove(rsrcAssignment)
+            
+    def wait_for(self, amount, *, extend_through_downtime=False):
+        """
+        Wait (pause transaction execution) for a fixed amount of simulated time.
+        
+        :param amount: Length of wait. Can be specified as a
+                       :class:`~.simtime.SimTime` or a scalar numeric (int or
+                       float). Must be non-negative. If a scalar value, the wait
+                       length will be the amount in the :class:`~.simclock.SimClock`
+                       default time unit (as defined by :func:`simtime.base_unit`.
+                       Scalar values are not recommended unless the base unit
+                       is dimensionless (None)
+        :type amount:  :class:`~.simtime.SimTime`, `int` or `float`
+        
+        :param extend_through_downtime: If True, extend the wait for any downtime
+                                        that occurs for resources this process has
+                                        acquired (while eating the exception(s)
+                                        that are raised when a resource goes down).
+                                        If False (the default) just wait the
+                                        specified time amount, and require the
+                                        caller to handle any
+                                        :class:`~.resource.SimResourceDownException`s
+                                        that are raised.
+        :type extend_through_downtime:  `bool`
+
+        """
+        if not extend_through_downtime:
+            super().wait_for(amount)
+        else:
+            # in case there were down resources at the time this was called
+            self.wait_for_all_resources_up()
+            
+            waitLeft = amount
+            while waitLeft > 0:                
+                waitStart = SimClock.now()
+                try:
+                    super().wait_for(waitLeft)
+                except SimResourceDownException as e:
+                    waitLeft -= (SimClock.now() - waitStart)
+                    self.wait_for_all_resources_up()
+                else:
+                    waitLeft = 0
+                    
+    def wait_for_all_resources_up(self):
+        """
+        Wait until ALL resources assigned to this process are up, returning
+        immediately if they are all up at the time of this method is invoked.
+        
+        Handles the case where at least one resource is down at the time
+        this method is called, and one or more additional assigned resources
+        go down while waiting - the wait continues until all of those
+        resources come back up.
+        
+        Designed to be called by :meth:`wait_for`wait_for with
+        `extend_through_downtime` set to True; this might have use for other
+        process implementations that handle resource down/up exceptions
+        themselves.
+        """
+        # Create a set of all resources assigned to this process that are
+        # currently down
+        downResources = set([r for r in self.assigned_resources() if r.down])
+        
+        while len(downResources) > 0:      
+            try:
+                self.wait_until_notified()
+            except SimResourceDownException as rsrcDownExcpt:
+                downResources.add(rsrcDownExcpt.resource)
+            except SimResourceUpException as rsrcUpExcpt:
+                assert rsrcUpExcpt.resource in downResources, "handling unexpected resource up"
+                downResources.remove(rsrcUpExcpt.resource)                                    
 
     def resource_assignments(self):
         """
         Returns a list of current resource assignments
-        (:class:`~.resource.SimResourceAssignment`) for the transaction;
+        (:class:`~.resource.SimResourceAssignment`) for the process;
         any assignment with a resource count of zero is ignored
         (i.e., is not included in the returned list).
         """
         return [assg for assg in self.__resource_assignments if assg.count > 0]
+    
+    def assigned_resources(self):
+        """
+        Returns a list of currently assigned resources (:class:`~.resource.SimResource`)
+        for this process.
+        """
+        assignedRsrcTuples = [assg.resources for assg in self.resource_assignments()]
+        return list(itertools.chain.from_iterable(assignedRsrcTuples))
         
     def __str__(self):
         return self.__class__.__name__

@@ -314,14 +314,14 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         
     def testInUse1a(self):
         "Test:  Resource 1 has initial inUse property value of zero"
-        self.assertEqual(self.rsrc1.inUse, 0)
+        self.assertEqual(self.rsrc1.in_use, 0)
         
     def testInUse1b(self):
         "Test:  Resource 1 has inUse property value of one after a single acquire() call"
         self.process = TestProcessSRP(self.rsrc1, 1)
         self.process.start()
         self.eventProcessor.process_events(0)
-        self.assertEqual(self.rsrc1.inUse, 1)
+        self.assertEqual(self.rsrc1.in_use, 1)
         
     def testAvailable1a(self):
         "Test:  Resource 1 has initial available property value of one"
@@ -344,7 +344,7 @@ class SimpleResourcePropertyTests(RATestCaseBase):
            
     def testInUse2a(self):
         "Test:  Resource 1 has initial inUse property value of zero"
-        self.assertEqual(self.rsrc2.inUse, 0)
+        self.assertEqual(self.rsrc2.in_use, 0)
         
     def testInUse2b(self):
         "Test:  Resource 2 has inUse property value of two after a two acquire() calls"
@@ -353,14 +353,14 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         self.process2 = TestProcessSRP(self.rsrc2, 1)
         self.process2.start()
         self.eventProcessor.process_events(0)
-        self.assertEqual(self.rsrc2.inUse, 2)
+        self.assertEqual(self.rsrc2.in_use, 2)
         
     def testInUse2c(self):
         "Test:  Resource 2 has inUse property value of two after an acquire(2) call"
         self.process = TestProcessSRP(self.rsrc2, 2)
         self.process.start()
         self.eventProcessor.process_events(0)
-        self.assertEqual(self.rsrc2.inUse, 2)
+        self.assertEqual(self.rsrc2.in_use, 2)
 
     def testAvailable2a(self):
         "Test:  Resource 2 has initial available property value of two"
@@ -423,7 +423,7 @@ class SimpleResourceBasicAcquireTests(RATestCaseBase):
     def testAssignment1(self):
         "Test: acquire() returns a resource assignment with correct process"
         ra = self.process1.assignment
-        self.assertEqual(ra.transaction, self.process1)
+        self.assertEqual(ra.process, self.process1)
         
     def testAssignment1a(self):
         "Test: acquire(1) returns a resource assignment with correct count"
@@ -498,7 +498,7 @@ class SimpleResourceBasicReleaseTests(RATestCaseBase):
         self.process1 = TestProcessBasicRelease(self.rsrc1, 1, 1)
         self.process1.start()
         self.eventProcessor.process_events(ONE_MIN)
-        self.assertEqual(self.rsrc1.inUse, 0)
+        self.assertEqual(self.rsrc1.in_use, 0)
         
     def testReleaseAll2(self):
         "Test: acquire() followed by release results in resource available property value equal to capacity"
@@ -526,28 +526,28 @@ class SimpleResourceBasicReleaseTests(RATestCaseBase):
         self.process1 = TestProcessBasicRelease(self.rsrc2, 2, self.rsrc2)
         self.process1.start()
         self.eventProcessor.process_events(ONE_MIN)
-        self.assertEqual(self.rsrc2.inUse, 1)
+        self.assertEqual(self.rsrc2.in_use, 1)
         
     def testAcquire2Release2A(self):
         "Test: acquire(2) followed by tw0 release(1) calls results in resource with inUse of 0"
         self.process1 = TestProcessBasicRelease2(self.rsrc2, 2, 2)
         self.process1.start()
         self.eventProcessor.process_events(ONE_MIN)
-        self.assertEqual(self.rsrc2.inUse, 0)
+        self.assertEqual(self.rsrc2.in_use, 0)
         
     def testAcquire2Release2B(self):
         "Test: acquire(2) followed by release(2) calls results in resource with inUse of 0"
         self.process1 = TestProcessBasicRelease(self.rsrc2, 2, 2)
         self.process1.start()
         self.eventProcessor.process_events(ONE_MIN)
-        self.assertEqual(self.rsrc2.inUse, 0)
+        self.assertEqual(self.rsrc2.in_use, 0)
         
     def testAcquire2Release2C(self):
         "Test: acquire(2) followed by release(rsrc, rsrc) calls results in resource with inUse of 0"
         self.process1 = TestProcessBasicRelease(self.rsrc2, 2, (self.rsrc2, self.rsrc2))
         self.process1.start()
         self.eventProcessor.process_events(ONE_MIN)
-        self.assertEqual(self.rsrc2.inUse, 0)
+        self.assertEqual(self.rsrc2.in_use, 0)
         
     def testAcquire2Release2Assignment(self):
         "Test: acquire(2) followed by tw release(1) (resource instance) calls results in resource with count of 0"
