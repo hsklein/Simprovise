@@ -222,19 +222,7 @@ class TestProcess1(SimProcess):
         
     def run(self):
         try:
-            if self.wait_before_start:
-                # approximates scheduling the process for a later time
-                self.wait_for(self.wait_before_start)
-                
-            self.runstart_tm = SimClock.now()
-            self.assignment = self.acquire(self.testcase.rsrc1)
-            self.acquire_tm = SimClock.now()
-            if self.acquire_rsrc2:
-                # for testing situations where the process acquires
-                # multiple resources
-                self.assignment2 = self.acquire(self.testcase.rsrc2)
-            self.wait_for(self.wait_time,
-                          extend_through_downtime=self.extend_through_downtime)
+            self.run_impl()
         except SimResourceDownException as e:
             self.exception = e
         finally:
@@ -244,7 +232,35 @@ class TestProcess1(SimProcess):
                 self.release(self.assignment)
             if self.assignment2:               
                 self.release(self.assignment2)
+                
+    def run_impl(self):
+        if self.wait_before_start:
+            # approximates scheduling the process for a later time
+            self.wait_for(self.wait_before_start)
+            
+        self.runstart_tm = SimClock.now()
+        self.assignment = self.acquire(self.testcase.rsrc1)
+        self.acquire_tm = SimClock.now()
+        if self.acquire_rsrc2:
+            # for testing situations where the process acquires
+            # multiple resources
+            self.assignment2 = self.acquire(self.testcase.rsrc2)
+        self.wait_for(self.wait_time,
+                      extend_through_downtime=self.extend_through_downtime)        
 
+class TestProcess1a(TestProcess1):
+    "Test Process for acquiring the same resource twice"
+    def run_impl(self):
+        if self.wait_before_start:
+            self.wait_for(self.wait_before_start)
+            
+        self.runstart_tm = SimClock.now()
+        self.assignment = self.acquire(self.testcase.rsrc3)
+        self.acquire_tm = SimClock.now()
+        self.assignment2 = self.acquire(self.testcase.rsrc3)
+        self.wait_for(self.wait_time,
+                      extend_through_downtime=self.extend_through_downtime)        
+    
      
 class BasicDowntimeAcquireTests1(unittest.TestCase):
     """
@@ -259,7 +275,7 @@ class BasicDowntimeAcquireTests1(unittest.TestCase):
         self.agent2 = TestDowntimeAgent()
         self.rsrc1 = SimSimpleResource("TestResource1")
         self.rsrc2 = SimSimpleResource("TestResource2")
-        #self.rsrc3 = SimSimpleResource("TestResource3")
+        self.rsrc3 = SimSimpleResource("TestResource3", capacity=2)
         self.process1 = TestProcess1(self)
         self.process2 = TestProcess1(self, acquire_rsrc2=True)
         SimClock.advance_to(ONE_MIN)
@@ -377,6 +393,17 @@ class BasicDowntimeAcquireTests1(unittest.TestCase):
         # the resource assignment agent's message queue
         rsrc2_msgs = self.rsrc2.assignment_agent.queued_messages(SimMsgType.RSRC_REQUEST)
         self.assertEqual(len(rsrc2_msgs), 0)
+      
+    def testRaisesTwoAssignmentsForSameProcess(self):
+        "Test: Exception raised, handled cleanly when one process acquires same resource twice, then resource goes down"
+        self.process1 = TestProcess1a(self)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
+        self.agent1.request_resource_takedown(self.rsrc3)
+        self.eventProcessor.process_events()
+        self.assertIs(self.process1.exception.resource, self.rsrc3)
+        #elf.assertIsNotNone(self.process1.exception)
+
         
      
 class FailureAgentTests(unittest.TestCase):
