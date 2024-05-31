@@ -619,17 +619,13 @@ class ResourceAssignmentAgentMixin(object):
             # still holding the resource via an interrupt, and schedule
             # resource assignment processing in case any new requests
             # result from that interrupt.
-            for assignment in resource.current_assignments():
-                # TODO - this is probably not a situation to interrupt
-                # instead, SimProcess should have a wait_for_resource_up()
-                # method, where upon resume events are generated when the
-                # resource comes back.
-                # Or better, allow both - e.g., imagining a situation where
-                # a process acquires two resources, one  goes down, and
-                # it continues  to process in some fashion with just one of
-                # them.
+            
+            # Again handle the case of the same process in multiple assignments
+            # by creating a process set first.
+            processSet = set(assg.process for assg in resource.current_assignments())
+            for process in processSet:
                 e = SimResourceUpException(resource, timedown)
-                assignment.process.interrupt(e)
+                process.interrupt(e)
                 
             self._schedule_assignment_request_processing()
         
