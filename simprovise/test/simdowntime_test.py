@@ -402,7 +402,6 @@ class BasicDowntimeAcquireTests1(unittest.TestCase):
         self.agent1.request_resource_takedown(self.rsrc3)
         self.eventProcessor.process_events()
         self.assertIs(self.process1.exception.resource, self.rsrc3)
-        #elf.assertIsNotNone(self.process1.exception)
 
         
      
