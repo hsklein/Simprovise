@@ -566,13 +566,13 @@ class ResourceAssignmentAgentMixin(object):
             # The resource is newly down. Interrupt any processes using the
             # resource, and then schedule assignment processing in case new
             # resource requests are made as a result.
-            # TODO handle the following situation:
-            #    1. process acquires resource A
-            #    2. process is waiting to acquire resource B
-            #    3. resource A goes down before resource B is acquired
-            for assignment in resource.current_assignments():
+            
+            # Multiple assignments for this resource might refer to the same process
+            # We only want to interrupt each process once, so create a set first
+            processSet = set(assg.process for assg in resource.current_assignments())
+            for process in processSet:
                 e = SimResourceDownException(resource)
-                assignment.process.interrupt(e)
+                process.interrupt(e)
                 
             self._schedule_assignment_request_processing()
         
