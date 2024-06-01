@@ -8,7 +8,9 @@
 #===============================================================================
 __all__ = ['SimDowntimeAgent', 'SimResourceFailureAgent']
 
-from simprovise.core import (SimError, SimClock, SimLogging)
+from typing import NamedTuple
+
+from simprovise.core import (SimError, SimClock, SimLogging, SimTime)
 from simprovise.core.agent import SimAgent, SimMsgType
 from simprovise.core.simevent import SimEvent
 from simprovise.core.apidoc import apidoc, apidocskip
@@ -220,6 +222,8 @@ class SimResourceFailureAgent(SimDowntimeAgent):
                
     def final_initialize(self):
         """
+        Perform initialization that must occur after the simulation clock,
+        event processor, and random number streams are initialized.
         """
         initialTakedownTime = SimClock.now() + next(self._timeToFailureGenerator)
         initialEvent = TakeDownResourceEvent(self, self._resource, 
@@ -253,15 +257,156 @@ class SimResourceFailureAgent(SimDowntimeAgent):
         tdEvent.register()
         
 
+@apidoc
 class DowntimeSchedule(object):
     """
+    Class representing a fixed downtime schedule, accessed via a generator
+    producing a SimTime pair for the start and end of the the next down time
+    in the schedule.
+    
+    The schedule is defined in terms of a total schedule cycle length and a
+    list of (start time, time length) pairs, where each pair defines one
+    down time period in the cycle. The cycle repeats once all down times for
+    the current cycle have been generated.
+        
+    For example, a nine hour workday with two 15 minute breaks and a
+    30 minute lunch could be defined (with appropriate constants) as::
+    
+        breaks = [(TWO_HRS, FIFTEEN_MINS), (FOUR_HRS, THIRTY_MINS),
+                  (SEVEN_HRS, FIFTEEN_MINS)])
+        workSchedule = DowntimeSchedule(NINE_HRS, breaks)
+    
+    For this schedule, the first six generated down time start/end pairs
+    would be:   
+        2:00,  2:15
+        4:00,  4:30
+        7:00,  7:15
+        11:00, 11:15
+        13:00, 13:30
+        16:00, 16:15
+
+        :param scheduleLength: The length of each schedule cycle
+        :type scheduleLength:  :class:`~.simtime.SimTime` 
+
+        :param downIntervals:  An iterable collection of
+                               (start time, period length) pairs
+        :type downIntervals:   Iterable of pairs of :class:`~.simtime.SimTime`
+                               None
+        
     """
-    def __init__(self, scheduleLength):
+    class Interval(NamedTuple):
+        start: SimTime
+        length: SimTime
+        
+    def __init__(self, scheduleLength, downIntervals):
         self._scheduleLength = scheduleLength
-        self._downTimeStarts = []
-        self._downtimeLengths = []
+        downIntervals.sort()
+        self._intervals = [DowntimeSchedule.Interval(SimTime(d[0]), SimTime(d[1]))
+                           for d in downIntervals]
+        self._validate(self._intervals)
+
+    def down_intervals(self):
+        """
+        Generator yielding the start and end of the next down time
+        according to this schedule
+        """
+        scheduleBeginTime = SimClock.now()
+        while True:
+            for interval in self._intervals:
+                startTime = scheduleBeginTime + interval.start
+                endTime = startTime + interval.length
+                yield startTime, endTime
+            
+            scheduleBeginTime += self._scheduleLength
+            
+    def _validate(self, intervals):
+        """
+        Validate the passed Interval list, raising if error is found.
+        Errors include:
+        - negative interval start time or interval length
+        - overlapping intervals
+        - interval starting or ending after the the schedule length
+        """
+        prevEnd = 0
+        for interval in intervals:
+            if interval.start < 0:
+                msg = "Start of interval {0} must be a SimTime >= 0"
+                raise SimError(_DOWNTIME_ERROR, interval)
+            if interval.start >= self._scheduleLength:
+                msg = "Start of interval {0} must be a SimTime less than the schedule length: {1}"
+                raise SimError(_DOWNTIME_ERROR, interval, self._scheduleLength)
+            if interval.length <= 0:
+                msg = "Length of interval {0} must be a SimTime > 0"
+                raise SimError(_DOWNTIME_ERROR, interval)
+            if interval.start <= prevEnd:
+                msg = "Start of interval {0} must be a SimTime > the end of the previous interval"
+                raise SimError(_DOWNTIME_ERROR, interval)
+                
+            end = interval.start + interval.length            
+            if end > self._scheduleLength:
+                msg = "End of interval {0} must be a SimTime >= the schedule length: {1}"
+                raise SimError(_DOWNTIME_ERROR, interval, self._scheduleLength)
+            prevEnd = end
     
+
+@apidoc
+class SimScheduledDowntimeAgent(SimDowntimeAgent):
+    """
+    A SimDowntimeAgent that generates downtimes for a single resource based on
+    a :class:`DowntimeSchedule`.
+
+        :param resource:         Resource to be brought up and down on sched.
+        :type resource:          :class:`~.resource.SimResource`
+        
+        :param downtimeSchedule: The regularly scheduled fixed down intervals
+                                 for the resource.
+        :type downtimeSchedule:  :class:`DowntimeSchedule`
+          
+    """
+    __slots__ = ('_resource', '_downtimeSchedule')
     
+    def __init__(self, resource, downtimeSchedule):
+        super().__init__()
+        self._resource = resource
+        self._downtimeSchedule = downtimeSchedule
+        self._downtimeIntervalGenerator = None
+               
+    def final_initialize(self):
+        """
+        Perform initialization that must occur after the simulation clock
+        and event processor are initialized.
+        """
+        assert SimClock.now() == 0, "final initialization called after SimClock advance or before initialization"
+        self._downtimeIntervalGenerator = self._downtimeSchedule.down_intervals()
+        self._create_next_takedown_and_bringup_events()
+        
+    def _create_next_takedown_and_bringup_events(self):
+        """
+        Obtains scheduled down start and end times from generator, creates
+        corresponding TakeDownResourceEvent and BringUpResourceEvent events,
+        and registers them.
+        """
+        downStartTime, downEndTime = next(self._downtimeIntervalGenerator)
+        
+        takedownEvent = TakeDownResourceEvent(self, self._resource, downStartTime)
+        bringupEvent =  BringUpResourceEvent(self, self._resource, downEndTime)
+        takedownEvent.register()
+        bringupEvent.register()
+        
+    def _resource_down_impl(self, resource, takedown_successful):
+        """
+        Called by the downtime agent's RSRC_DOWN message handler - a no-op       
+        """
+        pass
+    
+    def _resource_up_impl(self, resource):
+        """
+        Called by the downtime agent's RSRC_UP message handler. Just
+        schedules the next takedown and bringup events.
+        """
+        self._create_next_takedown_and_bringup_events()
+
+                
 class TakeDownResourceEvent(SimEvent):
     """
     An event that initiates a single resource takedown via a passed
@@ -302,19 +447,45 @@ class BringUpResourceEvent(SimEvent):
 if __name__ == '__main__':
     from simprovise.core import SimSimpleResource, SimDistribution
     from simprovise.core import simtime, simevent, SimTime, SimClock
-
-    SimClock.initialize()
-    simevent.initialize()
-    eventProcessor = simevent.EventProcessor()
+    
+    TWO_HRS = simtime.SimTime(2, simtime.HOURS)
+    FOUR_HRS = simtime.SimTime(4, simtime.HOURS)
+    SEVEN_HRS = simtime.SimTime(7, simtime.HOURS)
+    NINE_HRS = simtime.SimTime(9, simtime.HOURS)
+    BREAK_LEN = SimTime(15, simtime.MINUTES)
+    LUNCH_LEN = SimTime(30, simtime.MINUTES)
+    
     
     rsrc = SimSimpleResource("testResource")
     timeToFailureGenerator = SimDistribution.constant(SimTime(4, simtime.MINUTES))
     timeToRepairGenerator = SimDistribution.constant(SimTime(2, simtime.MINUTES))
     failureAgent = SimResourceFailureAgent(rsrc, timeToFailureGenerator, timeToRepairGenerator)
+
+    breaks = [(TWO_HRS, BREAK_LEN), (FOUR_HRS, LUNCH_LEN), (SEVEN_HRS, BREAK_LEN)]
+    sched = DowntimeSchedule(NINE_HRS, breaks)
+    rsrc2 = SimSimpleResource("testResource2")
+    scheduleAgent = SimScheduledDowntimeAgent(rsrc2, sched)
+    
+    SimClock.initialize()
+    simevent.initialize()
+    eventProcessor = simevent.EventProcessor()
             
     SimAgent.final_initialize_all()
   
-    for i in range(10):
+    for i in range(15):
         n = eventProcessor.process_events(SimTime(i, simtime.MINUTES))
         print(i, n, "events processed; resource up:", rsrc.up)
+        
+    for i in range(30, 1200, 15):      
+        n = eventProcessor.process_events(SimTime(i, simtime.MINUTES))
+        tm = SimClock.now().to_hours()
+        print(tm, "resource2 up", rsrc2.up)
+        
+
+    #SimClock.initialize()
+  
+    #intervals = sched.down_intervals() 
+    #for i in range(10):
+        #start, end = next(intervals)
+        #print(start.to_hours(), end.to_hours())
     

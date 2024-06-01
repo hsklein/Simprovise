@@ -34,13 +34,13 @@ class SimResourceAssignment(object):
     Encapsulates a set of zero or more resources assigned to a process
     via :meth:`.SimTransaction.acquire`.
     
-        :param transaction:     :class:`SimProcess` to which resource(s)
-                                are being assigned
-        :type transaction:      :class:`SimProcess` object
+        :param transaction:     :class:`~.process.SimProcess` to which 
+                                resource(s) are being assigned
+        :type transaction:      :class:`~.process.SimProcess` 
     
         :param assignmentagent: Agent (which might be the resource itself) 
                                 which made this assignment
-        :type assignmentagent:  :class:`SimAgent` object
+        :type assignmentagent:  :class:`~.agent.SimAgent`
     
         :param resources:      The resource(s) (at least one) in the assignment.
         :type resources:       Sequence of class :class:`SimResource` objects
