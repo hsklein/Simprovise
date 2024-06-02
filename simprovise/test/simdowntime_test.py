@@ -748,6 +748,7 @@ def makeTestSuite():
     suite.addTest(loader.loadTestsFromTestCase(FailureAgentTests))
     suite.addTest(loader.loadTestsFromTestCase(ExtendThroughDowntimeTests))
     suite.addTest(loader.loadTestsFromTestCase(DowntimeScheduleTests))
+    suite.addTest(loader.loadTestsFromTestCase(ScheduledDowntimeAgentTests))
     return suite
 
 if __name__ == '__main__':
