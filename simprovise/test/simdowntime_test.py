@@ -6,7 +6,9 @@
 # Unit tests for resource downtime
 #===============================================================================
 import unittest
+import itertools
 from simprovise.core import *
+from simprovise.core import simtime
 from simprovise.core.downtime import SimDowntimeAgent
 from simprovise.core.resource import SimResourceDownException
 from simprovise.core.agent import SimAgent, SimMsgType
@@ -32,6 +34,15 @@ SEVEN_MINS = simtime.SimTime(7, simtime.MINUTES)
 EIGHT_MINS = simtime.SimTime(8, simtime.MINUTES)
 NINE_MINS = simtime.SimTime(9, simtime.MINUTES)
 TEN_MINS = simtime.SimTime(10, simtime.MINUTES)
+FIFTEEN_MINS = simtime.SimTime(15, simtime.MINUTES)
+THIRTY_MINS = simtime.SimTime(30, simtime.MINUTES)
+ONE_HR = simtime.SimTime(1, simtime.HOURS)
+TWO_HRS = simtime.SimTime(2, simtime.HOURS)
+THREE_HRS = simtime.SimTime(3, simtime.HOURS)
+FOUR_HRS = simtime.SimTime(4, simtime.HOURS)
+SIX_HRS = simtime.SimTime(6, simtime.HOURS)
+EIGHT_HRS = simtime.SimTime(8, simtime.HOURS)
+TEN_HRS = simtime.SimTime(10, simtime.HOURS)
 
 class TestDowntimeAgent(SimDowntimeAgent):
     def __init__(self, *args, **kwargs):
@@ -404,7 +415,6 @@ class BasicDowntimeAcquireTests1(unittest.TestCase):
         self.assertIs(self.process1.exception.resource, self.rsrc3)
 
         
-     
 class FailureAgentTests(unittest.TestCase):
     """
     TestCase for testing basic SimResourceFailureAgent functionality
@@ -555,7 +565,110 @@ class ExtendThroughDowntimeTests(unittest.TestCase):
         self.eventProcessor.process_events(SimTime(25, simtime.MINUTES))
         self.assertEqual(self.process1.run_tm, SimTime(19, simtime.MINUTES))
         
+class DowntimeScheduleTests(unittest.TestCase):
+    """
+    TestCase for testing DowntimeSchedule functionality
+    """
+    def setUp(self):
+        SimClock.initialize()
+        self.baseScheduleLength = EIGHT_HRS
+        self.valid_breaks = [(TWO_HRS, FIFTEEN_MINS), (FOUR_HRS, THIRTY_MINS),
+                             (SIX_HRS, FIFTEEN_MINS)]
+        self.valid_breaks_reordered = [(FOUR_HRS, THIRTY_MINS),
+                             (SIX_HRS, FIFTEEN_MINS), (TWO_HRS, FIFTEEN_MINS)]
+        self.expectedIntervals = [(TWO_HRS, SimTime(2.25, simtime.HOURS)),
+                                  (FOUR_HRS, SimTime(4.5, simtime.HOURS)),
+                                  (SIX_HRS, SimTime(6.25, simtime.HOURS)),
+                                  (TEN_HRS, SimTime(10.25, simtime.HOURS))]
+                 
+    def testNonSimTimeScheduleLengthRaises(self):
+        "Test: initializing DowntimeSchedule with non-time schedule length raises SimError"
+        self.assertRaises(SimError, lambda: DowntimeSchedule('x', self.valid_breaks))
         
+    def testnegativeSimTimeScheduleLengthRaises(self):
+        "Test: initializing DowntimeSchedule with zero schedule length raises SimError"
+        self.assertRaises(SimError, lambda: DowntimeSchedule(0, self.valid_breaks))
+        
+    def testZeroSimTimeScheduleLengthRaises(self):
+        "Test: initializing DowntimeSchedule with negative schedule length raises SimError"
+        self.assertRaises(SimError, lambda: DowntimeSchedule(SimTime(-10), self.valid_breaks))
+        
+    def testScheduleLengthTooShortRaises(self):
+        "Test: initializing DowntimeSchedule with interval past schedule length raises SimError"
+        self.assertRaises(SimError, lambda: DowntimeSchedule(SimTime(368, simtime.MINUTES),
+                                                             self.valid_breaks))
+        
+    def testScheduleLengthToLastInterval(self):
+        "Test: initializing DowntimeSchedule with last interval to schedule length works"
+        sched = DowntimeSchedule(SimTime(375, simtime.MINUTES), self.valid_breaks)
+        intervals = sched.down_intervals()
+        self.assertEqual(next(intervals), (TWO_HRS, SimTime(135, simtime.MINUTES)))
+        
+    def testExpectedIntervals(self):
+        "Test: first four expected intervals on eight hour schedule"
+        sched = DowntimeSchedule(EIGHT_HRS, self.valid_breaks)
+        intervals = sched.down_intervals()
+        # Do subtests 
+        for expected in self.expectedIntervals:
+            with self.subTest(expected):
+                interval = next(intervals)
+                self.assertEqual(interval, expected)
+        
+    def testExpectedIntervalsUnsorted(self):
+        "Test: first four expected intervals on eight hour schedule, works with out-of-order input"
+        sched = DowntimeSchedule(EIGHT_HRS, self.valid_breaks_reordered)
+        intervals = sched.down_intervals()
+        for expected in self.expectedIntervals:
+            with self.subTest(expected):
+                interval = next(intervals)
+                self.assertEqual(interval, expected)
+         
+    def testNonTimeIntervalRaises1(self):
+        "Test: DowntimeSchedule with non-SimTime interval length raises SimError"
+        breaks = [(TWO_HRS, 'x'), (FOUR_HRS, THIRTY_MINS), (SIX_HRS, FIFTEEN_MINS)]
+        self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
+         
+    def testNonTimeIntervalRaises2(self):
+        "Test: DowntimeSchedule with non-SimTime interval start raises SimError"
+        breaks = [(TWO_HRS, FIFTEEN_MINS), ('x', THIRTY_MINS), (SIX_HRS, FIFTEEN_MINS)]
+        self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
+         
+    def testAdjacentIntervalRaises1(self):
+        "Test: DowntimeSchedule with no gap between two intervals start raises SimError"
+        breaks = [(TWO_HRS, ONE_HR), (THREE_HRS, THIRTY_MINS), (SIX_HRS, FIFTEEN_MINS)]
+        self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
+         
+    def testSameIntervalStartRaises1(self):
+        "Test: DowntimeSchedule with no two intervals starts at same time raises SimError"
+        breaks = [(TWO_HRS, THIRTY_MINS), (TWO_HRS, THIRTY_MINS), (SIX_HRS, FIFTEEN_MINS)]
+        self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
+         
+    def testIntervalOverlapRaises1(self):
+        "Test: DowntimeSchedule with 2nd interval within first interval raises SimError"
+        breaks = [(TWO_HRS, TWO_HRS), (THREE_HRS, THIRTY_MINS), (SIX_HRS, FIFTEEN_MINS)]
+        self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
+         
+    def testIntervalOverlapRaises2(self):
+        "Test: DowntimeSchedule with 2nd interval overlapping first interval raises SimError"
+        breaks = [(TWO_HRS, TWO_HRS), (THREE_HRS, TWO_HRS), (SIX_HRS, FIFTEEN_MINS)]
+        self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
+         
+    def testZeroIntervalRaises(self):
+        "Test: DowntimeSchedule with an interval length of zero raises SimError"
+        breaks = [(TWO_HRS, TWO_HRS), (THREE_HRS, SimTime(0)), (SIX_HRS, FIFTEEN_MINS)]
+        self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
+         
+    def testNegativeIntervalRaises(self):
+        "Test: DowntimeSchedule with an interval length of zero raises SimError"
+        breaks = [(TWO_HRS, TWO_HRS), (THREE_HRS, SimTime(-10, simtime.MINUTES)),
+                  (SIX_HRS, FIFTEEN_MINS)]
+        self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
+         
+    def testNegativeStartRaises(self):
+        "Test: DowntimeSchedule with an interval length of zero raises SimError"
+        breaks = [(SimTime(-10, simtime.MINUTES), TWO_HRS), (THREE_HRS, FIFTEEN_MINS)]
+        self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
+
 
 def makeTestSuite():
     loader = unittest.TestLoader()
@@ -564,6 +677,7 @@ def makeTestSuite():
     suite.addTest(loader.loadTestsFromTestCase(BasicDowntimeAcquireTests1))
     suite.addTest(loader.loadTestsFromTestCase(FailureAgentTests))
     suite.addTest(loader.loadTestsFromTestCase(ExtendThroughDowntimeTests))
+    suite.addTest(loader.loadTestsFromTestCase(DowntimeScheduleTests))
     return suite
 
 if __name__ == '__main__':

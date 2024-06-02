@@ -3,10 +3,11 @@
 #
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
-# Defines the DowntimeAgentMixin, SimDowntimeAgent, SimResourceFailureAgent and 
-# related event classes.  
+# Defines the DowntimeAgentMixin, SimDowntimeAgent, SimResourceFailureAgent,
+# SimScheduledDowntimeAgent, DowntimeSchedule and related event classes.  
 #===============================================================================
-__all__ = ['SimDowntimeAgent', 'SimResourceFailureAgent']
+__all__ = ['SimDowntimeAgent', 'SimResourceFailureAgent',
+           'SimScheduledDowntimeAgent', 'DowntimeSchedule']
 
 from typing import NamedTuple
 
@@ -299,7 +300,11 @@ class DowntimeSchedule(object):
         length: SimTime
         
     def __init__(self, scheduleLength, downIntervals):
-        self._scheduleLength = scheduleLength
+        self._scheduleLength = SimTime(scheduleLength)
+        if self._scheduleLength <= 0:
+            msg = "Schedule Length {0} must be a SimTime > 0"
+            raise SimError(_DOWNTIME_ERROR, msg, self._scheduleLength)
+
         downIntervals.sort()
         self._intervals = [DowntimeSchedule.Interval(SimTime(d[0]), SimTime(d[1]))
                            for d in downIntervals]
@@ -331,21 +336,21 @@ class DowntimeSchedule(object):
         for interval in intervals:
             if interval.start < 0:
                 msg = "Start of interval {0} must be a SimTime >= 0"
-                raise SimError(_DOWNTIME_ERROR, interval)
+                raise SimError(_DOWNTIME_ERROR, msg, interval)
             if interval.start >= self._scheduleLength:
                 msg = "Start of interval {0} must be a SimTime less than the schedule length: {1}"
-                raise SimError(_DOWNTIME_ERROR, interval, self._scheduleLength)
+                raise SimError(_DOWNTIME_ERROR, msg, interval, self._scheduleLength)
             if interval.length <= 0:
                 msg = "Length of interval {0} must be a SimTime > 0"
-                raise SimError(_DOWNTIME_ERROR, interval)
+                raise SimError(_DOWNTIME_ERROR, msg, interval)
             if interval.start <= prevEnd:
                 msg = "Start of interval {0} must be a SimTime > the end of the previous interval"
-                raise SimError(_DOWNTIME_ERROR, interval)
+                raise SimError(_DOWNTIME_ERROR, msg, interval)
                 
             end = interval.start + interval.length            
             if end > self._scheduleLength:
                 msg = "End of interval {0} must be a SimTime >= the schedule length: {1}"
-                raise SimError(_DOWNTIME_ERROR, interval, self._scheduleLength)
+                raise SimError(_DOWNTIME_ERROR, msg, interval, self._scheduleLength)
             prevEnd = end
     
 
