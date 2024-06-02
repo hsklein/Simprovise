@@ -669,7 +669,77 @@ class DowntimeScheduleTests(unittest.TestCase):
         breaks = [(SimTime(-10, simtime.MINUTES), TWO_HRS), (THREE_HRS, FIFTEEN_MINS)]
         self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
 
-
+        
+class ScheduledDowntimeAgentTests(unittest.TestCase):
+    """
+    TestCase for testing basic ScheduledDowntimeAgentTests functionality
+    """
+    def setUp(self):
+        SimClock.initialize()
+        simevent.initialize()
+        self.eventProcessor = simevent.EventProcessor()
+        #self.source = MockSource()
+        self.rsrc1 = SimSimpleResource("TestResource1")
+        self.baseScheduleLength = EIGHT_HRS
+        self.breaks = [(TWO_HRS, FIFTEEN_MINS), (FOUR_HRS, THIRTY_MINS),
+                       (SIX_HRS, FIFTEEN_MINS)]
+        
+        self.sched = DowntimeSchedule(EIGHT_HRS, self.breaks)
+        self.scheduleAgent = SimScheduledDowntimeAgent(self.rsrc1, self.sched)       
+        SimAgent.final_initialize_all()
+                 
+    def tearDown(self):
+        # Hack to allow recreation of static objects/agents for each test case
+        SimStaticObject.elements = {}
+        SimAgent.agents.clear()
+        
+    def testResourceDownAtFirstBreak1(self):
+        "Test: resource down at start of first break"
+        self.eventProcessor.process_events(TWO_HRS)
+        self.assertTrue(self.rsrc1.down)
+        
+    def testResourceDownAtFirstBreak2(self):
+        "Test: resource down ten minutes into first break"
+        self.eventProcessor.process_events(TWO_HRS + TEN_MINS)
+        self.assertTrue(self.rsrc1.down)
+        
+    def testResourceUptFirstBreakEnd(self):
+        "Test: resource up at end of first break"
+        self.eventProcessor.process_events(TWO_HRS + FIFTEEN_MINS)
+        self.assertTrue(self.rsrc1.up)
+        
+    def testResourceDownAtSecondBreak1(self):
+        "Test: resource down at start of second break"
+        self.eventProcessor.process_events(FOUR_HRS)
+        self.assertTrue(self.rsrc1.down)
+        
+    def testResourceDownAtSecondBreak2(self):
+        "Test: resource down fifteen minutes into second break"
+        self.eventProcessor.process_events(FOUR_HRS + FIFTEEN_MINS)
+        self.assertTrue(self.rsrc1.down)
+        
+    def testResourceUptSecondBreakEnd(self):
+        "Test: resource up at end of second break"
+        self.eventProcessor.process_events(FOUR_HRS + THIRTY_MINS)
+        self.assertTrue(self.rsrc1.up)
+        
+    def testResourceDownInSecondCycle1(self):
+        "Test: resource down at at start of last break in second cycle"
+        self.eventProcessor.process_events(TEN_HRS + FOUR_HRS)
+        self.assertTrue(self.rsrc1.down)
+        
+    def testResourceDownInSecondCycle2(self):
+        "Test: resource down tend minutes into last break in second cycle"
+        self.eventProcessor.process_events(TEN_HRS + FOUR_HRS + TEN_MINS)
+        self.assertTrue(self.rsrc1.down)
+        
+    def testResourceUpSecondBreakEndCycle(self):
+        "Test: resource up fifteen minutes into last break in second cycle"
+        self.eventProcessor.process_events(TEN_HRS + FOUR_HRS + FIFTEEN_MINS)
+        self.assertTrue(self.rsrc1.up)
+        
+        
+        
 def makeTestSuite():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
