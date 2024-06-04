@@ -388,7 +388,7 @@ class ResourceAssignmentAgentMixin(object):
         priority request is asking for the same resources, but fewer)
         """
         assert msg.msgType == SimMsgType.RSRC_REQUEST, "Invalid message type passed to handleResourceRequest()"
-        self.msgQueue.remove(msg)
+        self.msg_queue.remove(msg)
         self._schedule_assignment_request_processing()
         
     def _process_request(self, requestMsg):
@@ -405,7 +405,7 @@ class ResourceAssignmentAgentMixin(object):
                 resource.assign_to(txn)
             self.send_response(requestMsg, SimMsgType.RSRC_ASSIGNMENT, resourceAssignment)
             # Handled, so remove the message from the queue and return True
-            self.msgQueue.remove(requestMsg)
+            self.msg_queue.remove(requestMsg)
             return True
         else:
             return False

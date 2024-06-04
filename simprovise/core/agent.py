@@ -105,7 +105,7 @@ class SimAgent(object):
         # TODO the optimal data structure will vary based on the agent (e.g., a
         # deque would be best in many, but not all cases).  If necessary, we
         # can look at providing that flexibility.
-        self.msgQueue = deque()
+        self.msg_queue = deque()
         self.interceptHandler = None
         # _msgTypeHandler is a dictionary of functions and/or methods that
         # handle messages of a specific message type or types.  The dictionary
@@ -251,7 +251,7 @@ class SimAgent(object):
         else:
             handled = self._dispatch_message(msg)
         if not handled:
-            self.msgQueue.append(msg)
+            self.msg_queue.append(msg)
 
     def _dispatch_message(self, msg):
         """
@@ -358,7 +358,7 @@ class SimAgent(object):
         :rtype:        `list` of :class:`SimMessage`
                         
         """
-        msgs = [msg for msg in self.msgQueue if msg.msgType == msgType]
+        msgs = [msg for msg in self.msg_queue if msg.msgType == msgType]
         if msgType in self._msgPriorityFunc:
             msgs.sort(key=self._msgPriorityFunc[msgType])
         return msgs
@@ -383,7 +383,7 @@ class SimAgent(object):
         :rtype:        :class:`SimMessage`
                         
         """
-        msgs = [msg for msg in self.msgQueue if msg.msgType == msgType]
+        msgs = [msg for msg in self.msg_queue if msg.msgType == msgType]
         if len(msgs) == 0:
             return None
         elif msgType in self._msgPriorityFunc:
@@ -435,5 +435,5 @@ if __name__ == '__main__':
     for r in responses:
         print(r)
     print("agent 2 message queue")
-    for r in agent2.msgQueue:
+    for r in agent2.msg_queue:
         print(r)
