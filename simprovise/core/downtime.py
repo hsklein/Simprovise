@@ -41,24 +41,45 @@ class DowntimeAgentMixin(object):
         
     These methods are called by :meth:`_handle_resource_down` and
     :meth:`_handle_resource_up`, respectively. No-op implementations are
-    provided by :class:`SimDowntimeAgent` below.
+    provided by :class:`SimDowntimeAgent`.
    
     """
     def __init__(self, *args, **kwargs):
         super().__init__(*args, **kwargs)
         self._downrequests = set()
+        self._fulfilled_downrequests = set()
+        self._uprequests = set()
         self.register_handler(SimMsgType.RSRC_DOWN, self._handle_resource_down)
         self.register_handler(SimMsgType.RSRC_UP, self._handle_resource_up)
         
     def request_resource_takedown(self, resource):
         """
         Initiate a resource takedown by sending a takedown request to the
-        resource's assignment agent.
+        resource's assignment agent. Raises a :class:`~.simexception.SimError`
+        if this agent has previously made a request to take down this resource
+        and either:
+        
+        a) This agent is awaiting a response to that request, or
+        b) The request was taken down successfully in response to the request
+           and this agent has not subsequently requested that the resource
+           be brought back up, or
+        c) The agent has made a bringup request that has not yet been
+           handled/completed/responded to by the assignment agent
+                  
+        :param resource: Resource to take down
+        :type resource:  :class:`~.resource.SimResource`
+
         """
         # Make sure this downtime agent hasn't already requested a takedown
-        # (without an intervening bringup)
+        # (without an intervening bringup or takedown failure)
         if resource in self._downrequests:
+            msg = "This agent already has an open request to take down resource {0}"
+            raise SimError(_DOWNTIME_ERROR, msg, resource.element_id)
+        if resource in self._fulfilled_downrequests:
             msg = "Request to take down resource {0} that this agent has already taken down"
+            raise SimError(_DOWNTIME_ERROR, msg, resource.element_id)
+        if resource in self._uprequests:
+            msg = "Request to take down resource {0} while waiting for a response to a bringup request by this agent"
             raise SimError(_DOWNTIME_ERROR, msg, resource.element_id)
         
         self._downrequests.add(resource)
@@ -76,14 +97,22 @@ class DowntimeAgentMixin(object):
     def request_resource_bringup(self, resource):
         """
         Initiate a resource bringup by sending a bringup request to the
-        resource's assignment agent.
-         """
-        # Make sure this bringup request has an earlier matching down request
-        if not resource in self._downrequests:
-            msg = "Request to bring up resource {0} that this agent has not taken down"
+        resource's assignment agent. Raises a :class:`~.simexception.SimError`
+        if this request does not match a completed, successful takedown
+        request.   
+                  
+        :param resource: Resource to bring up
+        :type resource:  :class:`~.resource.SimResource`
+
+        """
+        # Make sure this bringup request matches an earlier, successfully completed
+        # down request
+        if not resource in self._fulfilled_downrequests:
+            msg = "Request to bring up resource {0} that this agent has not successfully taken down"
             raise SimError(_DOWNTIME_ERROR, msg, resource.element_id)
         
-        self._downrequests.remove(resource)
+        self._fulfilled_downrequests.remove(resource)
+        self._uprequests.add(resource)
         msgType = SimMsgType.RSRC_BRINGUP_REQ
         msgData = resource
         msg, responses = self.send_message(resource.assignment_agent, msgType, msgData)
@@ -94,8 +123,7 @@ class DowntimeAgentMixin(object):
         if responses:
             response = responses[0]
             self._dispatch_message(response)
-       
-        
+               
     def _handle_resource_down(self, msg):
         """
         The handler registered to process resource down (RSRC_DOWN) messages.
@@ -126,10 +154,12 @@ class DowntimeAgentMixin(object):
         resource, takedown_successful = msg.msgData
         assert resource in self._downrequests, "ResourceDown message sent to agent that did not request it's takedown"
         
-        if not takedown_successful:
-            self._downrequests.remove(resource)
+        self._downrequests.remove(resource)           
+        if takedown_successful:
+            self._fulfilled_downrequests.add(resource)
             
         self._resource_down_impl(resource, takedown_successful)
+        
         return True
         
     def _handle_resource_up(self, msg):
@@ -155,6 +185,7 @@ class DowntimeAgentMixin(object):
         """
         assert msg.msgType == SimMsgType.RSRC_UP, "Invalid message type passed to _handle_resource_up()"
         resource = msg.msgData
+        self._uprequests.remove(resource)
         self._resource_up_impl(resource)
         return True
 
@@ -194,6 +225,25 @@ class SimDowntimeAgent(DowntimeAgentMixin, SimAgent):
 class SimResourceFailureAgent(SimDowntimeAgent):
     """
     A SimDowntimeAgent that generates failure downtimes for a single resource.
+    
+    Failures are defined by two time intervals:
+    
+    - Time to Failure: the time from the end of the previous failure (i.e.,
+      the last time the resource came back up from a failure) to the start
+      of the next failure.
+      
+    - Time to Repair: the time from the start of a failure until it comes
+      back up.
+      
+    These two time parameters are obtained by sampling from passed
+    distributions.
+    
+    Note that this agent initiates both the start and end of failures by
+    sending requests to the resource's assignment agent. The default
+    assignment agent implementation responds to these requests immediately,
+    but other implementations may not. If the assignment agent delays
+    responding to a takedown request, for example, the time to repair
+    starts after that delay.
 
         :param resource:               Resource to be brought up and down for
                                        failure.
@@ -320,7 +370,8 @@ class DowntimeSchedule(object):
             for interval in self._intervals:
                 startTime = scheduleBeginTime + interval.start
                 endTime = startTime + interval.length
-                yield startTime, endTime
+                yield DowntimeSchedule.Interval(startTime, interval.length)
+#                yield startTime, endTime
             
             scheduleBeginTime += self._scheduleLength
             
@@ -359,6 +410,27 @@ class SimScheduledDowntimeAgent(SimDowntimeAgent):
     """
     A SimDowntimeAgent that generates downtimes for a single resource based on
     a :class:`DowntimeSchedule`.
+    
+    If the assignment agent for the resource "behaves" - successfully takes
+    down and brings up the resource immediately upon request - the result
+    will be continuously cycling regular downtimes according to the passed
+    :class:`DowntimeSchedule`. If the assignment agent does not behave:
+    
+    - If the takedown succeeds but is delayed, the scheduled downtime will
+      start when the resource comes down and last for the scheduled length.
+      If the end of the downtime overlaps with the next scheduled downtime,
+      that next scheduled downtime is skipped. (If the delay is longer,
+      multiple scheduled downtimes may be skipped - basically, when the
+      resource comes back up, the agent looks at the current simulated time
+      and gets the next scheduled downtime that doesn't start before that
+      time.)
+      
+    - If the takedown is not successful, that downtime interval is skipped.
+      If there was a delay in returning a non-successful takedown,
+      subsequent scheduled downtime periods may be skipped as well, based
+      on the length of the delay. (It follows the same algorithm described
+      above, looking for the next schedule period whose start time hasn't
+      already passed.)
 
         :param resource:         Resource to be brought up and down on sched.
         :type resource:          :class:`~.resource.SimResource`
@@ -368,48 +440,68 @@ class SimScheduledDowntimeAgent(SimDowntimeAgent):
         :type downtimeSchedule:  :class:`DowntimeSchedule`
           
     """
-    __slots__ = ('_resource', '_downtimeSchedule')
+    __slots__ = ('_resource', '_downtimeSchedule', '_downtimeGenerator',
+                 '_interval')
     
     def __init__(self, resource, downtimeSchedule):
         super().__init__()
         self._resource = resource
         self._downtimeSchedule = downtimeSchedule
-        self._downtimeIntervalGenerator = None
+        self._downtimeGenerator = None
+        self._interval = None
                
     def final_initialize(self):
         """
         Perform initialization that must occur after the simulation clock
-        and event processor are initialized.
+        and event processor are initialized:
+        - Creates the downtime generator, which yields schedule intervals
+        - Creates and registers  the first takedown event
         """
         assert SimClock.now() == 0, "final initialization called after SimClock advance or before initialization"
-        self._downtimeIntervalGenerator = self._downtimeSchedule.down_intervals()
-        self._create_next_takedown_and_bringup_events()
-        
-    def _create_next_takedown_and_bringup_events(self):
+        self._downtimeGenerator = self._downtimeSchedule.down_intervals()
+        self._interval = self._schedule_next_takedown_event()
+               
+    def _schedule_next_takedown_event(self):
         """
-        Obtains scheduled down start and end times from generator, creates
-        corresponding TakeDownResourceEvent and BringUpResourceEvent events,
-        and registers them.
-        """
-        downStartTime, downEndTime = next(self._downtimeIntervalGenerator)
+        Gets the next valid interval from the downtime interval generator
+        by skipping those whose start time has already passed. (These skips
+        are required if on an earlier cycle, the resource either did not
+        come down or did not come back up in a timely fashion)
         
-        takedownEvent = TakeDownResourceEvent(self, self._resource, downStartTime)
-        bringupEvent =  BringUpResourceEvent(self, self._resource, downEndTime)
+        Then creates/registers a takedown event for that interval, and
+        returns the interval.
+        """
+        nextInterval = next(self._downtimeGenerator)
+        while nextInterval.start <= SimClock.now():
+            nextInterval = next(self._downtimeGenerator)
+            
+        takedownEvent = TakeDownResourceEvent(self, self._resource,
+                                              nextInterval.start)
         takedownEvent.register()
-        bringupEvent.register()
-        
+        return nextInterval
+                    
     def _resource_down_impl(self, resource, takedown_successful):
         """
-        Called by the downtime agent's RSRC_DOWN message handler - a no-op       
+        Called by the downtime agent's RSRC_DOWN message handler
+        For successful takedowns, create/register a corresponding
+        brinup event. If the takedown was not successful, move on
+        and schedule the next takedown, updating  the current
+        downtime interval.
         """
-        pass
-    
+        if takedown_successful:
+            downEndTime = SimClock.now() + self._interval.length
+            buEvent = BringUpResourceEvent(self, self._resource, downEndTime)
+            buEvent.register()
+        else:
+            self._interval = self._schedule_next_takedown_event()            
+            
     def _resource_up_impl(self, resource):
         """
         Called by the downtime agent's RSRC_UP message handler. Just
-        schedules the next takedown and bringup events.
+        schedules the next takedown  event and update the current
+        downtime interval.
         """
-        self._create_next_takedown_and_bringup_events()
+        self._interval = self._schedule_next_takedown_event()
 
                 
 class TakeDownResourceEvent(SimEvent):
@@ -426,6 +518,7 @@ class TakeDownResourceEvent(SimEvent):
         
     def process_impl(self):
         """
+        Tell the downtime agent to request a resource takedown
         """
         self._agent.request_resource_takedown(self._resource)
     
@@ -445,6 +538,7 @@ class BringUpResourceEvent(SimEvent):
         
     def process_impl(self):
         """
+        Tell the downtime agent to request a resource bringup
         """
         self._agent.request_resource_bringup(self._resource)
         
