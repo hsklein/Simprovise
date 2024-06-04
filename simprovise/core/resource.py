@@ -374,7 +374,6 @@ class ResourceAssignmentAgentMixin(object):
             handled = self._process_request(request)
             if not handled:
                 return False
-            self.msgQueue.remove(request)
             if throughRequest is not None and request is throughRequest:
                 return True
             
@@ -395,7 +394,8 @@ class ResourceAssignmentAgentMixin(object):
     def _process_request(self, requestMsg):
         """
         Attempt to process a resource request, returning True if successful (and
-        False otherwise).
+        False otherwise). If successful, the message is handled so remove it
+        from the message queue.
         """
         resourceAssignment = self._assign_from_request(requestMsg)
         if resourceAssignment:
@@ -404,7 +404,8 @@ class ResourceAssignmentAgentMixin(object):
             for resource in resourceAssignment.resources:
                 resource.assign_to(txn)
             self.send_response(requestMsg, SimMsgType.RSRC_ASSIGNMENT, resourceAssignment)
-            # Handled, so return True
+            # Handled, so remove the message from the queue and return True
+            self.msgQueue.remove(requestMsg)
             return True
         else:
             return False
@@ -1222,9 +1223,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
             resource, rsrc_class, numRequested = get_request_data(request)
             if not is_blocked(resource, rsrc_class):
                 handled = self._process_request(request)
-                if handled:
-                    self.msgQueue.remove(request)
-                else:
+                if not handled:
                     if resource is not None:
                         blocked_resources.add(resource)
                     else:
