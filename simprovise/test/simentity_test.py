@@ -10,6 +10,7 @@ import logging
 from simprovise.core import *
 from simprovise.core.location import SimStaticObject
 from simprovise.core.simevent import EventProcessor
+from simprovise.core.agent import SimAgent
 
 class TestEntity(SimEntity):
     ""
@@ -50,6 +51,7 @@ class SimEntityTests(unittest.TestCase):
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
         SimStaticObject.elements = {}
+        SimAgent.agents.clear()
     
     def testCreateTime(self):
         "Test: createTime value equals time that the entity was instantiated"
@@ -106,6 +108,7 @@ class SimEntitySourceTests(unittest.TestCase):
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
         SimStaticObject.elements = {}
+        SimAgent.agents.clear()
     
     def testOneEntityGenerator(self):
         """
@@ -143,6 +146,24 @@ class SimEntitySourceTests(unittest.TestCase):
         self.source.add_entity_generator(TestEntity, MockProcess,
                                          SimDistribution.constant(SimTime(10)))
         self.source.final_initialize()              
+        eventsProcessed = self.eventProcessor.process_events(SimTime(10))
+        self.assertEqual(eventsProcessed, 6)
+     
+    def testTwoEntityGenerators2(self):
+        """
+        Two entity generators: one creating entity every 5 seconds, the other
+        every 10
+        Running for 10 seconds results in 6 events processed (Three entity
+        generation, three transaction start)
+        
+        Same as previous test, just use SimAgent.final_initialize_all()
+        to do final initialization
+        """
+        self.source.add_entity_generator(TestEntity, MockProcess,
+                                         SimDistribution.constant(SimTime(5)))
+        self.source.add_entity_generator(TestEntity, MockProcess,
+                                         SimDistribution.constant(SimTime(10)))
+        SimAgent.final_initialize_all()              
         eventsProcessed = self.eventProcessor.process_events(SimTime(10))
         self.assertEqual(eventsProcessed, 6)
 
