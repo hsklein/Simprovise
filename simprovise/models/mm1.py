@@ -32,10 +32,10 @@ class mm1Process(SimProcess):
     def run(self):
         entity = self.entity
         entity.move_to(queue)
-        resourceAssignment = self.acquire(server)
-        entity.move_to(serverLocation)
-        self.wait_for(self.serviceTime)
-        self.release(resourceAssignment)
+        with self.acquire(server) as resourceAssignment:
+            entity.move_to(serverLocation)
+            self.wait_for(self.serviceTime)
+            
         entity.move_to(sink)
 
 source.add_entity_generator(SimEntity, mm1Process,

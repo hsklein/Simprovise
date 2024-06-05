@@ -32,7 +32,17 @@ _POOL_ERROR = "Resource Pool Error"
 class SimResourceAssignment(object):
     """
     Encapsulates a set of zero or more resources assigned to a process
-    via :meth:`.SimTransaction.acquire`.
+    via :meth:`~.process.SimProcess.acquire` or
+    :meth:`~.process.SimProcess.acquire_from
+    
+    Can be used as a context manager in order to ensure the assignment
+    is released; e.g. with a :meth:`~.transaction.SimTransaction.run`::
+    
+        with self.acquire(server) as rsrc_assignment:
+            self.wait_for(service_time)
+            
+    The above code invokes `self.release(rsrc_assignment)` when exiting
+    the context manager.
     
         :param transaction:     :class:`~.process.SimProcess` to which 
                                 resource(s) are being assigned
@@ -60,6 +70,21 @@ class SimResourceAssignment(object):
         return "Resource Assignment: Transaction: " + str(self.process) + \
                ", Agent:" + str(self.assignment_agent) + ", Resources: " + \
                str(self.resources)
+    
+    def __enter__(self):
+        """
+        To use the assignment as a context manager
+        """
+        return self
+    
+    def __exit__(self, type, value, tb):
+        """
+        When using the assignment with a context manager, release the
+        entire assignment on exit
+        """
+        assert self._process, "Resource Assignment has no process"
+        self._process.release(self)
+        return False
 
     @property
     def process(self):
@@ -452,14 +477,16 @@ class ResourceAssignmentAgentMixin(object):
         The handler registered to handle resource release messages.
 
         Handles each resource release notification as it comes in, returning
-        ``True`` to indicate that it was, in fact handled. The
-        :class:`~.process.SimProcess` (or the agent owning that process)
-        is responsible for updating the resource assignment object that
-        is included in the message.
+        ``True`` to indicate that it was, in fact handled. This handler
+        also updates the resource assignment object that is included in the
+        message, reflecting the resource(s) released. Note that the process
+        requesting the release expects in to be fulfilled immediately/
+        synchronously - there is presently no RSRC_RELEASED response message
+        that is/can be sent to the process agent.
 
-        After releasing the resources, this handler will attempt to respond
-        to one or more request messages in the message queue if they can now
-        be fulfilled using the newly released resource(s).
+        After releasing the resources, this handler will schedule a round
+        of new resource assignments, as one or more request messages in the 
+        queue may now be fulfillable using the newly released resource(s).
 
         :param msg: Resource Request message (SimMsgType RSRC_RELEASE)
         :type msg:  :class:`~.agent.SimMessage`

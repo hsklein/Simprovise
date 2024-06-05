@@ -506,6 +506,14 @@ class SimpleResourceBasicReleaseTests(RATestCaseBase):
         self.process1.start()
         self.eventProcessor.process_events(ONE_MIN)
         self.assertEqual(self.rsrc2.available, self.rsrc2.capacity)
+        
+    def testReleaseAll3(self):
+        "Test: acquire() followed by release results in resource inUse property value of zero"
+        self.process1 = TestProcessBasicRelease(self.rsrc1, 1, 1)
+        self.process1.start()
+        self.eventProcessor.process_events(ONE_MIN)
+        self.process1.release(self.process1.assignment)
+        self.assertEqual(self.rsrc1.in_use, 0)
        
     def testAssignment2(self):
         "Test: acquire(2) followed by release(1) results in resource assignment with count of one"

@@ -387,9 +387,19 @@ class SimProcess(SimTransaction):
         assert rsrcAssignment.assignment_agent, "Resource assignment has no agent"
         assert rsrcAssignment.process == self, "Resource assignment transaction is not this transaction"
 
+        # If there are no resources remaining in the assignment and there
+        # is no releaseSpec, this is a no-op
+        # If there is a release spec, we rely on he assignment agent
+        # to raise if the assignment count is zero.
+        if rsrcAssignment.count == 0 and releaseSpec is None:
+            return
+        
         assignmentAgent = rsrcAssignment.assignment_agent
         msgType = SimMsgType.RSRC_RELEASE
         msgData = (rsrcAssignment, releaseSpec)
+        
+        # Note that we expect the resource assignment agent to handle this
+        # message immediately.
         self.agent.send_message(assignmentAgent, msgType, msgData)
         if rsrcAssignment.count == 0:
             self.__resource_assignments.remove(rsrcAssignment)
