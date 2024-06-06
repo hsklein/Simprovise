@@ -14,8 +14,7 @@
 #===============================================================================
 from greenlet import greenlet           # pylint: disable=E0611
 
-from simprovise.core import (SimClock, SimError, SimTime, simevent,
-                             SimInterruptException, SimTimeOutException)
+from simprovise.core import (SimClock, SimError, simevent)
 
 from simprovise.core.simevent import SimEvent
 from simprovise.core.agent import SimMsgType
@@ -156,6 +155,7 @@ class BaseInterruptEvent(SimEvent):
     def __str__(self):
         return super().__str__() + \
             " Transaction: {0}, reason: {1}".format(self.transaction, self.exception)
+
 
 @apidocskip
 class SimInterruptEvent(BaseInterruptEvent):

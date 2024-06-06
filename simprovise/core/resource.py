@@ -18,7 +18,7 @@ from simprovise.core import (SimCounter, SimUnweightedDataCollector, SimError,
 from simprovise.core.agent import SimAgent, SimMsgType
 from simprovise.core.location import SimStaticObject
 from simprovise.core.simevent import SimEvent
-from simprovise.core.transaction import SimInterruptEvent, SimInterruptException
+from simprovise.core.simexception import SimInterruptException
 from simprovise.core.apidoc import apidoc, apidocskip
 
 logger = SimLogging.get_logger(__name__)

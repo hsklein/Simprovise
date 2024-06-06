@@ -25,7 +25,7 @@ _ACQUIRE_ERROR = "Resource Acquisition Error"
 
 
 @apidocskip
-class SimTimeOutEvent(BaseInterruptEvent):
+class SimAcquireTimeOutEvent(BaseInterruptEvent):
     """
     Timeout a resource acquisition request. As with the base class
     Interrupt event, we rely on the higher priority of Resume events
@@ -331,7 +331,7 @@ class SimProcess(SimTransaction):
             # response. Schedule a timeout that will be executed if the resource
             # request is not fulfilled first.
             if timeout is not None:
-                timeoutEvent = SimTimeOutEvent(self, assignmentAgent, msg, timeout)
+                timeoutEvent = SimAcquireTimeOutEvent(self, assignmentAgent, msg, timeout)
                 timeoutEvent.register()
             try:                
                 response = self.wait_for_response(msg)
