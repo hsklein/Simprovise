@@ -1039,7 +1039,7 @@ class SimSimpleResource(ResourceAssignmentAgentMixin, SimResource):
    
     """
     def __init__(self, name, parentLocation=None, initialLocation=None, 
-                 capacity=1, moveable=True):
+                 *, capacity=1, moveable=True):
         super().__init__(name, parentLocation, initialLocation, capacity,
                              self, moveable)
         self._capacity = capacity
