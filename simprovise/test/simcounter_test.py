@@ -71,43 +71,43 @@ class SimInfiniteCounterTests(unittest.TestCase):
 
     def testIncrement2(self):
         "Test: value property after increment of 2"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.assertEqual(self.counter.value, 2)
 
     def testIncrement3(self):
         "Test: value property after increment of 3"
         self.counter.increment(self.process)
-        self.counter.increment(self.process, 3)
+        self.counter.increment(self.process, amount=3)
         self.assertEqual(self.counter.value, 4)
 
     def testDecrement1(self):
         "Test: value property after increment of 2, decrement of 1"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.counter.decrement()
         self.assertEqual(self.counter.value, 1)
 
     def testDecrement2(self):
         "Test: value property after increment of 2, two decrements of 1"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.counter.decrement()
         self.counter.decrement()
         self.assertEqual(self.counter.value, 0)
 
     def testDecrement2(self):
         "Test: value property after increment of 2, decrement of 2"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.counter.decrement(2)
         self.assertEqual(self.counter.value, 0)
 
     def testDecrementBelowZero1(self):
         "Test: decrement throws after increment of 1, two decrements result is zero"
-        self.counter.increment(self.process, 1)
+        self.counter.increment(self.process, amount=1)
         self.counter.decrement()
         self.assertEqual(self.counter.value, 0)
 
     def testDecrementBelowZero2(self):
         "Test: decrement more then current value results in zero value"
-        self.counter.increment(self.process, 1)
+        self.counter.increment(self.process, amount=1)
         self.counter.decrement(2)
         self.assertEqual(self.counter.value, 0)
         #self.assertRaises(simexception.Error, lambda: self.counter.decrement(2))
@@ -115,17 +115,17 @@ class SimInfiniteCounterTests(unittest.TestCase):
     def testOverflow1(self):
         "Test: Attempt to increment by sys.maxsize raises an error"
         self.assertRaises(simexception.SimError,
-                          lambda: self.counter.increment(self.process, sys.maxsize))
+                          lambda: self.counter.increment(self.process, amount=sys.maxsize))
 
     def testOverflow2(self):
         "Test: Attempt to increment to or past sys.maxsize raises an error"
-        self.counter.increment(self.process, sys.maxsize - 1)
+        self.counter.increment(self.process, amount=sys.maxsize - 1)
         self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process))
 
     def testOverflow3(self):
         "Test: Attempt to increment to or past infinite (sys.maxsize) raises an error"
-        self.counter.increment(self.process, sys.maxsize - 2)
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, 2))
+        self.counter.increment(self.process, amount=sys.maxsize - 2)
+        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, amount=2))
 
     def testOverflow4(self):
         "Test: Attempt to increment to one less than sys.maxsize is OK"
@@ -135,16 +135,16 @@ class SimInfiniteCounterTests(unittest.TestCase):
 
     def testFloatIncrement(self):
         "Test: Attempt to increment by a non-integer raises an error"
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, 1.1))
+        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, amount=1.1))
 
     def testFloatDecrement(self):
         "Test: Attempt to decrement by a non-integer raises an error"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.assertRaises(simexception.SimError, lambda: self.counter.decrement(1.1))
 
     def testNegativeIncrement(self):
         "Test: Attempt to increment by a negative value raises an error"
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, -1))
+        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, amount=-1))
 
     def testNegativeDecrement(self):
         "Test: Attempt to decrement by a negative value raises an error"
@@ -153,11 +153,11 @@ class SimInfiniteCounterTests(unittest.TestCase):
 
     def testZeroIncrement(self):
         "Test: Attempt to increment by zero raises an error"
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, 0))
+        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, amount=0))
 
     def testZeroDecrement(self):
         "Test: Attempt to decrement by a zero raises an error"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.assertRaises(simexception.SimError, lambda: self.counter.decrement(0))
 
     def testFloatCapacity(self):
@@ -178,7 +178,7 @@ class SimInfiniteCounterTests(unittest.TestCase):
     def testSetCapacityAfterIncrement(self):
         "Test: Attempt to set capacity after the counter has bee incremented raises an error"
         with self.assertRaises(SimError):
-            self.counter.increment(self.process, 1)
+            self.counter.increment(self.process, amount=1)
             self.counter.capacity = 3
 
 
@@ -224,61 +224,61 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
     def testIncrement3(self):
         "Test: value property after increment of 1, 3"
         self.counter.increment(self.process)
-        self.counter.increment(self.process, 3)
+        self.counter.increment(self.process, amount=3)
         self.assertEqual(self.counter.value, 4)
 
     def testIncrement4a(self):
         "Test: waiting process count property after increment of 4 (equal to capacity) should be zero"
-        self.counter.increment(self.process, 4)
+        self.counter.increment(self.process, amount=4)
         self.assertEqual(self.counter.waiting_transaction_count, 0)
 
     def testIncrementPastCap1(self):
         "Test: value property after increment past capacity"
-        self.counter.increment(self.process, CAP)
+        self.counter.increment(self.process, amount=CAP)
         self.counter.increment(self.process)
         self.assertEqual(self.counter.value, CAP)
 
     def testIncrementPastCap1a(self):
         "Test: waiting process count property after increment one past capacity should be one"
-        self.counter.increment(self.process, CAP)
+        self.counter.increment(self.process, amount=CAP)
         self.counter.increment(self.process2)
         self.assertEqual(self.counter.waiting_transaction_count, 1)
 
     def testDecrement1(self):
         "Test: value property after increment of 2, decrement of 1"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.counter.decrement()
         self.assertEqual(self.counter.value, 1)
 
     def testDecrement2(self):
         "Test: value property after increment of 2, two decrements of 1"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.counter.decrement()
         self.counter.decrement()
         self.assertEqual(self.counter.value, 0)
 
     def testDecrement2(self):
         "Test: value property after increment of 2, decrement of 2"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.counter.decrement(2)
         self.assertEqual(self.counter.value, 0)
 
     def testDecrementBelowZero1(self):
         "Test: decrement throws after increment of 1, two decrements result is zero"
-        self.counter.increment(self.process, 1)
+        self.counter.increment(self.process, amount=1)
         self.counter.decrement()
         self.assertEqual(self.counter.value, 0)
 
     def testDecrementBelowZero2(self):
         "Test: decrement more then current value results in zero value"
-        self.counter.increment(self.process, 1)
+        self.counter.increment(self.process, amount=1)
         self.counter.decrement(2)
         self.assertEqual(self.counter.value, 0)
         #self.assertRaises(simexception.Error, lambda: self.counter.decrement(2))
 
     def testIncrementAboveCapacity(self):
         "Test: increment of an amount greater than capacity raises an error"
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, CAP+1))
+        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, amount=CAP+1))
 
 class SimSetFiniteCapacityCounterTests(unittest.TestCase):
     """
@@ -313,65 +313,65 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
 
     def testIncrement2(self):
         "Test: value property after increment of 2"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.assertEqual(self.counter.value, 2)
 
     def testIncrement2a(self):
         "Test: waiting process count property after increment of 2 should be zero"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.assertEqual(self.counter.waiting_transaction_count, 0)
 
     def testIncrement3(self):
         "Test: value property after increment of 1, 3"
         self.counter.increment(self.process)
-        self.counter.increment(self.process, 3)
+        self.counter.increment(self.process, amount=3)
         self.assertEqual(self.counter.value, 4)
 
     def testIncrement4a(self):
         "Test: waiting process count property after increment of 4 (equal to capacity) should be zero"
-        self.counter.increment(self.process, 4)
+        self.counter.increment(self.process, amount=4)
         self.assertEqual(self.counter.waiting_transaction_count, 0)
 
     def testIncrementPastCap1(self):
         "Test: value property after increment past capacity"
-        self.counter.increment(self.process, CAP)
+        self.counter.increment(self.process, amount=CAP)
         self.counter.increment(self.process)
         self.assertEqual(self.counter.value, CAP)
 
     def testIncrementPastCap1a(self):
         "Test: waiting process count property after increment one past capacity should be one"
-        self.counter.increment(self.process, CAP)
+        self.counter.increment(self.process, amount=CAP)
         self.counter.increment(self.process2)
         self.assertEqual(self.counter.waiting_transaction_count, 1)
 
     def testDecrement1(self):
         "Test: value property after increment of 2, decrement of 1"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.counter.decrement()
         self.assertEqual(self.counter.value, 1)
 
     def testDecrement2(self):
         "Test: value property after increment of 2, two decrements of 1"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.counter.decrement()
         self.counter.decrement()
         self.assertEqual(self.counter.value, 0)
 
     def testDecrement2(self):
         "Test: value property after increment of 2, decrement of 2"
-        self.counter.increment(self.process, 2)
+        self.counter.increment(self.process, amount=2)
         self.counter.decrement(2)
         self.assertEqual(self.counter.value, 0)
 
     def testDecrementBelowZero1(self):
         "Test: decrement throws after increment of 1, two decrements result is zero"
-        self.counter.increment(self.process, 1)
+        self.counter.increment(self.process, amount=1)
         self.counter.decrement()
         self.assertEqual(self.counter.value, 0)
 
     def testDecrementBelowZero2(self):
         "Test: decrement more then current value results in zero value"
-        self.counter.increment(self.process, 1)
+        self.counter.increment(self.process, amount=1)
         self.counter.decrement(2)
         self.assertEqual(self.counter.value, 0)
         #self.assertRaises(simexception.Error, lambda: self.counter.decrement(2))
@@ -414,7 +414,7 @@ class SimProcessResumeCounterTests(unittest.TestCase):
 
     def testWaitingProcessCount3(self):
         "Test: waiting process count after attempt to increment three past capacity"
-        self.counter.increment(self.process2, 3)
+        self.counter.increment(self.process2, amount=3)
         self.assertEqual(self.counter.waiting_transaction_count, 1)
 
     def testWaitingProcessCount4(self):
@@ -435,7 +435,7 @@ class SimProcessResumeCounterTests(unittest.TestCase):
 
     def testResumeAfterIncrement2(self):
         "Test: increment past capacity does not resume any processes"
-        self.counter.increment(self.process, 1)
+        self.counter.increment(self.process, amount=1)
         self.assertEqual( MockProcess.resumedProcess, None)
 
     def testResumeAfterDecrement1(self):
@@ -445,7 +445,7 @@ class SimProcessResumeCounterTests(unittest.TestCase):
 
     def testResumeAfterDencrement2(self):
         "Test: process2 increment one past capacity, followed by decrement - process2 is resumed"
-        self.counter.increment(self.process2, 1)
+        self.counter.increment(self.process2, amount=1)
         self.counter.decrement()
         self.assertEqual( MockProcess.resumedProcess, self.process2)
 
@@ -457,21 +457,21 @@ class SimProcessResumeCounterTests(unittest.TestCase):
 
     def testResumeAfterDencrement4(self):
         "Test: process2 increment two past capacity, followed by two decrements - process2 is resumed"
-        self.counter.increment(self.process2, 2)
+        self.counter.increment(self.process2, amount=2)
         self.counter.decrement()
         self.counter.decrement()
         self.assertEqual( MockProcess.resumedProcess, self.process2)
 
     def testResumeAfterDencrement5(self):
         "Test: process2 increment two past capacity, followed by decrement of two - process2 is resumed"
-        self.counter.increment(self.process2, 2)
+        self.counter.increment(self.process2, amount=2)
         self.counter.decrement(2)
         self.assertEqual( MockProcess.resumedProcess, self.process2)
 
     def testResumeAfterDencrement6(self):
         "Test: process2 increment two past capacity, followed by an additonal increment then a decrement - NO process resumed"
-        self.counter.increment(self.process2, 2)
-        self.counter.increment(self.process3, 1)
+        self.counter.increment(self.process2, amount=2)
+        self.counter.increment(self.process3, amount=1)
         self.counter.decrement()
         self.assertEqual( MockProcess.resumedProcess, None)
 
@@ -515,9 +515,9 @@ class SimProcessResumeCounterTests(unittest.TestCase):
         3.  process3 increments by one
         Result - NO process resumed (process3 should NOT jump process2
         """
-        self.counter.increment(self.process2, 2)
+        self.counter.increment(self.process2, amount=2)
         self.counter.decrement()
-        self.counter.increment(self.process3, 1)
+        self.counter.increment(self.process3, amount=1)
         self.assertEqual( MockProcess.resumedProcess, None)
 
     def testResumeAfterDencrement10(self):
@@ -528,9 +528,9 @@ class SimProcessResumeCounterTests(unittest.TestCase):
         3.  process3 increments by one
         Result - value still below capacity because process2 is first in line to be resumed
         """
-        self.counter.increment(self.process2, 2)
+        self.counter.increment(self.process2, amount=2)
         self.counter.decrement()
-        self.counter.increment(self.process3, 1)
+        self.counter.increment(self.process3, amount=1)
         self.assertEqual(self.counter.value, CAP-1)
 
     def testResumeAfterDencrement10(self):
@@ -541,9 +541,9 @@ class SimProcessResumeCounterTests(unittest.TestCase):
         3.  process3 increments by one
         Result - both process2 and process 3 are waiting
         """
-        self.counter.increment(self.process2, 2)
+        self.counter.increment(self.process2, amount=2)
         self.counter.decrement()
-        self.counter.increment(self.process3, 1)
+        self.counter.increment(self.process3, amount=1)
         self.assertEqual((self.process2.waiting, self.process3.waiting), (True, True))
 
     def testResumeAfterDencrement11(self):
@@ -555,9 +555,9 @@ class SimProcessResumeCounterTests(unittest.TestCase):
         4.  another decrement
         Result - process2 is resumed, process3 is still waiting
         """
-        self.counter.increment(self.process2, 2)
+        self.counter.increment(self.process2, amount=2)
         self.counter.decrement()
-        self.counter.increment(self.process3, 1)
+        self.counter.increment(self.process3, amount=1)
         self.counter.decrement()
         self.assertEqual((self.process2.waiting, self.process3.waiting), (False, True))
 
@@ -571,9 +571,9 @@ class SimProcessResumeCounterTests(unittest.TestCase):
         5.  yet another decrement
         Result - process3 is last resumed
         """
-        self.counter.increment(self.process2, 2)
+        self.counter.increment(self.process2, amount=2)
         self.counter.decrement()
-        self.counter.increment(self.process3, 1)
+        self.counter.increment(self.process3, amount=1)
         self.counter.decrement()
         self.counter.decrement()
         self.assertEqual(MockProcess.resumedProcess, self.process3)

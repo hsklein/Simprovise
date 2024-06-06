@@ -477,7 +477,7 @@ class SimTransaction(object):
         :type amount:   `int` 
 
         """
-        counter.increment(self, amount)
+        counter.increment(self, amount=amount)
 
     def decrement(self, counter, amount=1):
         """

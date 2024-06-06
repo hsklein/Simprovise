@@ -839,7 +839,7 @@ class SimResource(SimStaticObject):
             msg = "Resource {0}: resources available ({1}} is less than number assigned ({2})"
             raise SimError(_REQUEST_ERROR, msg, self.element_id, self.available, number)        
         
-        self._utilCounter.increment(txn, number)
+        self._utilCounter.increment(txn, amount=number)
         if txn in self._currentTxnAssignments:
             self._currentTxnAssignments[txn][1] += number
         else:

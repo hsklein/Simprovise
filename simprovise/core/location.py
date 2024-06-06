@@ -593,7 +593,7 @@ class SimLocation(SimStaticObject):
         # Add the entering object to the list of residents (along with the entry time)
         # and increment the statistics-gathering counter/datacollector
         self._residents.append((enteringObj, SimClock.now()))
-        self._counter.increment(None, 1)
+        self._counter.increment(None, amount=1)
         self._entryDataCollector.add_value(1) # the value doesn't really matter
         self.on_enter_impl(enteringObj)
 
