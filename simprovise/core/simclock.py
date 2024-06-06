@@ -12,6 +12,7 @@
 __all__ = ['SimClock']
 
 from simprovise.core import simtime, SimTime, SimError
+from simprovise.core.simtime import Unit as tu
 from simprovise.core.apidoc import apidoc, apidocskip
 
 @apidoc
@@ -21,7 +22,7 @@ class SimClock(object):
     the global simulation clock.
     """
     # _currentTime is the current simulated clock time
-    _currentTime = SimTime(0, simtime.SECONDS)
+    _currentTime = SimTime(0, tu.SECONDS)
 
     @staticmethod
     @apidocskip
@@ -30,7 +31,7 @@ class SimClock(object):
         (Re)set the simulated clock to zero.
         TODO allow time unit to be specified.
         """
-        SimClock._currentTime = simtime.SimTime(0, simtime.SECONDS)
+        SimClock._currentTime = SimTime(0, tu.SECONDS)
 
     @staticmethod
     def now():
@@ -57,7 +58,7 @@ class SimClock(object):
         if newTime >= SimClock._currentTime:
             # ensure that we keep currentTime's units - otherwise we could just copy
             # newTime
-            SimClock._currentTime = simtime.SimTime(0, simtime.SECONDS) + newTime
+            SimClock._currentTime = simtime.SimTime(0, tu.SECONDS) + newTime
         else:
             errMsg = "Attempt to advance clock from {0} to {1}"
             raise SimError('InvalidClockAdvance', errMsg, SimClock._currentTime, newTime)

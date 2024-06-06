@@ -10,15 +10,16 @@ import simprovise.core
 from simprovise.core import *
 from simprovise.core.agent import SimAgent, SimMsgType
 from simprovise.core.location import SimStaticObject
+from simprovise.core.simtime import Unit as tu
 
 #print(globals().keys())
 #print(locals().keys())
 
-ONE_MIN = simtime.SimTime(1, simtime.MINUTES)
-TWO_MINS = simtime.SimTime(2, simtime.MINUTES)
-THREE_MINS = simtime.SimTime(3, simtime.MINUTES)
-FOUR_MINS = simtime.SimTime(4, simtime.MINUTES)
-EIGHT_MINS = simtime.SimTime(8, simtime.MINUTES)
+ONE_MIN = simtime.SimTime(1, tu.MINUTES)
+TWO_MINS = simtime.SimTime(2, tu.MINUTES)
+THREE_MINS = simtime.SimTime(3, tu.MINUTES)
+FOUR_MINS = simtime.SimTime(4, tu.MINUTES)
+EIGHT_MINS = simtime.SimTime(8, tu.MINUTES)
             
 
 class RATestCaseBase(unittest.TestCase):

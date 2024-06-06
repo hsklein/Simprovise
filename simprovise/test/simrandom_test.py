@@ -6,6 +6,7 @@
 # Unit tests for the simrandom module (and SimDistribution class)
 #===============================================================================
 from simprovise.core import *
+from simprovise.core.simtime import Unit as tu
 
 import unittest, logging
 
@@ -210,19 +211,19 @@ class SimDistributionSimTimeTests(SimDistributionTestsBase):
         
     def testTriangular1(self):
         "Test: SimDistribution.triangular with SimTime, scalar, scalar parameters"
-        gen = SimDistribution.triangular(SimTime(10.0, simtime.MINUTES), 20.0, 60.0)
+        gen = SimDistribution.triangular(SimTime(10.0, tu.MINUTES), 20.0, 60.0)
         mean = self._run_gen(gen)
         self.assertAlmostEqual(mean.value, 30, delta=0.15)
         
     def testTriangular2(self):
         "Test: SimDistribution.triangular with scalar, scalar, SimTime parameters"
-        gen = SimDistribution.triangular(10, 20, SimTime(60, simtime.MINUTES))
+        gen = SimDistribution.triangular(10, 20, SimTime(60, tu.MINUTES))
         mean = self._run_gen(gen)
         self.assertAlmostEqual(mean.value, 30, delta=0.15)
         
     def testTriangular3(self):
         "Test: SimDistribution.triangular with mixed SimTime time unit parameters"
-        gen = SimDistribution.triangular(10, SimTime(20, simtime.MINUTES), SimTime(1, simtime.HOURS))
+        gen = SimDistribution.triangular(10, SimTime(20, tu.MINUTES), SimTime(1, tu.HOURS))
         mean = self._run_gen(gen)
         self.assertAlmostEqual(mean.value, 30, delta=0.15)        
         
@@ -234,8 +235,8 @@ class SimDistributionSimTimeTests(SimDistributionTestsBase):
         
     def testUniform2(self):
         "Test: SimDistribution.uniform with SimTime, SimTime parameters"
-        gen = SimDistribution.uniform(SimTime(10.0, simtime.SECONDS),
-                                      SimTime(1, simtime.MINUTES))
+        gen = SimDistribution.uniform(SimTime(10.0, tu.SECONDS),
+                                      SimTime(1, tu.MINUTES))
         mean = self._run_gen(gen)
         self.assertAlmostEqual(mean.value, 35, delta=0.15)
         
@@ -285,9 +286,9 @@ class SimDistributionInvalidParameterTests(SimDistributionTestsBase):
         self.assertRaises(SimError, SimDistribution.triangular, 7, 14, 10)
         
     def testtriangular6(self):
-        low = SimTime(10, simtime.SECONDS)
-        mode = SimTime(1, simtime.MINUTES)
-        high = SimTime(50, simtime.SECONDS)
+        low = SimTime(10, tu.SECONDS)
+        mode = SimTime(1, tu.MINUTES)
+        high = SimTime(50, tu.SECONDS)
         "Test: SimDistribution.triangular with high < mode SimTime raises"       
         self.assertRaises(SimError, SimDistribution.triangular, low, mode, high)
         

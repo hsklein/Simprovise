@@ -8,6 +8,7 @@
 import unittest
 import logging
 from simprovise.core import *
+from simprovise.core.simtime import Unit as tu
 from simprovise.core.location import SimStaticObject
 from simprovise.core.simevent import EventProcessor
 from simprovise.core.agent import SimAgent
@@ -101,7 +102,7 @@ class SimEntitySourceTests(unittest.TestCase):
     def setUp(self):
         #SimLogging.set_level(logging.DEBUG, 'simprovise.core.simevent')
         reinitialize()
-        MockProcess.processTime = SimTime(1, simtime.MINUTES)
+        MockProcess.processTime = SimTime(1, tu.MINUTES)
         self.eventProcessor = EventProcessor() # also calls simevent.initialize()
         self.source = MockSource()
         

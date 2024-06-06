@@ -6,6 +6,7 @@
 # Unit tests for class SimClock
 #===============================================================================
 from simprovise.core import *
+from simprovise.core.simtime import Unit as tu
 
 import unittest
 
@@ -13,10 +14,10 @@ class simclockTests( unittest.TestCase ):
     "Tests for class simclock"
     def setUp( self ):
         SimClock.initialize()
-        self.ti_10secs = simtime.SimTime( 30, simtime.SECONDS )
-        self.ti_120secs = simtime.SimTime( 120, simtime.SECONDS )
-        self.ti_2mins = simtime.SimTime( 2, simtime.MINUTES )
-        self.ti_1hr = simtime.SimTime( 1, simtime.HOURS )
+        self.ti_10secs = simtime.SimTime( 30, tu.SECONDS )
+        self.ti_120secs = simtime.SimTime( 120, tu.SECONDS )
+        self.ti_2mins = simtime.SimTime( 2, tu.MINUTES )
+        self.ti_1hr = simtime.SimTime( 1, tu.HOURS )
 
     def testNow( self ):
         "Test: now()is initially zero"

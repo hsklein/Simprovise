@@ -7,6 +7,7 @@
 #===============================================================================
 import os, argparse
 import logging
+from simprovise.core.simtime import Unit as tu
 from simprovise.core.apidoc import apidoc, apidocskip
 
 _SECOND_UNITS = ('s', 'sec', 'secs', 'second', 'seconds')
@@ -402,9 +403,9 @@ def _execute(args):
     from Simalytix import Simulation
     from Simalytix.Core import simtime, SimTime
 
-    TIME_UNIT = {_SECOND_UNITS[0]: simtime.SECONDS,
-                 _MINUTE_UNITS[0]: simtime.MINUTES,
-                 _HOUR_UNITS[0]: simtime.HOURS,
+    TIME_UNIT = {_SECOND_UNITS[0]: tu.SECONDS,
+                 _MINUTE_UNITS[0]: tu.MINUTES,
+                 _HOUR_UNITS[0]: tu.HOURS,
                  }
 
     def makeSimTime(arg):

@@ -10,16 +10,17 @@ from simprovise.core import (simevent, simtime, SimClock, SimTime,
 from simprovise.core.transaction import (SimTransaction,
                                          SimTransactionResumeEvent,
                                          SimInterruptEvent)
+from simprovise.core.simtime import Unit as tu
 from simprovise.core.agent import SimAgent
 from simprovise.core.simexception import SimInterruptException, SimTimeOutException
 import unittest
 from heapq import heappop
 from simprovise.core.location import SimStaticObject
 
-ONE_MIN = simtime.SimTime(1, simtime.MINUTES)
-TWO_MINS = simtime.SimTime(2, simtime.MINUTES)
-THREE_MINS = simtime.SimTime(3, simtime.MINUTES)
-FOUR_MINS = simtime.SimTime(4, simtime.MINUTES)
+ONE_MIN = simtime.SimTime(1, tu.MINUTES)
+TWO_MINS = simtime.SimTime(2, tu.MINUTES)
+THREE_MINS = simtime.SimTime(3, tu.MINUTES)
+FOUR_MINS = simtime.SimTime(4, tu.MINUTES)
 
 
 

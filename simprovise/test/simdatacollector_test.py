@@ -6,6 +6,7 @@
 # Unit tests for SimDataCollector and the aggregate classes
 #===============================================================================
 from simprovise.core import *
+from simprovise.core.simtime import Unit as tu
 import unittest
 
         
@@ -101,9 +102,9 @@ class SimTimeDataCollectionTests(unittest.TestCase):
     "Tests for class SimDataCollector (unweighted), where the collected values are SimTimes"
     def setUp(self):
         self.dc1 = datacollector.SimUnweightedDataCollector()
-        self.dc1.add_value(simtime.SimTime(30, simtime.SECONDS))
-        self.dc1.add_value(simtime.SimTime(15, simtime.SECONDS))
-        self.dc1.add_value(simtime.SimTime(2, simtime.MINUTES))
+        self.dc1.add_value(simtime.SimTime(30, tu.SECONDS))
+        self.dc1.add_value(simtime.SimTime(15, tu.SECONDS))
+        self.dc1.add_value(simtime.SimTime(2, tu.MINUTES))
  
     def testEntries1(self):
         "Test: DataCollector (unweighted) entry count"

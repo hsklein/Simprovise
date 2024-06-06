@@ -93,7 +93,7 @@ class SimEntitySource(SimLocation):
 
         Sample Usage::
 
-            generator = SimDistribution.exponential(mean=SimTime(42, simtime.MINUTES)
+            generator = SimDistribution.exponential(mean=SimTime(42, tu.MINUTES)
             source.addEntityGenerator(SimEntity, MyProcess, generator, rnStream=18)
 
         This method requires the entity class initializer to take the same

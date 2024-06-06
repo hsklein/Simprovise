@@ -71,6 +71,7 @@ import numpy as np
 
 import simprovise
 from simprovise.core import SimError, SimLogging, SimTime, simtime
+from simprovise.core.simtime import Unit as tu
 from simprovise.core.apidoc import apidoc, apidocskip
 
 logger = SimLogging.get_logger(__name__)
@@ -204,8 +205,8 @@ class SimDistribution(object):
     
     .. code-block:: python
     
-       SimDistribution.uniform(SimTime(30, simtime.SECONDS),
-                               SimTime(2, simtime.MINUTES))
+       SimDistribution.uniform(SimTime(30, tu.SECONDS),
+                               SimTime(2, tu.MINUTES))
 
     Additional notes on the use of :class:`~.simtime.SimTime` parameters:
     
@@ -218,7 +219,7 @@ class SimDistribution(object):
       first SimTime parameter. e.g., for the following call, the second
       parameter value will be assumed to be 200 seconds::
     
-      SimDistribution.uniform(SimTime(30, simtime.SECONDS), 200)
+      SimDistribution.uniform(SimTime(30, tu.SECONDS), 200)
        
     Finally, note that in a few cases (:meth:`round_robin`, :meth:`choice`)
     the values returned can be non-numeric and non-time. We could, for
@@ -346,8 +347,8 @@ class SimDistribution(object):
         Returns a generator that yields pseudo-random values from the uniform
         distribution with the specified bounds. Sample usage::
 
-            SimDistribution.uniform(SimTime(10, simtime.SECONDS),
-                                    SimTime(1.5, simtime.MINUTES),
+            SimDistribution.uniform(SimTime(10, tu.SECONDS),
+                                    SimTime(1.5, tu.MINUTES),
                                     streamNum=12)
                                             
         :param low:      The low bound of the desired uniformly distributed sample. 
@@ -846,7 +847,7 @@ if __name__ == '__main__':
     cpuend = time.process_time()
     print("SimDistribution number_generator exponential SimTime", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.uniform(SimTime(10), SimTime(1, simtime.MINUTES))
+    gen = SimDistribution.uniform(SimTime(10), SimTime(1, tu.MINUTES))
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
@@ -854,7 +855,7 @@ if __name__ == '__main__':
     cpuend = time.process_time()
     print("SimDistribution number_generator uniform time", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.triangular(SimTime(10), 35, SimTime(1, simtime.MINUTES))
+    gen = SimDistribution.triangular(SimTime(10), 35, SimTime(1, tu.MINUTES))
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
@@ -864,7 +865,7 @@ if __name__ == '__main__':
 
     args1 = [SimTime(10)]
     kwargs1 = {}
-    kwargs1['high'] = SimTime(1, simtime.MINUTES)
+    kwargs1['high'] = SimTime(1, tu.MINUTES)
     kwargs1['mode'] = 35
     gen = SimDistribution.triangular(*args1, **kwargs1)
     total = 0

@@ -6,6 +6,7 @@
 # Unit tests for the SimEvent and EventProcessor classes
 #===============================================================================
 from simprovise.core import simevent, simtime, SimClock, SimTime
+from simprovise.core.simtime import Unit as tu
 import unittest
 import copy
 from heapq import heappop
@@ -34,7 +35,7 @@ class SimEventTests1(unittest.TestCase):
     def setUp( self ):
         simevent.initialize()
         SimClock.initialize()
-        self.twoMins = SimTime(2, simtime.MINUTES)
+        self.twoMins = SimTime(2, tu.MINUTES)
         self.testEvent = TestEvent(self.twoMins)
         self.testEvent.register()
 
@@ -84,7 +85,7 @@ class SimEventTests1(unittest.TestCase):
     def testAddEvent9(self):
         "Test: registration of an event scheduled prior to SimClock.now() raises"
         event = TestEvent(self.twoMins)
-        SimClock.advance_to(SimTime(3, simtime.MINUTES))
+        SimClock.advance_to(SimTime(3, tu.MINUTES))
         self.assertRaises(AssertionError, lambda: self.testEvent.register())
         
         
@@ -93,7 +94,7 @@ class SimEventTests2(unittest.TestCase):
     def setUp( self ):
         simevent.initialize()
         SimClock.initialize()
-        self.twoMins = simtime.SimTime(2, simtime.MINUTES)
+        self.twoMins = simtime.SimTime(2, tu.MINUTES)
         self.testEvent1 = TestEvent(self.twoMins)
         self.testEvent1.register()
         self.testEvent2 = TestEvent(self.twoMins)
@@ -135,8 +136,8 @@ class SimEventPriorityTests(unittest.TestCase):
     def setUp( self ):
         simevent.initialize()
         SimClock.initialize()
-        self.twoMins = simtime.SimTime(2, simtime.MINUTES)
-        self.threeMins = simtime.SimTime(3, simtime.MINUTES)
+        self.twoMins = simtime.SimTime(2, tu.MINUTES)
+        self.threeMins = simtime.SimTime(3, tu.MINUTES)
         self.testEvent1 = TestEventP2(self.twoMins)
         self.testEvent1.register()
         self.testEvent2 = TestEvent(self.threeMins)
@@ -194,7 +195,7 @@ class SimEventProcessorTests( unittest.TestCase ):
         TestEvent.processedEvents = []
 
         self.eventProcessor = simevent.EventProcessor()        
-        self.twoMins = simtime.SimTime(2, simtime.MINUTES)
+        self.twoMins = simtime.SimTime(2, tu.MINUTES)
         
     def addTestEvents(self, time, count):
         eventList = []
@@ -252,52 +253,52 @@ class SimEventProcessorTests( unittest.TestCase ):
         "Test:  events at time zero, two minutes.  Process events for 1 minute.  Current time is 1 minute"
         eventList = self.addTestEvents(SimClock.now(), 2)
         eventList.extend(self.addTestEvents(self.twoMins, 1))
-        self.eventProcessor.process_events(simtime.SimTime(60, simtime.SECONDS))                       
-        self.assertEqual(simtime.SimTime(60, simtime.SECONDS), SimClock.now())
+        self.eventProcessor.process_events(simtime.SimTime(60, tu.SECONDS))                       
+        self.assertEqual(simtime.SimTime(60, tu.SECONDS), SimClock.now())
 
     def testAdvanceClock2a(self):
         "Test:  events at time zero, two minutes.  Process events for 1 minute.  event at two minutes is not processed"
         eventList = self.addTestEvents(SimClock.now(), 2)
         eventList2 = self.addTestEvents(self.twoMins, 1)
-        self.eventProcessor.process_events(simtime.SimTime(60, simtime.SECONDS))                       
+        self.eventProcessor.process_events(simtime.SimTime(60, tu.SECONDS))                       
         self.assertEqual(TestEvent.processedEvents, eventList)
 
     def testAdvanceClock3(self):
         "Test:  events at time zero, two minutes.  Process events for 2 minutes.  All events processed"
         eventList = self.addTestEvents(SimClock.now(), 2)
         eventList.extend(self.addTestEvents(self.twoMins, 1))
-        self.eventProcessor.process_events(simtime.SimTime(120, simtime.SECONDS) )                       
+        self.eventProcessor.process_events(simtime.SimTime(120, tu.SECONDS) )                       
         self.assertEqual(TestEvent.processedEvents, eventList)
 
     def testAdvanceClock3a(self):
         "Test:  events at time zero, two minutes.  Process events for 2 minutes.  event heap is empty"
         eventList = self.addTestEvents(SimClock.now(), 2)
         eventList.extend(self.addTestEvents(self.twoMins, 1))
-        self.eventProcessor.process_events(simtime.SimTime(120, simtime.SECONDS))                       
+        self.eventProcessor.process_events(simtime.SimTime(120, tu.SECONDS))                       
         self.assertEqual(len(simevent.event_heap), 0)
 
     def testAdvanceClock4(self):
         "Test:  events at time zero, two minutes.  Process events for 1 minute, and repeat.  All events processed"
         eventList = self.addTestEvents(SimClock.now(), 2)
         eventList.extend(self.addTestEvents(self.twoMins, 1))
-        self.eventProcessor.process_events(simtime.SimTime(60, simtime.SECONDS) )                       
-        self.eventProcessor.process_events(simtime.SimTime(120, simtime.SECONDS) )                       
+        self.eventProcessor.process_events(simtime.SimTime(60, tu.SECONDS) )                       
+        self.eventProcessor.process_events(simtime.SimTime(120, tu.SECONDS) )                       
         self.assertEqual(TestEvent.processedEvents, eventList)
 
     def testAdvanceClock4a(self):
         "Test:  events at time zero, two minutes.  Process events for 1 minute, and repeat.  event chain is empty"
         eventList = self.addTestEvents(SimClock.now(), 2)
         eventList.extend(self.addTestEvents(self.twoMins, 1))
-        self.eventProcessor.process_events(simtime.SimTime(60, simtime.SECONDS))                       
-        self.eventProcessor.process_events(simtime.SimTime(120, simtime.SECONDS))                       
+        self.eventProcessor.process_events(simtime.SimTime(60, tu.SECONDS))                       
+        self.eventProcessor.process_events(simtime.SimTime(120, tu.SECONDS))                       
         self.assertEqual(len(simevent.event_heap), 0)
 
     def testAdvanceClock5(self):
         "Test:  events at time zero, two minutes.  Process events for 3 minutes - test that current time is 3 minutes (even though last event is at two minutes"
         eventList = self.addTestEvents(SimClock.now(), 2)
         eventList.extend(self.addTestEvents(self.twoMins, 1))
-        self.eventProcessor.process_events(simtime.SimTime(180, simtime.SECONDS))                                          
-        self.assertEqual(simtime.SimTime(180, simtime.SECONDS), SimClock.now())
+        self.eventProcessor.process_events(simtime.SimTime(180, tu.SECONDS))                                          
+        self.assertEqual(simtime.SimTime(180, tu.SECONDS), SimClock.now())
         
     def testDeregister1(self):
         "Test: deregistered event is not executed"

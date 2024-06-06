@@ -1,6 +1,7 @@
 import sys
 from simprovise.core import simtime, SimTime
-##simtime.set_base_unit(simtime.MINUTES)
+from simprovise.core.simtime import Unit as tu
+##simtime.set_base_unit(tu.MINUTES)
 
 
 from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,

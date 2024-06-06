@@ -11,16 +11,17 @@ from simprovise.core import *
 from simprovise.core.transaction import (SimTransaction,
                                          SimTransactionResumeEvent,
                                          SimInterruptEvent)
+from simprovise.core.simtime import Unit as tu
 from simprovise.core.agent import SimAgent
 from simprovise.core.simexception import SimInterruptException, SimTimeOutException
 import unittest
 from heapq import heappop
 from simprovise.core.location import SimStaticObject
 
-ONE_MIN = simtime.SimTime(1, simtime.MINUTES)
-TWO_MINS = simtime.SimTime(2, simtime.MINUTES)
-THREE_MINS = simtime.SimTime(3, simtime.MINUTES)
-FOUR_MINS = simtime.SimTime(4, simtime.MINUTES)
+ONE_MIN = simtime.SimTime(1, tu.MINUTES)
+TWO_MINS = simtime.SimTime(2, tu.MINUTES)
+THREE_MINS = simtime.SimTime(3, tu.MINUTES)
+FOUR_MINS = simtime.SimTime(4, tu.MINUTES)
 
         
 class MockSource(SimEntitySource):
@@ -44,7 +45,7 @@ class DataMethodsTestProcess(SimProcess):
         assignment2 = self.acquire(self.testcase.rsrc2, 2)
         self.assignmentset = set([assignment1, assignment2])
         self.resources = assignment1.resources + assignment2.resources
-        self.wait_for(SimTime(5, simtime.MINUTES))
+        self.wait_for(SimTime(5, tu.MINUTES))
         self.release(assignment1)
         self.release(assignment2)
         
@@ -62,7 +63,7 @@ class SimProcessDataMethodsTests(unittest.TestCase):
         self.process = DataMethodsTestProcess(self)
         self.process.start()
         # execute process, but not long enough for completion/resource release
-        self.eventProcessor.process_events(SimTime(1, simtime.MINUTES))
+        self.eventProcessor.process_events(SimTime(1, tu.MINUTES))
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
@@ -176,7 +177,7 @@ class BasicTimeoutTests(unittest.TestCase):
         """
         Test: A negative timeout value raises a SimError
         """
-        negtime = simtime.SimTime(-1, simtime.SECONDS)
+        negtime = simtime.SimTime(-1, tu.SECONDS)
         process = TestProcess(timeout=negtime)
         process.start()
         self.eventProcessor.process_events()

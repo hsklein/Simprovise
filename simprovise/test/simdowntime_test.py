@@ -9,6 +9,7 @@ import unittest
 import itertools
 from simprovise.core import *
 from simprovise.core import simtime
+from simprovise.core.simtime import Unit as tu
 from simprovise.core.downtime import SimDowntimeAgent
 from simprovise.core.resource import SimResourceDownException
 from simprovise.core.agent import SimAgent, SimMsgType
@@ -24,25 +25,25 @@ class MockEntity(SimEntity):
     ""
 
 
-ONE_MIN = simtime.SimTime(1, simtime.MINUTES)
-TWO_MINS = simtime.SimTime(2, simtime.MINUTES)
-THREE_MINS = simtime.SimTime(3, simtime.MINUTES)
-FOUR_MINS = simtime.SimTime(4, simtime.MINUTES)
-FIVE_MINS = simtime.SimTime(5, simtime.MINUTES)
-SIX_MINS = simtime.SimTime(6, simtime.MINUTES)
-SEVEN_MINS = simtime.SimTime(7, simtime.MINUTES)
-EIGHT_MINS = simtime.SimTime(8, simtime.MINUTES)
-NINE_MINS = simtime.SimTime(9, simtime.MINUTES)
-TEN_MINS = simtime.SimTime(10, simtime.MINUTES)
-FIFTEEN_MINS = simtime.SimTime(15, simtime.MINUTES)
-THIRTY_MINS = simtime.SimTime(30, simtime.MINUTES)
-ONE_HR = simtime.SimTime(1, simtime.HOURS)
-TWO_HRS = simtime.SimTime(2, simtime.HOURS)
-THREE_HRS = simtime.SimTime(3, simtime.HOURS)
-FOUR_HRS = simtime.SimTime(4, simtime.HOURS)
-SIX_HRS = simtime.SimTime(6, simtime.HOURS)
-EIGHT_HRS = simtime.SimTime(8, simtime.HOURS)
-TEN_HRS = simtime.SimTime(10, simtime.HOURS)
+ONE_MIN = simtime.SimTime(1, tu.MINUTES)
+TWO_MINS = simtime.SimTime(2, tu.MINUTES)
+THREE_MINS = simtime.SimTime(3, tu.MINUTES)
+FOUR_MINS = simtime.SimTime(4, tu.MINUTES)
+FIVE_MINS = simtime.SimTime(5, tu.MINUTES)
+SIX_MINS = simtime.SimTime(6, tu.MINUTES)
+SEVEN_MINS = simtime.SimTime(7, tu.MINUTES)
+EIGHT_MINS = simtime.SimTime(8, tu.MINUTES)
+NINE_MINS = simtime.SimTime(9, tu.MINUTES)
+TEN_MINS = simtime.SimTime(10, tu.MINUTES)
+FIFTEEN_MINS = simtime.SimTime(15, tu.MINUTES)
+THIRTY_MINS = simtime.SimTime(30, tu.MINUTES)
+ONE_HR = simtime.SimTime(1, tu.HOURS)
+TWO_HRS = simtime.SimTime(2, tu.HOURS)
+THREE_HRS = simtime.SimTime(3, tu.HOURS)
+FOUR_HRS = simtime.SimTime(4, tu.HOURS)
+SIX_HRS = simtime.SimTime(6, tu.HOURS)
+EIGHT_HRS = simtime.SimTime(8, tu.HOURS)
+TEN_HRS = simtime.SimTime(10, tu.HOURS)
 
 class TestDowntimeAgent(SimDowntimeAgent):
     def __init__(self, *args, **kwargs):
@@ -617,14 +618,14 @@ class FailureAgentTests(unittest.TestCase):
         self.rsrc1 = SimSimpleResource("TestResource1")
         self.rsrc2 = SimSimpleResource("TestResource2")
         
-        timeToFailureGenerator1 = SimDistribution.constant(SimTime(4, simtime.MINUTES))
-        timeToRepairGenerator1 = SimDistribution.constant(SimTime(3, simtime.MINUTES))
+        timeToFailureGenerator1 = SimDistribution.constant(SimTime(4, tu.MINUTES))
+        timeToRepairGenerator1 = SimDistribution.constant(SimTime(3, tu.MINUTES))
         self.failureAgent1 = SimResourceFailureAgent(self.rsrc1,
                                                      timeToFailureGenerator1,
                                                      timeToRepairGenerator1)
         
-        timeToFailureGenerator2 = SimDistribution.constant(SimTime(3, simtime.MINUTES))
-        timeToRepairGenerator2 = SimDistribution.constant(SimTime(2, simtime.MINUTES))
+        timeToFailureGenerator2 = SimDistribution.constant(SimTime(3, tu.MINUTES))
+        timeToRepairGenerator2 = SimDistribution.constant(SimTime(2, tu.MINUTES))
         self.failureAgent2 = SimResourceFailureAgent(self.rsrc2,
                                                      timeToFailureGenerator2,
                                                      timeToRepairGenerator2)
@@ -705,14 +706,14 @@ class ExtendThroughDowntimeTests(unittest.TestCase):
         self.rsrc1 = SimSimpleResource("TestResource1")
         self.rsrc2 = SimSimpleResource("TestResource2")
         
-        timeToFailureGenerator1 = SimDistribution.constant(SimTime(4, simtime.MINUTES))
-        timeToRepairGenerator1 = SimDistribution.constant(SimTime(3, simtime.MINUTES))
+        timeToFailureGenerator1 = SimDistribution.constant(SimTime(4, tu.MINUTES))
+        timeToRepairGenerator1 = SimDistribution.constant(SimTime(3, tu.MINUTES))
         self.failureAgent1 = SimResourceFailureAgent(self.rsrc1,
                                                      timeToFailureGenerator1,
                                                      timeToRepairGenerator1)
         
-        timeToFailureGenerator2 = SimDistribution.constant(SimTime(3, simtime.MINUTES))
-        timeToRepairGenerator2 = SimDistribution.constant(SimTime(2, simtime.MINUTES))
+        timeToFailureGenerator2 = SimDistribution.constant(SimTime(3, tu.MINUTES))
+        timeToRepairGenerator2 = SimDistribution.constant(SimTime(2, tu.MINUTES))
         self.failureAgent2 = SimResourceFailureAgent(self.rsrc2,
                                                      timeToFailureGenerator2,
                                                      timeToRepairGenerator2)
@@ -752,8 +753,8 @@ class ExtendThroughDowntimeTests(unittest.TestCase):
         "Test: process wait time of 10 minutes takes 19 minutes after three 3 minute down periods"
         self.process1.wait_time = TEN_MINS
         self.process1.start()
-        self.eventProcessor.process_events(SimTime(25, simtime.MINUTES))
-        self.assertEqual(self.process1.run_tm, SimTime(19, simtime.MINUTES))
+        self.eventProcessor.process_events(SimTime(25, tu.MINUTES))
+        self.assertEqual(self.process1.run_tm, SimTime(19, tu.MINUTES))
         
 class DowntimeScheduleTests(unittest.TestCase):
     """
@@ -783,12 +784,12 @@ class DowntimeScheduleTests(unittest.TestCase):
         
     def testScheduleLengthTooShortRaises(self):
         "Test: initializing DowntimeSchedule with interval past schedule length raises SimError"
-        self.assertRaises(SimError, lambda: DowntimeSchedule(SimTime(368, simtime.MINUTES),
+        self.assertRaises(SimError, lambda: DowntimeSchedule(SimTime(368, tu.MINUTES),
                                                              self.valid_breaks))
         
     def testScheduleLengthToLastInterval(self):
         "Test: initializing DowntimeSchedule with last interval to schedule length works"
-        sched = DowntimeSchedule(SimTime(375, simtime.MINUTES), self.valid_breaks)
+        sched = DowntimeSchedule(SimTime(375, tu.MINUTES), self.valid_breaks)
         intervals = sched.down_intervals()
         self.assertEqual(next(intervals), (TWO_HRS, FIFTEEN_MINS))
         
@@ -848,13 +849,13 @@ class DowntimeScheduleTests(unittest.TestCase):
          
     def testNegativeIntervalRaises(self):
         "Test: DowntimeSchedule with an interval length of zero raises SimError"
-        breaks = [(TWO_HRS, TWO_HRS), (THREE_HRS, SimTime(-10, simtime.MINUTES)),
+        breaks = [(TWO_HRS, TWO_HRS), (THREE_HRS, SimTime(-10, tu.MINUTES)),
                   (SIX_HRS, FIFTEEN_MINS)]
         self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
          
     def testNegativeStartRaises(self):
         "Test: DowntimeSchedule with an interval length of zero raises SimError"
-        breaks = [(SimTime(-10, simtime.MINUTES), TWO_HRS), (THREE_HRS, FIFTEEN_MINS)]
+        breaks = [(SimTime(-10, tu.MINUTES), TWO_HRS), (THREE_HRS, FIFTEEN_MINS)]
         self.assertRaises(SimError, lambda: DowntimeSchedule(EIGHT_HRS, breaks))
 
         

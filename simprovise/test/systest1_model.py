@@ -15,7 +15,7 @@ from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
 from simprovise.simulation import Simulation
 
 RSRC1_WAITS = [SimTime(10), SimTime(12), SimTime(2)]
-RSRC2_WAITS = [SimTime(0.5, simtime.MINUTES), SimTime(20), SimTime(4)]
+RSRC2_WAITS = [SimTime(0.5, tu.MINUTES), SimTime(20), SimTime(4)]
 
 pcounter = itertools.count()
 

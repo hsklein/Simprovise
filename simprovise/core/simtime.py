@@ -3,7 +3,7 @@
 #
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
-# Defines the SimTime class and time unit constants
+# Defines the SimTime class and time unit enumeration
 #===============================================================================
 __all__ = ['SimTime']
 
@@ -11,23 +11,23 @@ __all__ = ['SimTime']
 # customization of day, week and year length.
 from simprovise.core import SimError, SimLogging
 from simprovise.core.apidoc import apidoc, apidocskip
+from enum import IntEnum
 
 logger = SimLogging.get_logger(__name__)
 
-# TimeUnit constants
-SECONDS = 0
-MINUTES = 1
-HOURS = 2
-
-_UNITS = (SECONDS, MINUTES, HOURS)
+class Unit(IntEnum):
+    SECONDS = 0
+    MINUTES = 1
+    HOURS = 2
+    
 _UNITNAMES = ('second', 'minute', 'hour')
-_base_unit = SECONDS
+_base_unit = Unit.SECONDS
 
 _ERROR_NAME = "SimTime Error"
 
 def base_unit():   
     """
-    Return the base time unit for the model (SECONDS, MINUTES, HOURS)
+    Return the base time unit for the model (a Unit enum value)
     or None if simulated time for the model is dimensionless.
     
     This unit will be used for all database datasinks, and all simulated
@@ -35,28 +35,28 @@ def base_unit():
     written/stored by the output datasinks.
     
     :return: The base time unit or None if dimensionless
-    :rtype:  simttime.SECONDS, simtime.MINUTES, simtime.HOURS or None
+    :rtype:  simttime.SECONDS, tu.MINUTES, tu.HOURS or None
     """
     return _base_unit
 
 def set_base_unit(unit):
     """
-    Set the base unit for the model (SECONDS, MINUTES, HOURS) or None if
+    Set the base unit for the model (Unit.SECONDS, MINUTES, HOURS) or None if
     simulated time for the model is dimensionless.
     
     TODO base_unit should probably be set tablevia environment variable
     and/or configuration file upon first call to base_unit()
     
-    Regardless, changing the base_unit in code must be done carefully. Changing from a
-    dimensioned base time unit (seconds, minutes or hours) to a dimension
-    less setting is particularly fraught, since we cannot convert a SimTime
-    object from one to the other.
+    Regardless, changing the base_unit in code must be done carefully.
+    Changing from a dimensioned base time unit (seconds, minutes or
+    hours) to a dimensionless setting is particularly fraught, since we
+    cannot convert a SimTime object from one to the other.
     
-    :param unit: simttime.SECONDS, simtime.MINUTES, simtime.HOURS or None
+    :param unit: simttime.SECONDS, tu.MINUTES, tu.HOURS or None
     :type unit:  int (range 0-2)
     """
     global _base_unit
-    if unit in _UNITS or unit is None:
+    if unit in Unit or unit is None:
         _base_unit = unit
     else:
         msg = "Invalid unit {0} passed to set_base_unit - must be SECONDS, MINUTES, HOURS or None"
@@ -77,8 +77,8 @@ class SimTime(object):
     :param value: A numeric time length or another SimTime object
     :type value:  Numeric scalar or :class:`~.simtime.SimTime`
     
-    :param units: Time unit (simtime.SECONDS, simtime.MINUTES or
-                  simtime.HOURS) or None. If value is a
+    :param units: Time unit (tu.SECONDS, tu.MINUTES or
+                  tu.HOURS) or None. If value is a
                   :class:`~.simtime.SimTime`, this is ignored.
                   If :func:`base_unit` is None (dimensionless), this
                   must be None. If the base_unit is set,
@@ -96,7 +96,7 @@ class SimTime(object):
             # what we'll set.
             if units is None:
                 units = _base_unit
-            if units in _UNITS or units is None:
+            if units in Unit or units is None:
                 self._units = units
             else:
                 # TODO Allow units as string
@@ -128,7 +128,7 @@ class SimTime(object):
             else:
                 return
         
-        if not units in _UNITS:
+        if not units in Unit:
             msg = "Invalid SimTime units ({0}) specified"
             raise SimError(_ERROR_NAME, msg, units)
  
@@ -143,7 +143,7 @@ class SimTime(object):
         """
         if self._units is None:
             return ''
-        elif self._units not in _UNITS:
+        elif self._units not in Unit:
             return 'Invalid Units'
         elif self._value == 1:
             return _UNITNAMES[self._units]
@@ -172,7 +172,7 @@ class SimTime(object):
         """
         Returns a new SimTime instance of the specified time units
         """
-        if tounits in _UNITS:
+        if tounits in Unit:
             conversionFactor = 60**(self._units - tounits)
             return SimTime(self._value * conversionFactor, tounits)
         else:
@@ -181,15 +181,15 @@ class SimTime(object):
 
     def to_seconds(self):
         "Returns a new SimTime instance, in seconds"
-        return self.to_units(SECONDS)
+        return self.to_units(Unit.SECONDS)
 
     def to_minutes(self):
         "Returns a new SimTime instance, in minutes"
-        return self.to_units(MINUTES)
+        return self.to_units(Unit.MINUTES)
 
     def to_hours(self):
         "Returns a new SimTime instance, in hours"
-        return self.to_units(HOURS)
+        return self.to_units(Unit.HOURS)
     
     def to_scalar(self):
         """
@@ -282,7 +282,7 @@ class SimTime(object):
 
     def __hash__(self):
         "for hashing, return the time value converted to seconds and truncated, if necessary"
-        conversionFactor = 60**(self._units - SECONDS)
+        conversionFactor = 60**(self._units - Unit.SECONDS)
         return int(self._value * conversionFactor)
 
     @apidocskip

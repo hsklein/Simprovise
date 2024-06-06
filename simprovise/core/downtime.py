@@ -12,6 +12,7 @@ __all__ = ['SimDowntimeAgent', 'SimResourceFailureAgent',
 from typing import NamedTuple
 
 from simprovise.core import (SimError, SimClock, SimLogging, SimTime)
+from simprovise.core.simtime import Unit as tu
 from simprovise.core.agent import SimAgent, SimMsgType
 from simprovise.core.simevent import SimEvent
 from simprovise.core.apidoc import apidoc, apidocskip
@@ -547,17 +548,17 @@ if __name__ == '__main__':
     from simprovise.core import SimSimpleResource, SimDistribution
     from simprovise.core import simtime, simevent, SimTime, SimClock
     
-    TWO_HRS = simtime.SimTime(2, simtime.HOURS)
-    FOUR_HRS = simtime.SimTime(4, simtime.HOURS)
-    SEVEN_HRS = simtime.SimTime(7, simtime.HOURS)
-    NINE_HRS = simtime.SimTime(9, simtime.HOURS)
-    BREAK_LEN = SimTime(15, simtime.MINUTES)
-    LUNCH_LEN = SimTime(30, simtime.MINUTES)
+    TWO_HRS = simtime.SimTime(2, tu.HOURS)
+    FOUR_HRS = simtime.SimTime(4, tu.HOURS)
+    SEVEN_HRS = simtime.SimTime(7, tu.HOURS)
+    NINE_HRS = simtime.SimTime(9, tu.HOURS)
+    BREAK_LEN = SimTime(15, tu.MINUTES)
+    LUNCH_LEN = SimTime(30, tu.MINUTES)
     
     
     rsrc = SimSimpleResource("testResource")
-    timeToFailureGenerator = SimDistribution.constant(SimTime(4, simtime.MINUTES))
-    timeToRepairGenerator = SimDistribution.constant(SimTime(2, simtime.MINUTES))
+    timeToFailureGenerator = SimDistribution.constant(SimTime(4, tu.MINUTES))
+    timeToRepairGenerator = SimDistribution.constant(SimTime(2, tu.MINUTES))
     failureAgent = SimResourceFailureAgent(rsrc, timeToFailureGenerator, timeToRepairGenerator)
 
     breaks = [(TWO_HRS, BREAK_LEN), (FOUR_HRS, LUNCH_LEN), (SEVEN_HRS, BREAK_LEN)]
@@ -572,11 +573,11 @@ if __name__ == '__main__':
     SimAgent.final_initialize_all()
   
     for i in range(15):
-        n = eventProcessor.process_events(SimTime(i, simtime.MINUTES))
+        n = eventProcessor.process_events(SimTime(i, tu.MINUTES))
         print(i, n, "events processed; resource up:", rsrc.up)
         
     for i in range(30, 1200, 15):      
-        n = eventProcessor.process_events(SimTime(i, simtime.MINUTES))
+        n = eventProcessor.process_events(SimTime(i, tu.MINUTES))
         tm = SimClock.now().to_hours()
         print(tm, "resource2 up", rsrc2.up)
         

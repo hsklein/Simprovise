@@ -249,8 +249,8 @@ class SimDistribution(object):
     .. code-block:: python
     
        SimDistribution.number_generator(SimDistribution.uniform,
-                                        SimTime(30, simtime.SECONDS),
-                                        SimTime(2, simtime.MINUTES))
+                                        SimTime(30, tu.SECONDS),
+                                        SimTime(2, tu.MINUTES))
 
     Finally, note that in a few cases (:meth:`round_robin`, :meth:`choice`)
     the values returned can be non-numeric and non-time (despite the name
@@ -381,8 +381,8 @@ class SimDistribution(object):
         distribution with the specified bounds. Sample usage::
 
             SimDistribution.number_generator(SimDistribution.uniform,
-                                            SimTime(10, simtime.SECONDS),
-                                            SimTime(1.5, simtime.MINUTES),
+                                            SimTime(10, tu.SECONDS),
+                                            SimTime(1.5, tu.MINUTES),
                                             rnStream=12)
 
         Args:
@@ -672,7 +672,7 @@ if __name__ == '__main__':
     cpuend = time.process_time()
     print("SimDistribution number_generator exponential SimTime", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.number_generator(SimDistribution.uniform, SimTime(10), SimTime(1, simtime.MINUTES))
+    gen = SimDistribution.number_generator(SimDistribution.uniform, SimTime(10), SimTime(1, tu.MINUTES))
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
@@ -680,7 +680,7 @@ if __name__ == '__main__':
     cpuend = time.process_time()
     print("SimDistribution number_generator uniform time", cpuend - cpustart, "mean value:", total / 100000)
 
-    gen = SimDistribution.number_generator(SimDistribution.triangular, SimTime(10), SimTime(1, simtime.MINUTES), 35)
+    gen = SimDistribution.number_generator(SimDistribution.triangular, SimTime(10), SimTime(1, tu.MINUTES), 35)
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
@@ -690,7 +690,7 @@ if __name__ == '__main__':
 
     args1 = [SimTime(10)]
     kwargs1 = {}
-    kwargs1['high'] = SimTime(1, simtime.MINUTES)
+    kwargs1['high'] = SimTime(1, tu.MINUTES)
     kwargs1['mode'] = 35
     gen = SimDistribution.number_generator(SimDistribution.triangular, *args1, **kwargs1)
     total = 0

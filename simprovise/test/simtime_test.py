@@ -6,17 +6,18 @@
 # Unit tests for SimTime class
 #===============================================================================
 from simprovise.core import *
+from simprovise.core.simtime import Unit as tu
 
 import unittest
 
 class SimTimeTests(unittest.TestCase):
     "Tests for class SimTime"
     def setUp(self):
-        self.ti_30secs = simtime.SimTime(30, simtime.SECONDS)
-        self.ti_120secs = simtime.SimTime(120, simtime.SECONDS)
-        self.ti_3600secs = simtime.SimTime(3600, simtime.SECONDS)
-        self.ti_2mins = simtime.SimTime(2, simtime.MINUTES)
-        self.ti_1hr = simtime.SimTime(1, simtime.HOURS)
+        self.ti_30secs = simtime.SimTime(30, tu.SECONDS)
+        self.ti_120secs = simtime.SimTime(120, tu.SECONDS)
+        self.ti_3600secs = simtime.SimTime(3600, tu.SECONDS)
+        self.ti_2mins = simtime.SimTime(2, tu.MINUTES)
+        self.ti_1hr = simtime.SimTime(1, tu.HOURS)
 
     def testAssign1(self):
         "Test: Assignment of invalid 3 for units raises SimException error"
@@ -25,7 +26,7 @@ class SimTimeTests(unittest.TestCase):
     # 1/4/2012 - negative time intervals should be OK (needed for statistical calculations on time intervals)
     #def testAssign2(self):
     #    "Test: Assignment of negative integer value raises SimException error"
-    #    self.assertRaises(simexception.Error, lambda: simtime.SimTime(-1, simtime.HOURS))
+    #    self.assertRaises(simexception.Error, lambda: simtime.SimTime(-1, tu.HOURS))
 
     def testAssign3(self):
         "Test: Assignment from another SimTime"
@@ -37,27 +38,27 @@ class SimTimeTests(unittest.TestCase):
 
     def testAssign5(self):
         "Test: Assignment from another SimTime, HOUR unit argument - units are preserved from original"
-        self.assertEqual(self.ti_2mins.units, simtime.SimTime(self.ti_2mins, simtime.HOURS).units)
+        self.assertEqual(self.ti_2mins.units, simtime.SimTime(self.ti_2mins, tu.HOURS).units)
 
     def testConvert1(self):
         "Test:  120 seconds converted to minutes, units is MINUTES"
-        self.assertEqual(self.ti_120secs.to_units(simtime.MINUTES).units, simtime.MINUTES)
+        self.assertEqual(self.ti_120secs.to_units(tu.MINUTES).units, tu.MINUTES)
 
     def testConvert2(self):
         "Test:  120 seconds converted to minutes, value is 2"
-        self.assertEqual(self.ti_120secs.to_units(simtime.MINUTES).value, 2)
+        self.assertEqual(self.ti_120secs.to_units(tu.MINUTES).value, 2)
 
     def testConvert3(self):
         "Test:  1 hour converted to minutes, units is MINUTES"
-        self.assertEqual(self.ti_1hr.to_units(simtime.MINUTES).units, simtime.MINUTES)
+        self.assertEqual(self.ti_1hr.to_units(tu.MINUTES).units, tu.MINUTES)
 
     def testConvert4(self):
         "Test: 1 hour converted to minutes, value is 60"
-        self.assertEqual(self.ti_1hr.to_units(simtime.MINUTES).value, 60)
+        self.assertEqual(self.ti_1hr.to_units(tu.MINUTES).value, 60)
 
     def testConvert5(self):
         "Test: 1 hour converted to seconds, value is 3600"
-        self.assertEqual(self.ti_1hr.to_units(simtime.SECONDS).value, 3600)
+        self.assertEqual(self.ti_1hr.to_units(tu.SECONDS).value, 3600)
 
     def testConvert6(self):
         "Test: conversion to invalid units raises an error"
@@ -77,27 +78,27 @@ class SimTimeTests(unittest.TestCase):
 
     def testConvert10(self):
         "Test: toHours() conversion, units"
-        self.assertEqual(self.ti_3600secs.to_hours().units, simtime.HOURS)
+        self.assertEqual(self.ti_3600secs.to_hours().units, tu.HOURS)
 
     def testAdd1(self):
         "Test: 30 seconds + 120 seconds = 150 seconds"
-        self.assertEqual(self.ti_30secs + self.ti_120secs, simtime.SimTime(150, simtime.SECONDS))
+        self.assertEqual(self.ti_30secs + self.ti_120secs, simtime.SimTime(150, tu.SECONDS))
         
     def testAdd2(self):
         "Test: 30 seconds + 120 seconds = 2.5 minutes"
-        self.assertEqual(self.ti_30secs + self.ti_120secs, simtime.SimTime(2.5, simtime.MINUTES))
+        self.assertEqual(self.ti_30secs + self.ti_120secs, simtime.SimTime(2.5, tu.MINUTES))
          
     def testAdd3(self):
         "Tests that 30 seconds + 120 seconds != 151 seconds"
-        self.assertNotEqual(self.ti_30secs + self.ti_120secs, simtime.SimTime(151, simtime.SECONDS))
+        self.assertNotEqual(self.ti_30secs + self.ti_120secs, simtime.SimTime(151, tu.SECONDS))
         
     def testAdd4(self):
         "Test: 30 seconds + 2 minutes = 2.5 minutes"
-        self.assertEqual(self.ti_30secs + self.ti_2mins, simtime.SimTime(2.5, simtime.MINUTES))
+        self.assertEqual(self.ti_30secs + self.ti_2mins, simtime.SimTime(2.5, tu.MINUTES))
         
     def testAdd4a(self):
         "Test: 2 minutes + 30 seconds = 2.5 minutes"
-        self.assertEqual(self.ti_2mins + self.ti_30secs, simtime.SimTime(2.5, simtime.MINUTES))
+        self.assertEqual(self.ti_2mins + self.ti_30secs, simtime.SimTime(2.5, tu.MINUTES))
          
     def testAdd5(self):
         "Test: 30 seconds + 90 (no units) = 120 seconds"
@@ -113,23 +114,23 @@ class SimTimeTests(unittest.TestCase):
           
     def testSub1(self):
         "Test: 2 minutes - 90 seconds = 30 seconds"
-        self.assertEqual(self.ti_2mins - simtime.SimTime(90, simtime.SECONDS), self.ti_30secs)
+        self.assertEqual(self.ti_2mins - simtime.SimTime(90, tu.SECONDS), self.ti_30secs)
          
     def testSub2(self):
         "Test: 30 seconds - 10 (no units) == 20 seconds"
-        self.assertEqual(self.ti_30secs - 10, simtime.SimTime(20, simtime.SECONDS))
+        self.assertEqual(self.ti_30secs - 10, simtime.SimTime(20, tu.SECONDS))
           
     def testSub3(self):
         "Test: 30 seconds - 120 seconds == -90 seconds"
-        self.assertEqual(self.ti_30secs -  self.ti_120secs, simtime.SimTime(-90, simtime.SECONDS))
+        self.assertEqual(self.ti_30secs -  self.ti_120secs, simtime.SimTime(-90, tu.SECONDS))
          
     def testSub4(self):
         "Test: 2 minutes - 1 (no units) = 1 minute"
-        self.assertEqual(self.ti_2mins - 1, SimTime(1, simtime.MINUTES))
+        self.assertEqual(self.ti_2mins - 1, SimTime(1, tu.MINUTES))
          
     def testSub5(self):
         "Test: 1 hour - 0 (no units) = 60 minutes"
-        self.assertEqual(self.ti_1hr - 0, SimTime(60, simtime.MINUTES))
+        self.assertEqual(self.ti_1hr - 0, SimTime(60, tu.MINUTES))
 
     def testMultiply1(self):
         "Test: 30 seconds * 4 = 120 seconds"
@@ -192,11 +193,11 @@ class SimTimeTests(unittest.TestCase):
     def testHash2(self):
         "Test: five different time values result in five dictionary entries"
         testDict = {}
-        ti1 = simtime.SimTime(0, simtime.SECONDS)
-        ti2 = simtime.SimTime(0.1, simtime.SECONDS)
-        ti3 = simtime.SimTime(1, simtime.SECONDS)
-        ti4 = simtime.SimTime(1, simtime.MINUTES)
-        ti5 = simtime.SimTime(1, simtime.HOURS)
+        ti1 = simtime.SimTime(0, tu.SECONDS)
+        ti2 = simtime.SimTime(0.1, tu.SECONDS)
+        ti3 = simtime.SimTime(1, tu.SECONDS)
+        ti4 = simtime.SimTime(1, tu.MINUTES)
+        ti5 = simtime.SimTime(1, tu.HOURS)
         testDict[ ti1 ] = 1
         testDict[ ti2 ] = 2
         testDict[ ti3 ] = 3
@@ -206,14 +207,14 @@ class SimTimeTests(unittest.TestCase):
         
     def testScalarComparison(self):
         "Test: comparing SimTime to scalar value raises when base time unit is not None"
-        t1 = SimTime(2, simtime.MINUTES)
+        t1 = SimTime(2, tu.MINUTES)
         self.assertRaises(simexception.SimError, lambda: t1 == 2)
         
     def testScalar(self):
         "Test to_scalar for various simtime base units"
-        if simtime.base_unit() == simtime.SECONDS:
+        if simtime.base_unit() == tu.SECONDS:
             self.assertEqual(self.ti_1hr.to_scalar(), 3600)
-        elif simtime.base_unit() == simtime.MINUTES:
+        elif simtime.base_unit() == tu.MINUTES:
             self.assertEqual(self.ti_1hr.to_scalar(), 60)
         else:
             self.assertEqual(self.ti_1hr.to_scalar(), 1)
@@ -227,7 +228,7 @@ class SimMinuteBaseTimeTests(SimTimeTests):
     @classmethod
     def setUpClass(cls):
         cls.baseunit = simtime.base_unit()
-        simtime.set_base_unit(simtime.MINUTES)
+        simtime.set_base_unit(tu.MINUTES)
        
     @classmethod
     def tearDownClass(cls):
@@ -245,7 +246,7 @@ class SimHourBaseTimeTests(SimTimeTests):
     @classmethod
     def setUpClass(cls):
         cls.baseunit = simtime.base_unit()
-        simtime.set_base_unit(simtime.HOURS)
+        simtime.set_base_unit(tu.HOURS)
        
     @classmethod
     def tearDownClass(cls):
@@ -262,7 +263,7 @@ class SimDimensionlessBaseTimeTests(unittest.TestCase):
     """
     def setUp(self):
         self.savedbaseunit = simtime.base_unit()
-        simtime.set_base_unit(simtime.MINUTES)
+        simtime.set_base_unit(tu.MINUTES)
         self._ti_3mins = SimTime(3)
         simtime.set_base_unit(None)
         self._ti_3_none = SimTime(3)        
