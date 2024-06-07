@@ -11,6 +11,7 @@ from simprovise.core import simtime, SimTime
 from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
                             SimProcess, SimDistribution, SimLocation,
                             SimSimpleResource, SimQueue)
+from simprovise.core.simtime import Unit as tu
 
 from simprovise.simulation import Simulation
 
@@ -61,7 +62,7 @@ class TestProcess1(SimProcess):
         self.release(rsrcAssignment)
         entity.move_to(workloc2)
         rsrcAssignment = self.acquire(rsrc2)
-        if rsrcloc2a.currentPopulation == 0:
+        if rsrcloc2a.current_population == 0:
             entity.move_to(rsrcloc2a)
         else:
             entity.move_to(rsrcloc2b)

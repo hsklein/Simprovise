@@ -388,11 +388,6 @@ class SimLocation(SimStaticObject):
         return self._timeDataCollector.entries()
 
     @property
-    def currentPopulation(self):
-        "The number of objects currently resident at the location"
-        return self._counter.value
-
-    @property
     def has_child_locations(self):
         """
         Returns True if this location has at least one child location
