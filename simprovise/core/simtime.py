@@ -44,8 +44,12 @@ def set_base_unit(unit):
     Set the base unit for the model (Unit.SECONDS, MINUTES, HOURS) or None if
     simulated time for the model is dimensionless.
     
-    TODO base_unit should probably be set tablevia environment variable
+    TODO base_unit should probably be set table via environment variable
     and/or configuration file upon first call to base_unit()
+    Even better, if a model is configured to be dimensionless, the
+    SimTime constructor should be a function that returns the input, or
+    something like importing decimal.Decimal as SimTime
+    
     
     Regardless, changing the base_unit in code must be done carefully.
     Changing from a dimensioned base time unit (seconds, minutes or
@@ -210,8 +214,9 @@ class SimTime(object):
     # and just return other (which had better be or convert to a number)
     def _converted_other_value(self, other):
         if isinstance(other, self.__class__):
-            self._validate_units(other)
-            self._validate_units(self)
+            if __debug__:
+                self._validate_units(other)
+                self._validate_units(self)
             if other._units is None:
                 return other._value
             else:
@@ -251,7 +256,8 @@ class SimTime(object):
         if other == 0:
             # Validate this SimTime (mostly for a change to dimensionless base unit)
             # before returning
-            self._validate_units(self)
+            if __debug__:
+                self._validate_units(self)
             return self._value
 
         if _base_unit is not None and not isinstance(other, self.__class__):
