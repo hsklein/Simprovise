@@ -7,7 +7,7 @@
 # with the LocationAssignmentAgentMixin (used by classes in the
 # resource module to start)
 #===============================================================================
-from simprovise.core import SimError, SimLogging
+from simprovise.core import SimError, SimLogging, simtrace
 
 from simprovise.core.agent import SimAgent, SimMsgType
 from simprovise.core.apidoc import apidoc, apidocskip
@@ -120,6 +120,10 @@ class SimLocatableObject(SimAgent):
                            
         """        
         self._validate_move_to_location(toLocation)
+        @simtrace.trace
+        def trace():
+            simtrace.trace_event(self, simtrace.Action.MOVE_TO, [toLocation])
+        trace()
         self._currentLocation = toLocation
 
     def _validate_move_to_location(self, toLocation):

@@ -8,6 +8,7 @@
 __all__ = ['SimProcess']
 
 import itertools
+import simprovise
 from simprovise.core.transaction import SimTransaction, BaseInterruptEvent
 from simprovise.core.simevent import SimEvent
 from simprovise.core.simelement import SimClassElement 
@@ -17,11 +18,12 @@ from simprovise.core.apidoc import apidoc, apidocskip
 
 from simprovise.core import (SimEntity, SimCounter, SimTime, SimClock,
                              SimUnweightedDataCollector)
-from simprovise.core import SimLogging, SimError, SimTimeOutException
+from simprovise.core import SimLogging, SimError, SimTimeOutException, simtrace
 logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "SimProcessError"
 _ACQUIRE_ERROR = "Resource Acquisition Error"
+_RELEASE_ERROR = "Resource Release Error"
 
 
 @apidocskip
@@ -230,6 +232,12 @@ class SimProcess(SimTransaction):
         if numrequested <= 0 or int(numrequested) != numrequested:
             errorMsg = "Resource acquire() number requested ({0}) must be an integer greater than zero"
             raise SimError(_ACQUIRE_ERROR, errorMsg, numrequested)
+        
+        @simtrace.trace
+        def trace():            
+            simtrace.trace_event(self, simtrace.Action.ACQUIRING,
+                                 [resource]*numrequested)
+        trace()
 
         # Send a resource request message to the desired resource's assignment
         # agent (which may or may not be the resource itself)
@@ -290,7 +298,13 @@ class SimProcess(SimTransaction):
         """
         assert isinstance(rsrcClass, type), "acquireFrom() rsrcClass parameter is not a class"
         assert agent, "Null agent passed to acquireFrom()"
-
+        
+        @simtrace.trace
+        def trace():            
+            simtrace.trace_event(self, simtrace.Action.ACQUIRING,
+                                 [rsrcClass.__name__] * numrequested)
+        trace()
+        
         if numrequested <= 0 or int(numrequested) != numrequested:
             errorMsg = "Resource acquire() number requested ({0}) must be an integer greater than zero"
             raise SimError(_ACQUIRE_ERROR, errorMsg, numrequested)
@@ -348,6 +362,12 @@ class SimProcess(SimTransaction):
         assignment = response.msgData
         assert assignment.process is self, "Resource assignment does not specify this transaction"
         self.__resource_assignments.append(assignment)
+        
+        @simtrace.trace
+        def trace():
+            simtrace.trace_event(self, simtrace.Action.ACQUIRED,
+                                 assignment.resources)
+        trace()
 
         # Finally, return the assignment
         return assignment
@@ -393,17 +413,50 @@ class SimProcess(SimTransaction):
         # to raise if the assignment count is zero.
         if rsrcAssignment.count == 0 and releaseSpec is None:
             return
+
+        # Convert the releaseSpec to an iterable of resources to release
+        
+        # The default is to release all resources in the assignment
+        if not releaseSpec:
+            resourcesToRelease = rsrcAssignment.resources
+    
+        # If the spec is a resource instance, convert it to an iterable
+        elif isinstance(releaseSpec, simprovise.core.resource.SimResource):
+            resourcesToRelease = (releaseSpec,)
+    
+        # If the spec is a number (n) rather than resources,
+        # release the first n resources in the assignment. Raise if n is
+        # greater than the number of resources in the assignment.
+        elif type(releaseSpec) is int:
+            n = releaseSpec
+            if n <= rsrcAssignment.count:
+                resourcesToRelease = rsrcAssignment.resources[:n]
+            else:
+                errorMsg = "Invalid resource release: release specifies more resources ({0}) that are not currently in the assignment ({1})"
+                raise SimError(_RELEASE_ERROR, errorMsg, n, rsrcAssignment.count)
+    
+        # Otherwise, the release spec should be an iterable of SimResources
+        else:
+            resourcesToRelease = releaseSpec
+
+
         
         assignmentAgent = rsrcAssignment.assignment_agent
         msgType = SimMsgType.RSRC_RELEASE
-        msgData = (rsrcAssignment, releaseSpec)
+        msgData = (rsrcAssignment, resourcesToRelease)
+           
+        @simtrace.trace
+        def trace():
+            simtrace.trace_event(self, simtrace.Action.RELEASE,
+                                 rsrcAssignment.resources)
+        trace()
         
         # Note that we expect the resource assignment agent to handle this
         # message immediately.
         self.agent.send_message(assignmentAgent, msgType, msgData)
         if rsrcAssignment.count == 0:
             self.__resource_assignments.remove(rsrcAssignment)
-            
+             
     def wait_for(self, amount, *, extend_through_downtime=False):
         """
         Wait (pause transaction execution) for a fixed amount of simulated time.

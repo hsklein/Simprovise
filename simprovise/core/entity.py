@@ -7,6 +7,8 @@
 #===============================================================================
 __all__ = ['SimEntity']
 
+import itertools
+
 from simprovise.core import SimClock, SimTime, SimCounter, SimUnweightedDataCollector
 from simprovise.core.simelement import SimClassElement
 from simprovise.core.simobject import SimTransientObject
@@ -16,6 +18,8 @@ from simprovise.core import SimLogging, SimError
 logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "SimEntityError"
+
+_entity_count = itertools.count(1)
         
 @apidoc
 class SimEntity(SimTransientObject):
@@ -32,7 +36,7 @@ class SimEntity(SimTransientObject):
 
     """
     __slots__ = ('__source', '__process', '__element', '__processElement',
-                 '__createTime', '__destroyTime')
+                 '__createTime', '__destroyTime', '_id')
     
     elements = {}
     
@@ -114,6 +118,7 @@ class SimEntity(SimTransientObject):
         self.__process = process
         self.__createTime = SimClock.now()
         self.__destroyTime = None
+        self._id = next(_entity_count)
                
         # Determine the entity's corresponding SimEntityElement, if any
         self.__element = self.__class__.element
@@ -202,6 +207,9 @@ class SimEntity(SimTransientObject):
             return self.destroy_time - self.create_time
         else:
             return SimClock.now() - self.create_time
+        
+    def __str__(self):
+        return "{0} {1}".format(self.__class__.__name__, self._id)
 
 class SimEntityElement(SimClassElement):
     """

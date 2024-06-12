@@ -152,6 +152,9 @@ class SimElement(object):
         at that point just before the simulation execution starts.
         """
         pass
+    
+    def __str__(self):
+        return self.element_id
 
 
 class SimClassElement(SimElement):   

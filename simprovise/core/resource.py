@@ -14,7 +14,7 @@ from itertools import chain
 from inspect import isclass
 
 from simprovise.core import (SimCounter, SimUnweightedDataCollector, SimError,
-                            SimTime, SimClock, SimLogging)
+                            SimTime, SimClock, SimLogging, simtrace)
 from simprovise.core.agent import SimAgent, SimMsgType
 from simprovise.core.location import SimStaticObject
 from simprovise.core.simevent import SimEvent
@@ -497,35 +497,11 @@ class ResourceAssignmentAgentMixin(object):
         """
         assert msg.msgType == SimMsgType.RSRC_RELEASE, "Invalid message type passed to handleResourceRelease()"
 
-        assignment, releaseSpec = msg.msgData
+        assignment, resourcesToRelease = msg.msgData
 
         if len(assignment.resources) == 0:
             errorMsg = "Invalid release: assignment passed to handleResourceRelease() has no resources"
             raise SimError(_RELEASE_ERROR, errorMsg)
-
-        # The default is to release all resources in the assignment
-        if not releaseSpec:
-            resourcesToRelease = assignment.resources
-
-        # If the caller has specified a resource instance, handle it by
-        # converting it to an iterable
-        elif isinstance(releaseSpec, SimResource):
-            resourcesToRelease = (releaseSpec,)
-
-        # If the caller has specified a number (n) rather than resources,
-        # release the first n resources in the assignment. Raise if n is
-        # greater than the number of resources in the assignment.
-        elif type(releaseSpec) is int:
-            n = releaseSpec
-            if n <= assignment.count:
-                resourcesToRelease = assignment.resources[:n]
-            else:
-                errorMsg = "Invalid resource release: release specifies more resources ({0}) that are not currently in the assignment ({1})"
-                raise SimError(_RELEASE_ERROR, errorMsg, n, assignment.count)
-
-        # Otherwise, the release spec should be an iterable of SimResources
-        else:
-            resourcesToRelease = releaseSpec
 
         if not assignment.contains(resourcesToRelease):
             errorMsg = "Invalid release: release specifies resources that are not currently in the assignment"
@@ -978,8 +954,9 @@ class SimResource(SimStaticObject):
             # The resource is newly down
             self._downtimeStart = SimClock.now()
             assert self._downPctCounter.value == 0, "_downPctCounter.value not zero on first takedown()"
-            self._downPctCounter.increment()
-
+            self._downPctCounter.increment()            
+            simtrace.trace_event(self, simtrace.Action.DOWN)
+            
     @apidocskip
     def _bringup(self):
         """
@@ -1001,6 +978,7 @@ class SimResource(SimStaticObject):
         self._downCount -= 1
         if self._downCount == 0:
             self._downPctCounter.decrement()
+            simtrace.trace_event(self, simtrace.Action.UP)
 
 
 @apidoc
