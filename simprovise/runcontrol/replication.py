@@ -182,6 +182,9 @@ class SimReplication(QObject):
                                                          msgQueue=self.__msgQueue)
             runControlScheduler.schedule_run_control_events()
 
+            # Initialize the trace, if any (in particular, open the trace file)
+            simtrace.initialize(self.__model.filename)
+            
             startTime = time.time()
             self._send_status_message(SimMessageQueue.STATUS_STARTED)
             nEvents = eventProcessor.process_events(self.__totalRunLength)

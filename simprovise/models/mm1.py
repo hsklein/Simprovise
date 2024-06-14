@@ -6,7 +6,8 @@ from simprovise.core.simtime import Unit as tu
 
 from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
                             SimProcess, SimDistribution, SimLocation,
-                            SimCounter, SimSimpleResource, SimQueue)
+                            SimCounter, SimSimpleResource, SimQueue,
+                            simtrace)
 
 from simprovise.simulation import Simulation
 from simprovise.models.queuing_theory_calc import theory_results
@@ -41,6 +42,8 @@ class mm1Process(SimProcess):
 
 source.add_entity_generator(SimEntity, mm1Process,
                             SimDistribution.exponential(meanInterarrivalTime, streamNum=2))
+
+#simtrace.set_trace_stdout()
 
 
 if __name__ == '__main__':

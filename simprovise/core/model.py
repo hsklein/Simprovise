@@ -83,8 +83,10 @@ class SimModel(object):
     @property
     def filename(self):
         """
-        The file path of the model script loaded via
-        :meth:`load_model_from_script`.
+        The file path of the model script. If a script was loaded via
+        :meth:`load_model_from_script`, returns the file path that was
+        loaded. Otherwise, we assume the model script is being run
+        directly, so we return sys.argv[0]
         
         TODO figure out how to get filename, module if the simulation is run
         directly from the model script
@@ -93,7 +95,10 @@ class SimModel(object):
         :rtype:  `str` or None
         
         """
-        return self._filename
+        if self._filename:           
+            return self._filename
+        else:
+            return sys.argv[0]
         
     @property
     def model_module(self):

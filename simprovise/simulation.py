@@ -860,7 +860,7 @@ if __name__ == '__main__':
     batchLength = SimTime(10000)
     #batchLength = SimTime(0)
     scriptpath = "models\\mm1.py"
-    multi_replication = True
+    multi_replication = False
     nruns = 50
     
     SimLogging.set_level(logging.WARN)

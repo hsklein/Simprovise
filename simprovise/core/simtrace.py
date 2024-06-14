@@ -55,7 +55,7 @@ class Action(Enum):
 # TODO set these via configuration and/or environment variable
 _trace_enabled = True
 _trace_type = TraceType.TABLE
-_trace_file = sys.stdout
+_trace_file = None
 _trace_max_events = 100   # If not None/zero, Cut trace off at this many events
 
 _trace_initialized = False
@@ -81,41 +81,74 @@ def trace(func):
      else:
          return no_op
     
+def set_tracetype(tracetype):
+     """
+     """
+     global _trace_type
+     assert isinstance(tracetype, TraceType), "non-TraceType passed to set_tracetype()"
+     _trace_type = tracetype
+    
+def set_trace_stdout():
+     """
+     """
+     global _trace_file
+     _trace_file = sys.stdout
+     
+    
 @trace
-def initialize(tracetype = None):
+def initialize(modelscript_filename=None):
      """
      Initialize the trace (if tracing is enabled)
      
-     Can change the default configured TraceType via the supplied parameter.
      Sets the header and write_event functions based on the TraceType.
-     Sets the trace file handle either to stdout (for TABLE traces) or a
-     file (<model script name>.csv) for CSV traces. For the latter, the file
-     is also opened.
+     
+     If the TraceType involves writing to an output file (both TABLE and
+     CSV) AND the trace_file has not yet been specified (via
+     :func:`set_trace_stdout`), open a new output file based on the
+     passed modelscript filename, using an extension based on the
+     trace type ('txt' for TABLE, 'csv' for CSV). If the modelscript
+     filename is not specified, the output goes to stdout regardless.
+     
+     :param modelscript_filename: The filename of the model python script
+     :type modelscript_filename:  `str`
+     
      """
-     global _trace_type
      global _trace_file
      global _header_func
      global _write_event_func
      global _trace_initialized
      
-     if tracetype:
-          _trace_type = tracetype
+     if _trace_initialized:
+          return
+ 
+     trace_ext = None
 
      if _trace_type == TraceType.TABLE:
-          _trace_file = sys.stdout
           _header_func = _write_trace_table_header
           _write_event_func = _write_trace_event_to_table
+          trace_ext = ".txt"
           
      elif _trace_type == TraceType.CSV:
           _header_func = _write_trace_csv_header
           _write_event_func = _write_trace_event_to_csv
-          basename, ext = os.path.splitext(os.path.basename(sys.argv[0]))
-          csv_filename = basename + '.csv'
-          try:
-               _trace_file = open(csv_filename, 'w')
-          except Exception as e:
-               logger.fatal("Error opening CSV trace file: %s: %s", csv_filename, e)
-               raise SimError(_ERROR_NAME, "Unable to open CSV trace file")
+          trace_ext = ".csv"
+          
+     if trace_ext and _trace_file is None:
+          # The tracetype involves writing to a file, and it hasn't already been
+          # set (presumably to stdout)
+          if modelscript_filename:
+               base, pyext = os.path.splitext(os.path.basename(modelscript_filename))
+               trace_filename = base + trace_ext
+               try:
+                    _trace_file = open(trace_filename, 'w')
+               except Exception as e:
+                    logger.fatal("Error opening CSV trace file: %s: %s",
+                                 trace_filename, e)
+                    raise SimError(_ERROR_NAME, "Unable to open trace file")
+          else:
+               # No modelscript filename, so write to stdout
+               _trace_file = sys.stdout
+          
      _trace_initialized = True
                        
 @trace
