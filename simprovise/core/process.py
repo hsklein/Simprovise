@@ -235,7 +235,7 @@ class SimProcess(SimTransaction):
         
         @simtrace.trace
         def trace():            
-            simtrace.trace_event(self, simtrace.Action.ACQUIRING,
+            simtrace.trace_event(self.entity, simtrace.Action.ACQUIRING,
                                  [resource]*numrequested)
         trace()
 
@@ -301,7 +301,7 @@ class SimProcess(SimTransaction):
         
         @simtrace.trace
         def trace():            
-            simtrace.trace_event(self, simtrace.Action.ACQUIRING,
+            simtrace.trace_event(self.entity, simtrace.Action.ACQUIRING,
                                  [rsrcClass.__name__] * numrequested)
         trace()
         
@@ -365,7 +365,7 @@ class SimProcess(SimTransaction):
         
         @simtrace.trace
         def trace():
-            simtrace.trace_event(self, simtrace.Action.ACQUIRED,
+            simtrace.trace_event(self.entity, simtrace.Action.ACQUIRED,
                                  assignment.resources)
         trace()
 
@@ -447,8 +447,8 @@ class SimProcess(SimTransaction):
            
         @simtrace.trace
         def trace():
-            simtrace.trace_event(self, simtrace.Action.RELEASE,
-                                 rsrcAssignment.resources)
+            simtrace.trace_event(self.entity, simtrace.Action.RELEASE,
+                                 resourcesToRelease)
         trace()
         
         # Note that we expect the resource assignment agent to handle this

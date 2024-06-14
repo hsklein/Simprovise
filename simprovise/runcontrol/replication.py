@@ -26,7 +26,7 @@ except ImportError:
     from simprovise.runcontrol.mockqt import MockSignal as Signal
 
 from simprovise.core import (SimModel, SimClock, SimError, SimTime,
-                             SimLogging, simtime, simrandom)
+                             SimLogging, simtime, simrandom, simtrace)
 from simprovise.core.simevent import EventProcessor
 from simprovise.database import SimDatabaseManager
 from simprovise.runcontrol.simruncontrol import (SimRunControlParameters,
@@ -198,6 +198,7 @@ class SimReplication(QObject):
             raise SimError(_ERROR_NAME, str(e)) from e
         finally:
             self.__hasExecuted = True
+            simtrace.finalize()
 
     def _send_status_message(self, status):
         if self.__msgQueue:

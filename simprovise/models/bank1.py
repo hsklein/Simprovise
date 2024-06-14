@@ -1,9 +1,14 @@
+#===============================================================================
+# MODULE bank1
+#
+# Copyright (C) 2024 Howard Klein - All Rights Reserved
+#
+# Defines one iteration of the bank demo model.
+#===============================================================================
 import sys
 from enum import Enum
 from simprovise.core import simtime, SimTime, simtrace
 from simprovise.core.simtime import Unit as tu
-##simtime.set_base_unit(tu.MINUTES)
-
 
 from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
                             SimProcess, SimDistribution, SimLocation,
@@ -15,24 +20,19 @@ from simprovise.models.queuing_theory_calc import theory_results
 
 class Customer(SimEntity):
     """
-    Base class for customer entities
+    Base class for bank customer entities
     """
 
 class RegularCustomer(Customer):
     """
     Regular (not merchant) bank customer
     """
-    def __str__(self):
-        return "RegularCustomer"
 
 class MerchantCustomer(Customer):
     """
     Merchant bank customer
     """
-    def __str__(self):
-        return "MerchantCustomer"
     
-
 class Teller(SimSimpleResource):
     """
     Base class for teller resources
@@ -54,6 +54,8 @@ class MerchantTeller(Teller):
     
 class Bank(SimLocation):
     """
+    A simLocation that encapsulates all of the objects (resources,
+    queues and locations) that comprise a bank.
     """
     __slots__ = ('teller_counter', 'regular_teller', 'merchant_teller',
                  'teller_pool', 'regular_queue', 'merchant_queue')
@@ -74,43 +76,17 @@ class Bank(SimLocation):
         
         self.regular_queue = SimQueue("RegularQueue", self)
         self.merchant_queue = SimQueue("MerchantQueue", self)
-    
-    def status_str(self):
-        """
-        Returns a formatted string of current bank queue and teller
-        size/status for the benefit of simulation result tracing.
-        """
-        qstr = "\tqueue lengths - regular:{0} merchant:{1}"
-        qstatus = qstr.format(self.regular_queue.current_population,
-                              self.merchant_queue.current_population)
-        tstr = "\tteller availability - regular:{0} merchant:{1}"
-        tstatus = tstr.format(self.regular_teller.available,
-                              self.merchant_teller.available)
-        return qstatus + tstatus
 
-
-def now_str():
-    return "{:.2f}\t".format(SimClock.now().to_minutes().to_scalar())
 
 class BankTransaction(SimProcess):
     """
+    Base class for simulated bank transaction classes
     """        
-    #def trace_enter_queue(self, bank):
-        #if not trace: return
-        #print(now_str(), self.entity, '\tentering queue\t\t', bank.status_str())
-    
-    #def trace_start_service(self, bank, teller):
-        #if not trace: return
-        #print(now_str(), self.entity, '\tmoving to:', teller, bank.status_str())
-    
-    #def trace_service_complete(self, bank, teller):
-        #if not trace: return
-        #print(now_str(), self.entity, '\tfinished with:', teller, bank.status_str())
-        
-
 
 class RegularTransaction(BankTransaction):
     """
+    Represents a "regular" transaction by a "regular" (non-merchant)
+    customer.
     """
     mean_interarrival_time = SimTime(1, tu.MINUTES)
     mean_service_time = SimTime(3, tu.MINUTES) 
@@ -130,6 +106,7 @@ class RegularTransaction(BankTransaction):
 
 class MerchantTransaction(BankTransaction):
     """
+    Represents a merchant transaction (by a merchant customer)
     """
     mean_interarrival_time = SimTime(6, tu.MINUTES)
     mean_service_time = SimTime(4, tu.MINUTES)
@@ -147,15 +124,21 @@ class MerchantTransaction(BankTransaction):
             self.wait_for(service_time)
         customer.move_to(sink)
 
+# The bank model consists of a (customer) source, a (customer) sink, and
+# a bank.
 source = SimEntitySource("Source")
 sink = SimEntitySink("Sink")
 bank = Bank(name="Bank", nRegularTellers=4, nMerchantTellers=1)
 
+# Define and create the (customer) entity generators for the model's entity
+# source.
 dist_reg = SimDistribution.exponential(RegularTransaction.mean_interarrival_time) 
 dist_merch = SimDistribution.exponential(MerchantTransaction.mean_interarrival_time) 
 source.add_entity_generator(RegularCustomer, RegularTransaction, dist_reg)
 source.add_entity_generator(MerchantCustomer, MerchantTransaction, dist_merch)
 
+# Set up trace output
+simtrace.initialize(simtrace.TraceType.CSV)
 simtrace.add_trace_column(bank.regular_queue, 'current_population', 'Regular Queue')
 simtrace.add_trace_column(bank.merchant_queue, 'current_population', 'Merchant Queue')
 simtrace.add_trace_column(bank.regular_teller, 'available', 'RegularTellers: available')

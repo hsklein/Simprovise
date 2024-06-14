@@ -7,16 +7,65 @@
 #==============================================================================
 from collections import namedtuple
 from enum import Enum
-import inspect
-from simprovise.core import SimClock
+import inspect, sys, os
+from simprovise.core import SimClock, SimLogging, SimError
 from simprovise.core.apidoc import apidoc, apidocskip
+
+logger = SimLogging.get_logger(__name__)
  
+_ERROR_NAME = "Trace Error"
 _DEFAULT_FMT_WIDTH = 20
 _ACTION_FMT_WIDTH = 9
 _CLOCKTIME_FMT_WIDTH = 10
 
-# TODO set this via configuration and/or environment variable
-_trace_enabled = False
+class TraceType(Enum):
+     """
+     The supported types of event tracing:
+     TABLE - writes a formatted table of events/column values to stdout
+     CSV   - writes the same data to a CSV file (with the same filename
+             as the model script)
+             
+    TODO: Support for additional trace types and/or pluggable/configurable
+          trace types facilitating functions such as animation.
+     """
+     TABLE = 0
+     CSV = 1
+        
+class Action(Enum):
+     """
+     Enumeration of the actions that can be traced via :func:`trace_event`
+     The basic events are:
+     
+     <entity> MOVE_TO <location>
+     <entity> ACQUIRING <resource(s)>  (resources have been requested)
+     <entity> ACQUIRED <resource(s)>  (resources have been acquired/assigned)
+     <entity> RELEASE <resource(s)>
+     <resource> DOWN
+     <resource> UP
+     
+     """
+     MOVE_TO = 'Move-to'
+     ACQUIRING = 'Acquiring'
+     ACQUIRED = 'Acquired'
+     RELEASE = 'Release'
+     DOWN = 'Down'
+     UP = 'Up'
+     
+# TODO set these via configuration and/or environment variable
+_trace_enabled = True
+_trace_type = TraceType.TABLE
+_trace_file = sys.stdout
+_trace_max_events = 100   # If not None/zero, Cut trace off at this many events
+
+_trace_initialized = False
+_trace_event_count = 0
+_object_fmt_width = _DEFAULT_FMT_WIDTH
+_argument_fmt_width = _DEFAULT_FMT_WIDTH
+_trace_columns = []
+
+# TraceType-specific functions, set by initialize()
+_header_func = None
+_write_event_func = None
 
 @apidocskip
 def trace(func):
@@ -30,6 +79,54 @@ def trace(func):
          return func
      else:
          return no_op
+    
+@trace
+def initialize(tracetype = None):
+     """
+     Initialize the trace (if tracing is enabled)
+     
+     Can change the default configured TraceType via the supplied parameter.
+     Sets the header and write_event functions based on the TraceType.
+     Sets the trace file handle either to stdout (for TABLE traces) or a
+     file (<model script name>.csv) for CSV traces. For the latter, the file
+     is also opened.
+     """
+     global _trace_type
+     global _trace_file
+     global _header_func
+     global _write_event_func
+     global _trace_initialized
+     
+     if tracetype:
+          _trace_type = tracetype
+
+     if _trace_type == TraceType.TABLE:
+          _trace_file = sys.stdout
+          _header_func = _write_trace_table_header
+          _write_event_func = _write_trace_event_to_table
+          
+     elif _trace_type == TraceType.CSV:
+          _header_func = _write_trace_csv_header
+          _write_event_func = _write_trace_event_to_csv
+          basename, ext = os.path.splitext(os.path.basename(sys.argv[0]))
+          csv_filename = basename + '.csv'
+          try:
+               _trace_file = open(csv_filename, 'w')
+          except Exception as e:
+               logger.fatal("Error opening CSV trace file: %s: %s", csv_filename, e)
+               raise SimError(_ERROR_NAME, "Unable to open CSV trace file")
+     _trace_initialized = True
+                       
+@trace
+def finalize():
+     """
+     Cleanup the trace. For csv files, close the file.
+     """
+     global _trace_file
+     if _trace_file and _trace_file is not sys.stdout and _trace_file is not sys.stderr:
+          logger.info("closing trace file...")
+          _trace_file.close()
+     _trace_file = None
     
 class Column(namedtuple('Column', ['colname', 'element', 'elementname', 'property', 'propertyname'])):
      """
@@ -79,8 +176,6 @@ class Column(namedtuple('Column', ['colname', 'element', 'elementname', 'propert
           return "{0}: {1:8}".format(self.name(), self.value())
  
 
-_trace_columns = []
-
 @apidoc
 def add_trace_column(element, propertyname, colname=None):
      """
@@ -104,17 +199,7 @@ def add_trace_column(element, propertyname, colname=None):
              if name == propertyname][0]
      col = Column(colname, element, element.element_id, prop, propertyname)
      _trace_columns.append(col)
-    
-class Action(Enum):
-     """
-     Enumeration of the actions that can be traced via :func:`trace_event`
-     """
-     MOVE_TO = 'Move-to'
-     ACQUIRING = 'Acquiring'
-     ACQUIRED = 'Acquired'
-     RELEASE = 'Release'
-     DOWN = 'Down'
-     UP = 'Up'
+
 
 
 class Event(namedtuple('Event', ['simtime', 'object', 'action', 'arguments'],
@@ -138,9 +223,9 @@ class Event(namedtuple('Event', ['simtime', 'object', 'action', 'arguments'],
 
      """
      __slots__ = ()
-     def __str__(self):
+     def arguments_to_str(self):
           """
-          Output the event formatted for the non-csv event trace output source
+          Format and return the arguments value as a string
           """
           argstr = ''
           n_arguments = len(self.arguments)
@@ -154,17 +239,19 @@ class Event(namedtuple('Event', ['simtime', 'object', 'action', 'arguments'],
                          argstr += "{0} ".format(arg)
                     else:
                          argstr += "{0} ({1}) ".format(arg, count)
-               
+          return argstr
+     
+     def __str__(self):
+          """
+          Output the event formatted for the non-csv event trace output source
+          """               
           estr = "{0:{w0}.2f} {1!s:{w1}} {2:{w2}} {3!s:{w3}}"
-          return estr.format(self.simtime, self.object, self.action.value, argstr, 
+          return estr.format(self.simtime, self.object, self.action.value,
+                             self.arguments_to_str(), 
                              w0=_CLOCKTIME_FMT_WIDTH, 
                              w1=_object_fmt_width,
                              w2=_ACTION_FMT_WIDTH,
                              w3=_argument_fmt_width)
-
-_trace_initialized = False
-_object_fmt_width = _DEFAULT_FMT_WIDTH
-_argument_fmt_width = _DEFAULT_FMT_WIDTH
 
 def _set_fmt_widths():
      """
@@ -203,29 +290,73 @@ def trace_event(obj, action, arguments=''):
      :type arguments: An iterable of simulation objects
      
      """
-     global _trace_initialized
-     if not _trace_initialized:
-          _set_fmt_widths()
-          event_fmt_width = _object_fmt_width + _ACTION_FMT_WIDTH + _argument_fmt_width + 4
-          table_width = event_fmt_width + _CLOCKTIME_FMT_WIDTH
-          
-          print("{0:>{width}}".format("Time", width=_CLOCKTIME_FMT_WIDTH), end='')
-          print("{0:{width}}".format("", width=event_fmt_width), end="")
-          for col in _trace_columns:
-               print("{0}".format(col.name()), end=' ')
-               table_width += len(col.name()) + 1
-               
-          print('\n{0:=^{w}}'.format('', w=table_width))
-          _trace_initialized = True
+     global _trace_event_count
+     
+     if _trace_max_events and _trace_event_count >= _trace_max_events:
+          return
+     
+     _trace_event_count += 1
+     if _trace_event_count == 1:
+          _header_func()
+          #_write_trace_table_header()
       
      evt = Event(SimClock.now().to_scalar(), obj, action, arguments)
-     print(evt, end=' ')
+     _write_event_func(evt)
+     #_write_trace_event_to_table(evt)
+
+     
+def _write_trace_table_header():
+     """
+     Write the formatted trace table  header row
+     """
+     _set_fmt_widths()
+     event_fmt_width = _object_fmt_width + _ACTION_FMT_WIDTH + _argument_fmt_width + 4
+     table_width = event_fmt_width + _CLOCKTIME_FMT_WIDTH
+     
+     print("{0:>{width}}".format("Time", width=_CLOCKTIME_FMT_WIDTH),
+           end='', file=_trace_file)
+     print("{0:{width}}".format("", width=event_fmt_width),
+           end="", file=_trace_file)
+     for col in _trace_columns:
+          print("{0}".format(col.name()), end=' ', file=_trace_file)
+          table_width += len(col.name()) + 1
+          
+     print('\n{0:=^{w}}'.format('', w=table_width), file=_trace_file)
+     
+def _write_trace_event_to_table(evt):
+     """
+     Write a passed trace event to the formatted table
+     """
+     print(evt, end=' ', file=_trace_file)
      for col in _trace_columns:
           colwidth = len(col.name()) + 1
           w1 = int(colwidth / 2)
           w2 = colwidth - w1
-          print("{0:-{w1}}{1:{w2}}".format(col.value(), '', w1=w1, w2=w2), end=' ')
-     print()
+          print("{0:-{w1}}{1:{w2}}".format(col.value(), '', w1=w1, w2=w2),
+                end=' ', file=_trace_file)
+     print('', file=_trace_file)
+     
+     
+def _write_trace_csv_header():
+     """
+     Write the csv column header row
+     """
+     print("Time", "Object", "Action", "Arguments",
+           sep=',', end='', file=_trace_file)
+     for col in _trace_columns:
+          print('', col.name(), sep=',', end='', file=_trace_file)
+     print('', file=_trace_file)
+     
+def _write_trace_event_to_csv(evt):
+     """
+     Write a passed trace event and columns as comma separated values
+     """
+     print(evt.simtime, evt.object, evt.action.value, evt.arguments_to_str(),
+           sep=',', end='', file=_trace_file)
+     
+     for col in _trace_columns:
+          print(',', col.value(), sep=' ', end='', file=_trace_file)
+     print('', file=_trace_file)
           
  
 if __name__ == '__main__':
@@ -241,13 +372,13 @@ if __name__ == '__main__':
      rsrc2 = SimSimpleResource("TestResource2", loc)
      _set_fmt_widths()
      
-     print(_object_fmt_width, _argument_fmt_width)
-          
+     initialize(TraceType.TABLE)
      add_trace_column(loc, 'current_population', 'Location Population')
      add_trace_column(loc, 'entries')
      trace_event(entity, Action.MOVE_TO, [loc])
      trace_event(entity, Action.ACQUIRED, (rsrc1, rsrc2))
      trace_event(entity, Action.ACQUIRED, (rsrc1, rsrc1))
+     finalize()
      
 
      
