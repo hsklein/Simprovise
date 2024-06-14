@@ -22,6 +22,8 @@ htmlcov/
 /simprovise/models/*simdef*
 /simprovise/models/*.png
 
-# ignore simulation output databases
+# ignore simulation output databases, txt and csv files
 *.simoutput
+*.txt
+*.csv
 
