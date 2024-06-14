@@ -120,10 +120,7 @@ class SimLocatableObject(SimAgent):
                            
         """        
         self._validate_move_to_location(toLocation)
-        @simtrace.trace
-        def trace():
-            simtrace.trace_event(self, simtrace.Action.MOVE_TO, [toLocation])
-        trace()
+        simtrace.trace_event(self, simtrace.Action.MOVE_TO, (toLocation,) )
         self._currentLocation = toLocation
 
     def _validate_move_to_location(self, toLocation):

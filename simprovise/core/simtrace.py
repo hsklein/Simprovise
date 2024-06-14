@@ -37,6 +37,7 @@ class Action(Enum):
      The basic events are:
      
      <entity> MOVE_TO <location>
+     <resource> MOVE_TO <location>     (for moveable resources)
      <entity> ACQUIRING <resource(s)>  (resources have been requested)
      <entity> ACQUIRED <resource(s)>  (resources have been acquired/assigned)
      <entity> RELEASE <resource(s)>
