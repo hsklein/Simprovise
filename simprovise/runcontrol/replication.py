@@ -545,31 +545,31 @@ class SimReplicator(QObject):
 
         self.__status = _STATUS_IN_PROGRESS
         n = replicationParameters.max_concurrent_replications
-        pool = multiprocessing.Pool(processes=n, maxtasksperchild=1)
-        self.__pool = pool
-        firstRun, lastRun = replicationParameters.replication_range
-        self.__nRuns = lastRun +1 - firstRun
-        self.__nRepsStarted = 0
-        self.__nRepsFailed = 0
-        self.__nRepsFinished = 0
-        self.__msgQueue.start_listening()
-
-        for runNumber in range(firstRun, lastRun+1):
-            dbpath = self._clone_initialized_database()
-            ar = pool.apply_async(execute_replication,
-                                  self._execute_args(runNumber, dbpath),
-                                  callback=self._callback)
-
-        pool.close()
-        logger.info("Running replications on thread %d", threading.get_ident())
-        if asynch:
-            self._async_join(pool)
-        else:
-            pool.join()
-            self.__status = _STATUS_COMPLETE
-            self.__msgQueue.stop_listening()
-            self.ReplicationsComplete.emit()
-            logger.info("(synchronous) replications complete")
+        with multiprocessing.Pool(processes=n, maxtasksperchild=1) as pool:
+            self.__pool = pool
+            firstRun, lastRun = replicationParameters.replication_range
+            self.__nRuns = lastRun +1 - firstRun
+            self.__nRepsStarted = 0
+            self.__nRepsFailed = 0
+            self.__nRepsFinished = 0
+            self.__msgQueue.start_listening()
+    
+            for runNumber in range(firstRun, lastRun+1):
+                dbpath = self._clone_initialized_database()
+                ar = pool.apply_async(execute_replication,
+                                      self._execute_args(runNumber, dbpath),
+                                      callback=self._callback)
+    
+            pool.close()
+            logger.info("Running replications on thread %d", threading.get_ident())
+            if asynch:
+                self._async_join(pool)
+            else:
+                pool.join()
+                self.__status = _STATUS_COMPLETE
+                self.__msgQueue.stop_listening()
+                self.ReplicationsComplete.emit()
+                logger.info("(synchronous) replications complete")
 
     def _async_join(self, pool):
         """
