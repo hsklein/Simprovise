@@ -25,8 +25,8 @@ except ImportError:
     from simprovise.runcontrol.mockqt import MockQObject as QObject
     from simprovise.runcontrol.mockqt import MockSignal as Signal
 
-from simprovise.core import (SimModel, SimClock, SimError, SimTime,
-                             SimLogging, simtime, simrandom, simtrace)
+from simprovise.core import (SimModel, SimClock, SimError,
+                             SimLogging, simrandom, simtrace)
 from simprovise.core.simevent import EventProcessor
 from simprovise.database import SimDatabaseManager
 from simprovise.runcontrol.simruncontrol import (SimRunControlParameters,
