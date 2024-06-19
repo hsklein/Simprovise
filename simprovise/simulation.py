@@ -339,7 +339,8 @@ class SimulationResult(object):
         TODO look at gathering data (SimDatasetStatistic objects) in initializer,
         to be available to reporting/output methods.
         """
-        logger.info("Simulation result created for output DB {0} {1}", dbpath, isTemporary)
+        logger.info("Simulation result created for output DB %s isTemporary: %s",
+                    dbpath, isTemporary)
         #print("==========", dbpath, isTemporary)
         self.dbMgr = SimDatabaseManager()
         self.dbMgr.open_archived_database(dbpath, isTemporary)
@@ -860,8 +861,8 @@ if __name__ == '__main__':
     batchLength = SimTime(10000)
     #batchLength = SimTime(0)
     scriptpath = "models\\mm1.py"
-    multi_replication = False
-    nruns = 50
+    multi_replication = True
+    nruns = 10
     
     SimLogging.set_level(logging.WARN)
     SimLogging.set_level(logging.INFO, 'simprovise.core.process')
