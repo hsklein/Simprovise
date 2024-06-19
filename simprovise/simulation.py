@@ -341,7 +341,6 @@ class SimulationResult(object):
         """
         logger.info("Simulation result created for output DB %s isTemporary: %s",
                     dbpath, isTemporary)
-        #print("==========", dbpath, isTemporary)
         self.dbMgr = SimDatabaseManager()
         self.dbMgr.open_archived_database(dbpath, isTemporary)
         self.datasetStatistics = None
