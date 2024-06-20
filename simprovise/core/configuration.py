@@ -12,8 +12,8 @@ from simprovise.core import SimError
 
 _CONFIG_EXTENSION = '.ini'
 _SIMPROVISE_CFG_BASENAME = 'simprovise.ini'
+_MODEL_SCRIPT_ENV_VARNAME = 'SIMPROVISE_MODEL_SCRIPT'
 
-# ENV variable name for model local_cfg_filename?
 
 # Configuration .ini file section names
 _SIM_TIME = 'SimTime'
@@ -132,27 +132,35 @@ class SimConfigParser(configparser.ConfigParser):
         this module can be imported without creating an import of simtime/simlogging;
         then the filename could be communicated via function call rather than
         environment variable. That would also require lazily initialization here.
+        
+        Update: Below, we now do attempt to read a model script filename from
+        an environment variable. There is not yet any real infrastructure in place
+        to set it.
         """
         install_dir = os.path.split(os.path.dirname(__file__))[0]
         script_dir = os.path.split(sys.argv[0])[0]
          
         install_cfg_filename = os.path.join(install_dir, _SIMPROVISE_CFG_BASENAME)
         local_cfg_filename = os.path.join(os.getcwd(), _SIMPROVISE_CFG_BASENAME)
-        script_cfg_filename = os.path.splitext(sys.argv[0])[0] + _CONFIG_EXTENSION
+        
+        script_filename = os.environ.get(_MODEL_SCRIPT_ENV_VARNAME, sys.argv[0])      
+        script_cfg_filename = os.path.splitext(script_filename)[0] + _CONFIG_EXTENSION
         local_script_cfg_filename = os.path.join(os.getcwd(),
                                                  os.path.basename(script_cfg_filename))
         
         #print(script_cfg_filename, local_script_cfg_filename, install_cfg_filename, local_cfg_filename)
+        # The configuration files to be read (if they exist) in the order
+        # in which they should be read, starting with the default configuration
+        # in the installation directory
+        cfg_files = [install_cfg_filename, local_cfg_filename,
+                             script_cfg_filename, local_script_cfg_filename]
+        
+        
+        # Eliminate duplicates while maintaining order
+        cfg_files = list(dict.fromkeys(cfg_files))
         
         try:
-            # The configuration files to be read (if they exist) in the order
-            # in which they should be read, starting with the default configuration
-            # in the installation directory
-            cfg_files = [install_cfg_filename, local_cfg_filename,
-                         script_cfg_filename, local_script_cfg_filename]
-            # Eliminate duplicates while maintaining order
-            cfg_files = list(dict.fromkeys(cfg_files))
-            
+             
             files_read = self.read(cfg_files)
             files_not_read = set(cfg_files) - set(files_read)
             if files_read:

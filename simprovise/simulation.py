@@ -12,6 +12,10 @@
 import os, sys, shutil, types
 import numpy as np
 
+#SCRIPTPATH = "models\\mm1.py"
+#os.environ["SIMPROVISE_MODEL_SCRIPT"] = SCRIPTPATH
+
+
 from simprovise.core import SimModel
 from simprovise.runcontrol.replication import (SimReplication, SimReplicator)
 from simprovise.runcontrol.simruncontrol import (SimReplicationParameters)
