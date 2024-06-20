@@ -23,8 +23,8 @@ SIM_TRACE = 'SimTrace'
 
 _ERROR_NAME = 'SimConfiguration Error'
 
-def testset():
-    print("**** configuration testset() *****")
+#def testset():
+    #print("**** configuration testset() *****")
 
 class SimConfigParser(configparser.ConfigParser):
     """
@@ -97,76 +97,79 @@ class SimConfigParser(configparser.ConfigParser):
         else:
             msg = "SimConfiguration {0} {1} setting ({2}) must be one of: {3}"
             raise SimError(_ERROR_NAME, msg, section, option, value, valid_values)
-                       
+        
+    def read_files(self):
+        """
+        Read (if they exist) configuration files in the following order,
+        where <filename>.py is the script being executed (argv[0]):
+        
+          - simprovise.ini in the simprovise installation directory
+          - simprovise.ini in the caller's working directory
+          - <filename>.ini in the same directory as <filename>.py 
+          - <filename>.ini in the caller's working directory 
+        
+        Setting values in later-read files supercede those from earlier-read
+        files.
+        
+        TODO:
+        We'd actually like to read configuration file's based on the
+        name of the model script, which may not be the same as thescript being executed
+        via the command line or equivalent - e.g., if our main script calls
+        simulation.execute_script(). Unfortunately, as currently built,
+        the configuration is read at the time that the simtime and simlogging
+        modules are loaded (in order to properly configure those modules) and
+        the filename is not available until after that point.
+        
+        The fix: while a refactoring/reorganization of the simprovise.core module
+         may be a good idea regardless -in order to reduce the number of modules 
+        that get imported on first touch (and reduce/eliminate the imports in __init__.py),
+        that probably won't be sufficient to solve this problem completely, since
+        execute_script() runs the model script in-process and requires SimTime
+        arguments. The only "easy" option that comes to mind is a bit of a hack:
+        communicate the model (or other) configuration filename out-of-band,
+        e.g. via environment variable before importing any simprovise modules.
+        A __slightly__ less hacky mechanism would require reorganizing so that
+        this module can be imported without creating an import of simtime/simlogging;
+        then the filename could be communicated via function call rather than
+        environment variable. That would also require lazily initialization here.
+        """
+        install_dir = os.path.split(os.path.dirname(__file__))[0]
+        script_dir = os.path.split(sys.argv[0])[0]
+         
+        install_cfg_filename = os.path.join(install_dir, _SIMPROVISE_CFG_BASENAME)
+        local_cfg_filename = os.path.join(os.getcwd(), _SIMPROVISE_CFG_BASENAME)
+        script_cfg_filename = os.path.splitext(sys.argv[0])[0] + _CONFIG_EXTENSION
+        local_script_cfg_filename = os.path.join(os.getcwd(),
+                                                 os.path.basename(script_cfg_filename))
+        
+        #print(script_cfg_filename, local_script_cfg_filename, install_cfg_filename, local_cfg_filename)
+        
+        try:
+            # The configuration files to be read (if they exist) in the order
+            # in which they should be read, starting with the default configuration
+            # in the installation directory
+            cfg_files = [install_cfg_filename, local_cfg_filename,
+                         script_cfg_filename, local_script_cfg_filename]
+            # Eliminate duplicates while maintaining order
+            cfg_files = list(dict.fromkeys(cfg_files))
+            
+            files_read = self.read(cfg_files)
+            files_not_read = set(cfg_files) - set(files_read)
+            if files_read:
+                print("Configuration files processed:", files_read)
+            if files_not_read:
+                print("Configuration files not found:", files_not_read)
+        except Exception as e:
+            msg = "Error parsing one or more simprovise configuration files {0}: {1}"
+            raise SimError(_ERROR_NAME, msg, cfg_files, e)
+                            
 
 def _init():
     """
-    Create and initialize a SimConfigParser singleton instance. Right now,
-    reads (if they exist) configuration files in the following order,
-    where <filename>.py is the script being executed (argv[0]):
-    
-      - simprovise.ini in the simprovise installation directory
-      - simprovise.ini in the caller's working directory
-      - <filename>.ini in the same directory as <filename>.py 
-      - <filename>.ini in the caller's working directory 
-    
-    Setting values in later-read files supercede those from earlier-read
-    files.
-    
-    TODO:
-    We'd actually like to read configuration file's based on the
-    name of the model script, which may not be the same as thescript being executed
-    via the command line or equivalent - e.g., if our main script calls
-    simulation.execute_script(). Unfortunately, as currently built,
-    the configuration is read at the time that the simtime and simlogging
-    modules are loaded (in order to properly configure those modules) and
-    the filename is not available until after that point.
-    
-    The fix: while a refactoring/reorganization of the simprovise.core module
-     may be a good idea regardless -in order to reduce the number of modules 
-    that get imported on first touch (and reduce/eliminate the imports in __init__.py),
-    that probably won't be sufficient to solve this problem completely, since
-    execute_script() runs the model script in-process and requires SimTime
-    arguments. The only "easy" option that comes to mind is a bit of a hack:
-    communicate the model (or other) configuration filename out-of-band,
-    e.g. via environment variable before importing any simprovise modules.
-    A __slightly__ less hacky mechanism would require reorganizing so that
-    this module can be imported without creating an import of simtime/simlogging;
-    then the filename could be communicated via function call rather than
-    environment variable. That would also require lazily initialization here.
-
+    Create and initialize a SimConfigParser singleton instance. 
     """
-    install_dir = os.path.split(os.path.dirname(__file__))[0]
-    script_dir = os.path.split(sys.argv[0])[0]
-     
-    install_cfg_filename = os.path.join(install_dir, _SIMPROVISE_CFG_BASENAME)
-    local_cfg_filename = os.path.join(os.getcwd(), _SIMPROVISE_CFG_BASENAME)
-    script_cfg_filename = os.path.splitext(sys.argv[0])[0] + _CONFIG_EXTENSION
-    local_script_cfg_filename = os.path.join(os.getcwd(),
-                                             os.path.basename(script_cfg_filename))
-    
-    #print(script_cfg_filename, local_script_cfg_filename, install_cfg_filename, local_cfg_filename)
     config = SimConfigParser()
-    
-    try:
-        # The configuration files to be read (if they exist) in the order
-        # in which they should be read, starting with the default configuration
-        # in the installation directory
-        cfg_files = [install_cfg_filename, local_cfg_filename,
-                     script_cfg_filename, local_script_cfg_filename]
-        # Eliminate duplicates while maintaining order
-        cfg_files = list(dict.fromkeys(cfg_files))
-        
-        files_read = config.read(cfg_files)
-        files_not_read = set(cfg_files) - set(files_read)
-        if files_read:
-            print("Configuration files processed:", files_read)
-        if files_not_read:
-            print("Configuration files not found:", files_not_read)
-    except Exception as e:
-        msg = "Error parsing one or more simprovise configuration files {0}: {1}"
-        raise SimError(_ERROR_NAME, msg, cfg_files, e)
-    
+    config.read_files()
     return config
     
 _config = _init()
@@ -279,58 +282,6 @@ def get_max_trace_events():
     """
     return _config.getint(_SIM_RANDOM, 'MaxReplications', minvalue=0, fallback=100)
 
-#def get_warmuplength():
-    #"""
-    #Return the Run Control warmup length as a SimTime
-    #"""
-    #value = _config.get(RUN_CONTROL, 'WarmupLength', fallback='0')
-    #return _get_simtime(value, 'WarmupLength')
-
-#def get_batchlength():
-    #"""
-    #Return the Run Control warmup length as a SimTime
-    #"""
-    #value = _config.get(RUN_CONTROL, 'BatchLength')
-    #return _get_simtime(value, 'BatchLength')
-
-#def get_numbatches():
-    #"""
-    #"""
-    #return _config.getint(RUN_CONTROL, 'NumBatches', fallback=1)
-
-#def _get_simtime(value, option):
-    #"""
-    #Convert a SimTime string to a SimTime. The string should consist of
-    #an 
-    #"""
-    #def to_number(string):
-        #try:
-            #return int(string)
-        #except ValueError:
-            #pass
-        #try:
-            #return float(string)
-        #except ValueError:
-            #exceptstr = "First value for configuration {0} is non-numeric: {1}"
-            #raise Exception(exceptstr.format(option, value))
-            
-    #from simprovise.core.simtime import SimTime
-    #valuestr = value.split()
-    
-    #if len(valuestr) == 0 or len(valuestr) > 2:
-        #exceptstr = "configuration option {0} must have one or two values: {1}"
-        #raise Exception(exceptstr.format(option, value))
-    
-    #timevalue = to_number(valuestr[0])
-    #if timevalue < 0:
-        #exceptstr = "First value for configuration {0} is negative: {1}"
-        #raise Exception(exceptstr.format(option, value))
-        
-    #if len(valuestr) == 2:
-        #timeunit = _timeunit_from_str(valuestr[1], option)
-        #return SimTime(timevalue, timeunit)
-    #else:       
-        #return SimTime(timevalue)
 
 
 
