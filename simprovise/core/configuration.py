@@ -166,7 +166,8 @@ class SimConfigParser(configparser.ConfigParser):
 
 def _init():
     """
-    Create and initialize a SimConfigParser singleton instance. 
+    Create and initialize a SimConfigParser singleton instance.
+    TODO allow read_files to occur via lazy initialization?
     """
     config = SimConfigParser()
     config.read_files()
