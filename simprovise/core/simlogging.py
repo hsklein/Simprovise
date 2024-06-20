@@ -10,6 +10,7 @@ __all__ = ['SimLogging']
 
 import logging, os
 from simprovise.core.apidoc import apidoc, apidocskip
+import simprovise.core.configuration as simconfig
 
 _BASE_LOGGER_NAME = __name__.rsplit('.')[0]
 
@@ -32,19 +33,23 @@ _formatter = logging.Formatter('%(name)s %(levelname)s:\t%(lineno)d\t%(message)s
 _ch.setFormatter(_formatter)
 _baseLogger.addHandler(_ch)
 
-# Determine if logging is to be completely disabled via environment variable
-_DISABLE_LOGGING_ENV_NAME = _BASE_LOGGER_NAME + '_DISABLE_LOGGING'
+#_DISABLE_LOGGING_ENV_NAME = _BASE_LOGGER_NAME + '_DISABLE_LOGGING'
+#if os.getenv(_DISABLE_LOGGING_ENV_NAME):
+
+# We can disable logging entirely via the NullLogger
+# Enable/disable based on configuration setting
 _useNullLogger = False
            
-if os.getenv(_DISABLE_LOGGING_ENV_NAME):
+if not simconfig.get_logging_enabled():
     _useNullLogger = True
     _baseLogger.info("SimLogging disabled")
 else:
     _baseLogger.info("SimLogging initialized")
-   
-
-# TODO add ability to specify debug level via environment variable or other 
-# configuration
+    
+# Set the default (base) logging level based on configuration setting
+level, levelstr = simconfig.get_logging_level()
+_baseLogger.info("Setting base logging level to %s...", levelstr)
+_baseLogger.setLevel(level)
 
 @apidocskip
 class NullLogger(object):

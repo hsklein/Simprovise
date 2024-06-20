@@ -10,6 +10,7 @@ from enum import Enum
 import inspect, sys, os
 from simprovise.core import SimClock, SimLogging, SimError
 from simprovise.core.apidoc import apidoc, apidocskip
+import simprovise.core.configuration as simconfig
 
 logger = SimLogging.get_logger(__name__)
  
@@ -52,12 +53,31 @@ class Action(Enum):
      DOWN = 'Down'
      UP = 'Up'
      
-# TODO set these via configuration and/or environment variable
-_trace_enabled = True
-_trace_type = TraceType.TABLE
-_trace_file = None
-_trace_max_events = 100   # If not None/zero, Cut trace off at this many events
+# Set enabled, trace type, max events and trace output destination
+# via configuration 
+_trace_enabled = simconfig.get_trace_enabled()
+if _trace_enabled: logger.info("Event Tracing enabled")
+else: logger.info("Event Tracing disabled")
 
+_trace_type = TraceType.TABLE
+if simconfig.get_tracetype == 'csv':
+     _trace_type = TraceType.CSV
+if _trace_enabled:
+     logger.info("Event Trace Type: %s", _trace_type)
+
+# If not None/zero, Cut trace off at this many events
+_trace_max_events = simconfig.get_max_trace_events()
+if _trace_enabled:
+     logger.info("Maximum number of events to trace: %d", _trace_max_events)
+
+# If the configuration specifies that trace be written to stdout, set
+# the trace file to that. Otherwise, it will get set/opened by initialize()
+_trace_file = None
+if simconfig.get_trace_destination() == 'stdout':
+     _trace_file = sys.stdout
+if _trace_enabled:
+     logger.info("Trace output destination: %s", simconfig.get_trace_destination())
+     
 _trace_initialized = False
 _trace_event_count = 0
 _object_fmt_width = _DEFAULT_FMT_WIDTH
@@ -81,21 +101,34 @@ def trace(func):
      else:
          return no_op
     
-def set_tracetype(tracetype):
-     """
-     """
-     global _trace_type
-     assert isinstance(tracetype, TraceType), "non-TraceType passed to set_tracetype()"
-     _trace_type = tracetype
+#def enable():
+     #"""
+     #Enable tracing
+     #"""
+     #global _trace_enabled
+     #_trace_enabled = True
     
-def set_trace_stdout():
-     """
-     """
-     global _trace_file
-     _trace_file = sys.stdout
+#def disable():
+     #"""
+     #Disable tracing
+     #"""
+     #global _trace_enabled
+     #_trace_enabled = False
+    
+#def set_tracetype(tracetype):
+     #"""
+     #"""
+     #global _trace_type
+     #assert isinstance(tracetype, TraceType), "non-TraceType passed to set_tracetype()"
+     #_trace_type = tracetype
+    
+#def set_trace_stdout():
+     #"""
+     #"""
+     #global _trace_file
+     #_trace_file = sys.stdout
      
     
-@trace
 def initialize(modelscript_filename=None):
      """
      Initialize the trace (if tracing is enabled)
@@ -113,6 +146,9 @@ def initialize(modelscript_filename=None):
      :type modelscript_filename:  `str`
      
      """
+     if not _trace_enabled:
+          return
+     
      global _trace_file
      global _header_func
      global _write_event_func
@@ -151,11 +187,13 @@ def initialize(modelscript_filename=None):
           
      _trace_initialized = True
                        
-@trace
 def finalize():
      """
-     Cleanup the trace. For csv files, close the file.
+     Cleanup the trace if trace is enabled. For csv files, close the file.
      """
+     if not _trace_enabled:
+          return
+     
      global _trace_file
      if _trace_file and _trace_file is not sys.stdout and _trace_file is not sys.stderr:
           logger.info("closing trace file...")
@@ -301,16 +339,16 @@ def _set_fmt_widths():
      _argument_fmt_width = max([len(element.element_id)
                                 for element in SimModel.model().static_objects]) * 2 + 6
 
-@trace
 def trace_event(obj, action, arguments=''):
      """
      If tracing is enabled, write the passed object, action and argument(s) as a
-     :class:`simtrace.Event` to the event trace output table. If this is the first
-     event to be written, initialize format widths and the table headers first.
+     :class:`simtrace.Event` to the event trace output, either a formatted table
+     or as comma separated values. If this is the first event to be written,
+     write the table/file header first.
      
-     TODO: Refactor for multiple tracing options. A csv file en liue of formatted
-     standard output is the next obvious option. longer term, trace_event() should 
-     be useable to pipe data to an animation process.
+     TODO: More refactoring for multiple tracing options. trace_event() should 
+     eventually be usable for other puposes, such asbe piping data to an
+     animator.
      
      :param obj:    The simulation object that is the focus of this
                        event, typically an entity or resource
@@ -324,6 +362,9 @@ def trace_event(obj, action, arguments=''):
      :type arguments: An iterable of simulation objects
      
      """
+     if not _trace_enabled:
+          return
+     
      global _trace_event_count
      
      if _trace_max_events and _trace_event_count >= _trace_max_events:
@@ -332,11 +373,9 @@ def trace_event(obj, action, arguments=''):
      _trace_event_count += 1
      if _trace_event_count == 1:
           _header_func()
-          #_write_trace_table_header()
       
      evt = Event(SimClock.now().to_scalar(), obj, action, arguments)
      _write_event_func(evt)
-     #_write_trace_event_to_table(evt)
 
      
 def _write_trace_table_header():
@@ -406,7 +445,7 @@ if __name__ == '__main__':
      rsrc2 = SimSimpleResource("TestResource2", loc)
      _set_fmt_widths()
      
-     initialize(TraceType.TABLE)
+     initialize()
      add_trace_column(loc, 'current_population', 'Location Population')
      add_trace_column(loc, 'entries')
      trace_event(entity, Action.MOVE_TO, [loc])

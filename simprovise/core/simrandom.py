@@ -73,6 +73,7 @@ import simprovise
 from simprovise.core import SimError, SimLogging, SimTime, simtime
 from simprovise.core.simtime import Unit as tu
 from simprovise.core.apidoc import apidoc, apidocskip
+import simprovise.core.configuration as simconfig
 
 logger = SimLogging.get_logger(__name__)
 
@@ -80,10 +81,14 @@ _BASE_SEED = 1976
 _BASE_BIT_GENERATOR = np.random.PCG64DXSM(seed=_BASE_SEED)
 
 # The number of independent streams allowed per model (run) TODO: make configurable
-_NSTREAMS = 2000
+_NSTREAMS = simconfig.get_PRNstreams_per_run()
+logger.info("Initialized random number streams per run to %d based on configuration setting",
+            _NSTREAMS)
 
 # The maximum number of replications (runs) supported TODO: make configurable
-_MAX_REPLICATIONS = 100
+_MAX_REPLICATIONS = simconfig.get_max_replications()
+logger.info("Initialized maximum replications/max run number to %d based on configuration setting",
+            _MAX_REPLICATIONS)
 
 # We obtain (sufficiently) independent streams by starting with a base
 # generator and advancing/jumping ahead by a delta value

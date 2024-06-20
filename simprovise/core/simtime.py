@@ -12,6 +12,7 @@ __all__ = ['SimTime']
 from simprovise.core import SimError, SimLogging
 from simprovise.core.apidoc import apidoc, apidocskip
 from enum import IntEnum
+import simprovise.core.configuration as simconfig
 
 logger = SimLogging.get_logger(__name__)
 
@@ -21,9 +22,21 @@ class Unit(IntEnum):
     HOURS = 2
     
 _UNITNAMES = ('second', 'minute', 'hour')
-_base_unit = Unit.SECONDS
+
+#_base_unit = Unit.SECONDS
+
+# Initialize the base time unit from the configuration setting
+_base_unit = simconfig.get_base_timeunit()
+if _base_unit is not None:
+    _base_unit = Unit(_base_unit)
+    logger.info("SimTime base time unit set to %s", _base_unit.__repr__())
+else:
+    logger.info("SimTime base time unit set to None - dimensionless")
+   
 
 _ERROR_NAME = "SimTime Error"
+
+#print("base_timeunit:", _base_unit.__repr__())
 
 def base_unit():   
     """

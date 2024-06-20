@@ -104,7 +104,7 @@ class SimReplication(QObject):
         sets up a non-animated run, initializes the random number generators
         for this run, initializes the simulation clock, and loads the model.
         """
-        SimLogging.set_level(logging.WARN)
+        #SimLogging.set_level(logging.WARN)
         self.__databaseManager = SimDatabaseManager()
         self.__dbPath = dbPath
         self.__model = model

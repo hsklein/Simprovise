@@ -854,17 +854,16 @@ class SimSample(object):
 
 
 if __name__ == '__main__':
-    import logging
     
     warmupLength = SimTime(1000)
     batchLength = SimTime(10000)
     #batchLength = SimTime(0)
     scriptpath = "models\\mm1.py"
-    multi_replication = True
+    multi_replication = False
     nruns = 10
     
-    SimLogging.set_level(logging.WARN)
-    SimLogging.set_level(logging.INFO, 'simprovise.core.process')
+    #SimLogging.set_level(logging.WARN)
+    #SimLogging.set_level(logging.INFO, 'simprovise.core.process')
     
     if not multi_replication:
         print("Running a single replication...")

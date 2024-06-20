@@ -138,8 +138,8 @@ source.add_entity_generator(RegularCustomer, RegularTransaction, dist_reg)
 source.add_entity_generator(MerchantCustomer, MerchantTransaction, dist_merch)
 
 # Set up trace output
-simtrace.set_tracetype(simtrace.TraceType.TABLE)
-simtrace.set_trace_stdout()
+#simtrace.set_tracetype(simtrace.TraceType.TABLE)
+#simtrace.set_trace_stdout()
 simtrace.add_trace_column(bank.regular_queue, 'current_population', 'Regular Queue')
 simtrace.add_trace_column(bank.merchant_queue, 'current_population', 'Merchant Queue')
 simtrace.add_trace_column(bank.regular_teller, 'available', 'RegularTellers: available')
@@ -148,6 +148,7 @@ simtrace.add_trace_column(bank.merchant_teller, 'available', 'MerchantTellers: a
 
 if __name__ == '__main__':
     print("================ main=================")
+    print("debug:", __debug__)
     warmupLength = SimTime(100, tu.MINUTES)
     batchLength = SimTime(600, tu.MINUTES)
     warmupLength = SimTime(10, tu.MINUTES)
