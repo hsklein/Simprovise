@@ -7,16 +7,15 @@
 #===============================================================================
 #from simprovise.core import (simevent, simtime, SimClock, SimTime, SimProcess, 
                              #SimSimpleResource, SimResourceAssignmentAgent, SimError)
-from simprovise.core import * 
-from simprovise.core.transaction import (SimTransaction,
-                                         SimTransactionResumeEvent,
-                                         SimInterruptEvent)
-from simprovise.core.simtime import Unit as tu
-from simprovise.core.agent import SimAgent
-from simprovise.core.simexception import SimInterruptException, SimTimeOutException
+from simprovise.core import simtime, simevent, SimError 
+from simprovise.core.simclock import SimClock
+from simprovise.core.simtime import SimTime, Unit as tu
+from simprovise.modeling import (SimEntity, SimEntitySource, SimProcess,
+                                 SimSimpleResource)
+from simprovise.core.simexception import SimTimeOutException
 import unittest
 from heapq import heappop
-from simprovise.core.location import SimStaticObject
+from simprovise.core.model import SimModel
 
 ONE_MIN = simtime.SimTime(1, tu.MINUTES)
 TWO_MINS = simtime.SimTime(2, tu.MINUTES)
@@ -67,7 +66,7 @@ class SimProcessDataMethodsTests(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         
     def testResourceAssignments1(self):
         "test: results of SimProcess.resource_assignments"
@@ -152,7 +151,7 @@ class BasicTimeoutTests(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         
     def testStartNotExecuting(self):
         """
@@ -227,7 +226,7 @@ class TimeoutTests1(unittest.TestCase):
     - starting a second transaction, same run() with a acquire timeout of 1 min
     """
     def setUp( self ):
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         simevent.initialize()
         SimClock.initialize()
         self.source = MockSource()
@@ -241,7 +240,7 @@ class TimeoutTests1(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
 
 
     def testTimeout2(self):
@@ -309,7 +308,7 @@ class TimeoutTests2(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         
 
     def testTimeout2(self):
@@ -380,7 +379,7 @@ class ZeroTimeoutTests(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
 
     def testTimeout1(self):
         """

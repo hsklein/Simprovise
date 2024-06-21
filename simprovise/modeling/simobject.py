@@ -7,9 +7,11 @@
 # with the LocationAssignmentAgentMixin (used by classes in the
 # resource module to start)
 #===============================================================================
-from simprovise.core import SimError, SimLogging, simtrace
+from simprovise.core import SimError
+from simprovise.core.simlogging import SimLogging
+from simprovise.core import simtrace
 
-from simprovise.core.agent import SimAgent, SimMsgType
+from simprovise.modeling.agent import SimAgent, SimMsgType
 from simprovise.core.apidoc import apidoc, apidocskip
 
 _LOCATABLE_ERROR_NAME = "SimLocatableObjectError"

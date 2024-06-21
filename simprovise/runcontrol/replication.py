@@ -15,7 +15,6 @@ import sys, os, time
 import multiprocessing, threading
 import tempfile, shutil
 import sqlite3
-import logging
 from traceback import format_tb
 
 # Use PySide if it is installed; otherwise replace with mock object classes
@@ -25,8 +24,10 @@ except ImportError:
     from simprovise.runcontrol.mockqt import MockQObject as QObject
     from simprovise.runcontrol.mockqt import MockSignal as Signal
 
-from simprovise.core import (SimModel, SimClock, SimError,
-                             SimLogging, simrandom, simtrace)
+from simprovise.core.simlogging import SimLogging
+from simprovise.core.model import SimModel
+from simprovise.core.simclock import SimClock
+from simprovise.core import SimError, simrandom, simtrace
 from simprovise.core.simevent import EventProcessor
 from simprovise.database import SimDatabaseManager
 from simprovise.runcontrol.simruncontrol import (SimRunControlParameters,

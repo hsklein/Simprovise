@@ -5,7 +5,8 @@
 #
 # Unit tests for SimDataCollector and the aggregate classes
 #===============================================================================
-from simprovise.core import *
+from simprovise.core.simclock import SimClock
+from simprovise.core import simtime, datacollector
 from simprovise.core.simtime import Unit as tu
 import unittest
 

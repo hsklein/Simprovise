@@ -10,7 +10,9 @@ __all__ = ['SimDataCollector',
 
 from abc import ABCMeta, abstractmethod
 
-from simprovise.core import (SimClock, simtime, SimLogging, SimError)
+from simprovise.core import simtime, SimError
+from simprovise.core.simclock import SimClock
+from simprovise.core.simlogging import SimLogging
 from simprovise.core.datasink import NullDataSink
 from simprovise.core.apidoc import apidoc, apidocskip
 

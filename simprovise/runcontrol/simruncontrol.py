@@ -26,9 +26,12 @@ except ImportError:
     from simprovise.runcontrol.mockqt import MockQObject as QObject
     from simprovise.runcontrol.mockqt import MockSignal as Signal
 
-from simprovise.core import SimDataCollector, SimClock, SimError, simrandom
-from simprovise.core import SimLogging, SimTime
 from simprovise.core.simevent import SimEvent
+from simprovise.core.simlogging import SimLogging
+from simprovise.core.simtime import SimTime
+from simprovise.core.datacollector import SimDataCollector
+from simprovise.core.simclock import SimClock
+from simprovise.core import SimError, simrandom
 
 logger = SimLogging.get_logger(__name__)
 

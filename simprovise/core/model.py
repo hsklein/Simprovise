@@ -8,11 +8,10 @@
 __all__ = ['SimModel']
 
 import sys, os
-from simprovise.core import SimError, SimLogging, SimEntity, SimProcess
-from simprovise.core.location import SimStaticObject
+from simprovise.core import SimError
+from simprovise.core.simlogging import SimLogging
 from simprovise.core.utility import SimUtility
 from simprovise.core.simelement import SimElement
-from simprovise.core.agent import SimAgent
 
 logger = SimLogging.get_logger(__name__)
 
@@ -79,7 +78,57 @@ class SimModel(object):
         """
         self._filename = None
         self._module = None
+        self._agents = set()
+        self._processElements = {}
+        self._entityElements = {}
+        self._staticObjects = {}
         
+    def _register_agent(self, agent):
+        """
+        """
+        self._agents.add(agent)
+        
+    def _register_processElement(self, element):
+        """
+        Add a SimProcessElement to the dictionary. This method should only
+        be called by SimProcess.__init_subclass__()
+        """
+        if element.element_id in self._processElements:
+            msg = "SimProcess class with element ID {0} is already registered"
+            raise SimError(_ERROR_NAME, msg, element.element_id)
+        self._processElements[element.element_id] = element
+        
+    def _register_entityElement(self, element):
+        """
+        Add a SimEntityElement to the dictionary. This method should only
+        be called by SimEntity.__init_subclass__()
+        """
+        if element.element_id in self._entityElements:
+            msg = "SimEntity class with element ID {0} is already registered"
+            raise SimError(_ERROR_NAME, msg, element.element_id)
+        self._entityElements[element.element_id] = element
+       
+    def _register_staticObject(self, statObj):
+        """
+        Add a SimStaticObject to the dictionary. This method should only
+        be called by SimStaticObject.__init__()
+        """
+        if statObj.element_id in self._staticObjects:
+            msg = "Static Object with element ID {0} is already registered"
+            raise SimError(_ERROR_NAME, msg, statObj.element_id)
+        self._staticObjects[statObj.element_id] = statObj
+        
+    def clear_registry_partial(self):
+        """
+        Clear all of the registered agents and staticObjects.
+        Intended for use by unit test setup/teardown.
+        """
+        self._agents.clear()
+        #self._processElements.clear()
+        #self._entityElements.clear()
+        self._staticObjects.clear()
+        
+                
     @property
     def filename(self):
         """
@@ -128,11 +177,11 @@ class SimModel(object):
         A generator that returns all :class:`SimElements
         <.simelement.SimElement>` in the model.
         """
-        for e in SimProcess.elements.values():
+        for e in self._processElements.values():
             yield e
-        for e in SimEntity.elements.values():
+        for e in self._entityElements.values():
             yield e
-        for e in SimStaticObject.elements.values():
+        for e in self._staticObjects.values():
             yield e
             
     @property
@@ -141,7 +190,7 @@ class SimModel(object):
         A generator returning all :class:`~.agent.SimAgent` objects in the
         model.
         """
-        for agent in SimAgent.agents:
+        for agent in self._agents:
             yield agent
                
     @property
@@ -150,7 +199,7 @@ class SimModel(object):
         A generator that returns a all :class:`~.location.SimStaticObject`
         elements in the model
          """
-        for e in SimStaticObject.elements.values():
+        for e in self._staticObjects.values():
             yield e
     
     @property
@@ -159,7 +208,7 @@ class SimModel(object):
         A generator that returns a all :class:`~.process.SimProcess`
         classes in the model
         """
-        for e in SimProcess.elements.values():
+        for e in self._processElements.values():
             yield e
      
     @property
@@ -168,7 +217,7 @@ class SimModel(object):
         A generator that returns a all :class:`~.entity.SimEntity`
         classes in the model
         """
-        for e in SimEntity.elements.values():
+        for e in self._entityElements.values():
             yield e
             
     def has_static_object(self, elementid):
@@ -181,7 +230,7 @@ class SimModel(object):
         :type elementid:  `str`
     
         """
-        return elementid in SimStaticObject.elements
+        return elementid in self._staticObjects
     
     def get_static_object(self, elementid):
         """
@@ -196,8 +245,8 @@ class SimModel(object):
         :rtype:  :class:`~.location.SimStaticObject`
         
         """
-        if elementid in SimStaticObject.elements:
-            return SimStaticObject.elements[elementid]
+        if elementid in self._staticObjects:
+            return self._staticObjects[elementid]
         else:
             msg = "get_static_object({0}): element ID not found"
             raise SimError(_ERROR_NAME, msg, elementid)
@@ -206,33 +255,29 @@ class SimModel(object):
         """
         Returns the registered :class:`~.entity.SimEntityElement` for the 
         passed entity class; raises a :class:`~.simexception.SimError` if
-        not found, or the passed parameter is not a SimEntity subclass.
+        not found.
         
         :param entity_cls: The entity class corresponding to the requested
-                           :class:`~.entity.SimEntityElement`
+                           :class:`~simprovise.modeling.entity.SimEntity`
         :type entity_cls:  `class`
                            
         :return:           The specified static entity element
-        :rtype:            :class:`~.entity.SimEntityElement`
+        :rtype:            :class:`~simprovise.modeling.entity.SimEntityElement`
         
         """
-        if not issubclass(entity_cls, SimEntity):
-            msg = "get_entity_element({0}): parameter is either not a class or not a subclass of SimEntity"
-            raise SimError(_ERROR_NAME, msg, entity_cls)
-            
         elementid = SimElement.get_full_class_name(entity_cls)
         
-        if elementid in SimEntity.elements:
-            return SimEntity.elements[elementid]
+        if elementid in self._entityElements:
+            return self._entityElements[elementid]
         else:
-            msg = "get_entity_element({0}): element ID not found"
-            raise SimError(_ERROR_NAME, msg, elementid)
+            msg = "get_entity_element({0}): element ID {1} not found"
+            raise SimError(_ERROR_NAME, msg, entity_cls, elementid)
     
     def get_process_element(self, process_cls):
         """
         Returns the registered :class:`~.process.SimProcessElement` for the 
         passed process class; raises a :class:`~.simexception.SimError` if
-        not found, or the passed parameter is not a SimProcess subclass.
+        not found.
         
         :param process_cls: The process class corresponding to the requested
                             :class:`~.process.SimProcessElement`
@@ -242,24 +287,20 @@ class SimModel(object):
         :rtype:             :class:`~.process.SimProcessElement`
         
         """
-        if not issubclass(process_cls, SimProcess):
-            msg = "get_process_element({0}): parameter is either not a class or not a subclass of SimProcess"
-            raise SimError(_ERROR_NAME, msg, process_cls)
-            
         elementid = SimElement.get_full_class_name(process_cls)
         
-        if elementid in SimProcess.elements:
-            return SimProcess.elements[elementid]
+        if elementid in self._processElements:
+            return self._processElements[elementid]
         else:
-            msg = "get_process_element({0}): element ID not found"
-            raise SimError(_ERROR_NAME, msg, elementid)
+            msg = "get_process_element({0}): element ID {1} not found"
+            raise SimError(_ERROR_NAME, msg, process_cls, elementid)
                  
         
 logger.info("Creating SimModel singleton in module: %s", __name__)
 SimModel._theModel = SimModel()    
 
 if __name__ == '__main__':
-    from simprovise.core import SimSimpleResource
+    from simprovise.modeling import SimProcess
     
     class testProcess(SimProcess):
         """

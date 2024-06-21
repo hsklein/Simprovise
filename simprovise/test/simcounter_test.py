@@ -5,7 +5,10 @@
 #
 # Unit tests for SimCounter class
 #===============================================================================
-from simprovise.core import *
+from simprovise.core.simclock import SimClock
+from simprovise.core import simtime, SimError
+from simprovise.core.simtime import SimTime, Unit as tu
+from simprovise.modeling import SimCounter
 import unittest
 import sys
 
@@ -32,7 +35,7 @@ class SimInfiniteCounterTests(unittest.TestCase):
     def setUp(self):
         SimClock.initialize();
         element = MockElement()
-        self.counter = counter.SimCounter(element, 'Test')
+        self.counter = SimCounter(element, 'Test')
         self.process = MockProcess()
 
     def testInfiniteFlag(self):
@@ -114,18 +117,18 @@ class SimInfiniteCounterTests(unittest.TestCase):
 
     def testOverflow1(self):
         "Test: Attempt to increment by sys.maxsize raises an error"
-        self.assertRaises(simexception.SimError,
+        self.assertRaises(SimError,
                           lambda: self.counter.increment(self.process, amount=sys.maxsize))
 
     def testOverflow2(self):
         "Test: Attempt to increment to or past sys.maxsize raises an error"
         self.counter.increment(self.process, amount=sys.maxsize - 1)
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process))
+        self.assertRaises(SimError, lambda: self.counter.increment(self.process))
 
     def testOverflow3(self):
         "Test: Attempt to increment to or past infinite (sys.maxsize) raises an error"
         self.counter.increment(self.process, amount=sys.maxsize - 2)
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, amount=2))
+        self.assertRaises(SimError, lambda: self.counter.increment(self.process, amount=2))
 
     def testOverflow4(self):
         "Test: Attempt to increment to one less than sys.maxsize is OK"
@@ -135,30 +138,30 @@ class SimInfiniteCounterTests(unittest.TestCase):
 
     def testFloatIncrement(self):
         "Test: Attempt to increment by a non-integer raises an error"
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, amount=1.1))
+        self.assertRaises(SimError, lambda: self.counter.increment(self.process, amount=1.1))
 
     def testFloatDecrement(self):
         "Test: Attempt to decrement by a non-integer raises an error"
         self.counter.increment(self.process, amount=2)
-        self.assertRaises(simexception.SimError, lambda: self.counter.decrement(1.1))
+        self.assertRaises(SimError, lambda: self.counter.decrement(1.1))
 
     def testNegativeIncrement(self):
         "Test: Attempt to increment by a negative value raises an error"
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, amount=-1))
+        self.assertRaises(SimError, lambda: self.counter.increment(self.process, amount=-1))
 
     def testNegativeDecrement(self):
         "Test: Attempt to decrement by a negative value raises an error"
         self.counter.increment(self.process, 2)
-        self.assertRaises(simexception.SimError, lambda: self.counter.decrement(-1))
+        self.assertRaises(SimError, lambda: self.counter.decrement(-1))
 
     def testZeroIncrement(self):
         "Test: Attempt to increment by zero raises an error"
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, amount=0))
+        self.assertRaises(SimError, lambda: self.counter.increment(self.process, amount=0))
 
     def testZeroDecrement(self):
         "Test: Attempt to decrement by a zero raises an error"
         self.counter.increment(self.process, amount=2)
-        self.assertRaises(simexception.SimError, lambda: self.counter.decrement(0))
+        self.assertRaises(SimError, lambda: self.counter.decrement(0))
 
     def testFloatCapacity(self):
         "Test: Attempt to set capacity to a non-integer raises an error"
@@ -189,7 +192,7 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
     def setUp(self):
         SimClock.initialize();
         element = MockElement()
-        self.counter = counter.SimCounter(element, 'Test', CAP)
+        self.counter = SimCounter(element, 'Test', CAP)
         self.process = MockProcess()
         self.process2 = MockProcess()
         MockProcess.resumedProcess = None
@@ -278,7 +281,7 @@ class SimFiniteCapacityCounterTests(unittest.TestCase):
 
     def testIncrementAboveCapacity(self):
         "Test: increment of an amount greater than capacity raises an error"
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, amount=CAP+1))
+        self.assertRaises(SimError, lambda: self.counter.increment(self.process, amount=CAP+1))
 
 class SimSetFiniteCapacityCounterTests(unittest.TestCase):
     """
@@ -288,7 +291,7 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
     def setUp(self):
         SimClock.initialize();
         element = MockElement()
-        self.counter = counter.SimCounter(element, 'Test')
+        self.counter = SimCounter(element, 'Test')
         self.counter.capacity = CAP
         self.process = MockProcess()
         self.process2 = MockProcess()
@@ -378,7 +381,7 @@ class SimSetFiniteCapacityCounterTests(unittest.TestCase):
 
     def testIncrementAboveCapacity(self):
         "Test: increment of an amount greater than capacity raises an error"
-        self.assertRaises(simexception.SimError, lambda: self.counter.increment(self.process, CAP+1))
+        self.assertRaises(SimError, lambda: self.counter.increment(self.process, CAP+1))
 
 
 
@@ -387,7 +390,7 @@ class SimProcessResumeCounterTests(unittest.TestCase):
     def setUp(self):
         SimClock.initialize();
         element = MockElement()
-        self.counter = counter.SimCounter(element, 'Test', CAP)
+        self.counter = SimCounter(element, 'Test', CAP)
         self.process = MockProcess()
         self.process2 = MockProcess()
         self.process3 = MockProcess()

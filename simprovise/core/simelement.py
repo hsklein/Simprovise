@@ -5,7 +5,8 @@
 #
 # Defines the SimElement and SimClassElement classes.
 #===============================================================================
-from simprovise.core import SimError, SimLogging
+from simprovise.core import SimError
+from simprovise.core.simlogging import SimLogging
 from simprovise.core.apidoc import apidoc, apidocskip
 
 # This constant is accessed by other methods
@@ -173,7 +174,6 @@ class SimClassElement(SimElement):
     __slots__ = ('_simclass', '_datasets')
     def __init__(self, simclass):
         """
-        Constructor registers the element
         """
         super().__init__()
         self._simclass = simclass

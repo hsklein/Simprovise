@@ -11,9 +11,11 @@ __all__ = ['SimDowntimeAgent', 'SimResourceFailureAgent',
 
 from typing import NamedTuple
 
-from simprovise.core import (SimError, SimClock, SimLogging, SimTime)
-from simprovise.core.simtime import Unit as tu
-from simprovise.core.agent import SimAgent, SimMsgType
+from simprovise.core import SimError
+from simprovise.core.simclock import SimClock
+from simprovise.core.simlogging import SimLogging
+from simprovise.core.simtime import SimTime, Unit as tu
+from simprovise.modeling.agent import SimAgent, SimMsgType
 from simprovise.core.simevent import SimEvent
 from simprovise.core.apidoc import apidoc, apidocskip
 

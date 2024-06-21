@@ -9,7 +9,8 @@ __all__ = ['SimTime']
 
 # TODO - recode in terms of builtin timedelta class? - problem is with potential
 # customization of day, week and year length.
-from simprovise.core import SimError, SimLogging
+from simprovise.core import SimError
+from simprovise.core.simlogging import SimLogging
 from simprovise.core.apidoc import apidoc, apidocskip
 from enum import IntEnum
 import simprovise.core.configuration as simconfig

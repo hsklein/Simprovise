@@ -16,12 +16,14 @@ import numpy as np
 #os.environ["SIMPROVISE_MODEL_SCRIPT"] = SCRIPTPATH
 
 
-from simprovise.core import SimModel
+from simprovise.core.model import SimModel
 from simprovise.runcontrol.replication import (SimReplication, SimReplicator)
 from simprovise.runcontrol.simruncontrol import (SimReplicationParameters)
 from simprovise.database import (SimDatabaseManager, SimSummaryData,
                                 SimPercentileData)
-from simprovise.core import SimError, SimLogging, SimTime
+from simprovise.core import SimError
+from simprovise.core.simlogging import SimLogging
+from simprovise.core.simtime import SimTime
 from simprovise.core.apidoc import apidoc, apidocskip
 
 _ERROR_NAME = "Simulation Error"
@@ -863,7 +865,7 @@ if __name__ == '__main__':
     batchLength = SimTime(10000)
     #batchLength = SimTime(0)
     scriptpath = "models\\mm1.py"
-    multi_replication = False
+    multi_replication = True
     nruns = 10
     
     #SimLogging.set_level(logging.WARN)

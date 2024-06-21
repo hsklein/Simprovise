@@ -5,8 +5,10 @@
 #
 # Unit tests for the simrandom module (and SimDistribution class)
 #===============================================================================
-from simprovise.core import *
-from simprovise.core.simtime import Unit as tu
+from simprovise.core import simrandom, SimError
+from simprovise.core.simrandom import SimDistribution
+from simprovise.core.simlogging import SimLogging
+from simprovise.core.simtime import SimTime, Unit as tu
 
 import unittest, logging
 
@@ -19,29 +21,29 @@ class RandomInitializationTests(unittest.TestCase):
         
     def testRunZero(self):
         "Test: Initialize(run = 0) raises"
-        self.assertRaises(simexception.SimError, simrandom.initialize, 0)
+        self.assertRaises(SimError, simrandom.initialize, 0)
         
     def testRunBelowMin(self):
         "Test: Initialize(run < min_run_number()) raises"
         run = simrandom.min_run_number() - 1
-        self.assertRaises(simexception.SimError, simrandom.initialize, run)
+        self.assertRaises(SimError, simrandom.initialize, run)
         
     def testRunOverMax(self):
         "Test: Initialize(run > max_run_number()) raises"
         run = simrandom.max_run_number() + 1
-        self.assertRaises(simexception.SimError, simrandom.initialize, run)
+        self.assertRaises(SimError, simrandom.initialize, run)
         
     def testStreamZero(self):
         "Test: sampling from stream zero raises"
         simrandom.initialize(1)
-        with self.assertRaises(simexception.SimError):
+        with self.assertRaises(SimError):
             SimDistribution.exponential(3, streamNum=0)
         
     def testStreamOverMax(self):
         "Test: sampling from stream greater than max_streams() raises"
         simrandom.initialize(1)
         stream_num = simrandom.max_streams() + 1
-        with self.assertRaises(simexception.SimError):
+        with self.assertRaises(SimError):
             SimDistribution.exponential(3, streamNum=stream_num)
         
     def testNoIdenticalStreams(self):
@@ -81,12 +83,12 @@ class SimDistributionSmokeTests(SimDistributionTestsBase):
         
     def testInvalidStream0(self):
         "Test: SimDistribution generator with stream 0 raises"
-        self.assertRaises(simexception.SimError, SimDistribution.exponential, 42, streamNum=0)
+        self.assertRaises(SimError, SimDistribution.exponential, 42, streamNum=0)
         
     def testInvalidStreamOverMax(self):
         "Test: SimDistribution generator with stream greater than max_streams raises"
         s = simrandom.max_streams() + 1
-        self.assertRaises(simexception.SimError, SimDistribution.exponential, 42, streamNum=s)
+        self.assertRaises(SimError, SimDistribution.exponential, 42, streamNum=s)
         
     def testConstant(self):
         "Test: SimDistribution.constant generator generates a constant"

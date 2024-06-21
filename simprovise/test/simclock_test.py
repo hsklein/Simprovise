@@ -5,8 +5,9 @@
 #
 # Unit tests for class SimClock
 #===============================================================================
-from simprovise.core import *
-from simprovise.core.simtime import Unit as tu
+from simprovise.core.simclock import SimClock
+from simprovise.core import simtime, SimError
+from simprovise.core.simtime import SimTime, Unit as tu
 
 import unittest
 
@@ -37,11 +38,11 @@ class simclockTests( unittest.TestCase ):
     def testAdvance3( self ):
         "Test: advance from two minutes to 10 seconds raises simexception.Error"
         SimClock.advance_to( self.ti_2mins )
-        self.assertRaises( simexception.SimError, SimClock.advance_to, self.ti_10secs  )
+        self.assertRaises(SimError, SimClock.advance_to, self.ti_10secs)
         
     def testAdvance4( self ):
         "Test: advanceTo() with integer parameter raises simexception.Error"
-        self.assertRaises( simexception.SimError, SimClock.advance_to, 5  )
+        self.assertRaises(SimError, SimClock.advance_to, 5  )
 
     def testClockProtect1( self ):
         "Test: Return value of now() is not a reference to the clock"

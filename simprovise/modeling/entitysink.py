@@ -7,9 +7,10 @@
 #===============================================================================
 __all__ = ['SimEntitySink']
 
-from simprovise.core import SimError, SimLogging
+from simprovise.core import SimError
+from simprovise.core.simlogging import SimLogging
+from simprovise.modeling.location import SimStaticObject
 from simprovise.core.apidoc import apidoc, apidocskip
-from simprovise.core.location import SimStaticObject
 
 logger = SimLogging.get_logger(__name__)
 _ERROR_NAME = "SimEntitySinkError" 

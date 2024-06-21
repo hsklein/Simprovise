@@ -12,7 +12,6 @@
 #      https://www.johndcook.com/blog/2022/01/12/mm2/
 #===============================================================================
 import math
-from simprovise.core import simtime, SimTime
 
 def theoryResultsOld(meanIATime, meanProcTime, nServers=1):
     lamb = 1.0 / meanIATime

@@ -8,10 +8,16 @@
 import unittest
 import logging
 from simprovise.core import *
-from simprovise.core.simtime import Unit as tu
-from simprovise.core.location import SimStaticObject
+from simprovise.modeling import *
+from simprovise.core import simtime
+from simprovise.core.simtime import SimTime, Unit as tu
+from simprovise.core.simclock import SimClock
+from simprovise.core.datacollector import SimDataCollector
 from simprovise.core.simevent import EventProcessor
-from simprovise.core.agent import SimAgent
+from simprovise.core.model import SimModel
+from simprovise.core.simrandom import SimDistribution
+from simprovise.modeling.agent import SimAgent
+#from simprovise.modeling.location import SimStaticObject
 
 class TestEntity(SimEntity):
     ""
@@ -35,8 +41,10 @@ def reinitialize():
     SimClock.initialize()
     MockProcess.processStarts.clear()
     # Hack to allow recreation of static objects for each test case
-    SimStaticObject.elements = {}
-        
+    #SimModel.model()._staticObjects.clear()
+    #SimModel.model()._agents.clear()
+    SimModel.model().clear_registry_partial()
+    
 class SimEntityTests(unittest.TestCase):
     "Tests for basic SimEntity functionality"
     def setUp(self):
@@ -51,8 +59,8 @@ class SimEntityTests(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
-        SimAgent.agents.clear()
+        # can't clear class elements - need clear_static_object_registry
+        SimModel.model().clear_registry_partial()
     
     def testCreateTime(self):
         "Test: createTime value equals time that the entity was instantiated"
@@ -108,8 +116,7 @@ class SimEntitySourceTests(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
-        SimAgent.agents.clear()
+        SimModel.model().clear_registry_partial()
     
     def testOneEntityGenerator(self):
         """

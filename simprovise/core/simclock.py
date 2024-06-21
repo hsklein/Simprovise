@@ -11,8 +11,8 @@
 #===============================================================================
 __all__ = ['SimClock']
 
-from simprovise.core import simtime, SimTime, SimError
-from simprovise.core.simtime import Unit as tu
+from simprovise.core import simtime, SimError
+from simprovise.core.simtime import SimTime, Unit as tu
 from simprovise.core.apidoc import apidoc, apidocskip
 
 @apidoc

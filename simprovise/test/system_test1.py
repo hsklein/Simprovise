@@ -2,7 +2,7 @@ import os
 from simprovise.runcontrol.replication import (SimReplication,
                                                SimReplicationParameters,
                                                SimRunControlParameters)
-from simprovise.core import *
+from simprovise.core.model import SimModel
 from simprovise.core.location import SimStaticObject
 from simprovise.database import *
 from simprovise.simulation import Simulation
@@ -34,7 +34,7 @@ class ReplicatorTests(unittest.TestCase):
         """
         print("========== setUpClass ===========")
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         
         cls.model = SimModel.load_model_from_script(TEST_MODELSCRIPT1_PATH)
         

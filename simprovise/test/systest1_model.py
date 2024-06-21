@@ -76,8 +76,6 @@ source.add_entity_generator(SimEntity, TestProcess1,
 
 if __name__ == '__main__':
     print("main")
-    for e in SimEntity.elements.values():
-        print(e.element_id, e.element_class, e.element_class.element)
     #warmupLength = None
     #batchLength = None
     #print("Running single execution...")

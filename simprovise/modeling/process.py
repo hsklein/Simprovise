@@ -9,16 +9,22 @@ __all__ = ['SimProcess']
 
 import itertools
 import simprovise
-from simprovise.core.transaction import SimTransaction, BaseInterruptEvent
-from simprovise.core.simevent import SimEvent
+from simprovise.core import SimError, simtrace
+from simprovise.core.simclock import SimClock
+from simprovise.core.simtime import SimTime
+from simprovise.core.simexception import SimTimeOutException
+from simprovise.core.datacollector import SimUnweightedDataCollector
+from simprovise.core.simlogging import SimLogging
 from simprovise.core.simelement import SimClassElement 
-from simprovise.core.agent import SimMsgType
-from simprovise.core.resource import SimResourceDownException, SimResourceUpException
+from simprovise.core.model import SimModel
+
+from simprovise.modeling.agent import SimMsgType
+from simprovise.modeling.resource import SimResourceDownException, SimResourceUpException
+from simprovise.modeling import SimEntity, SimCounter
+from simprovise.modeling.transaction import SimTransaction, BaseInterruptEvent
+
 from simprovise.core.apidoc import apidoc, apidocskip
 
-from simprovise.core import (SimEntity, SimCounter, SimTime, SimClock,
-                             SimUnweightedDataCollector)
-from simprovise.core import SimLogging, SimError, SimTimeOutException, simtrace
 logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "SimProcessError"
@@ -83,9 +89,7 @@ class SimProcess(SimTransaction):
     """
     __slots__ = ('__executing', '__entity', '__element',
                  '__resource_assignments')
-    
-    elements = {}
-    
+        
     def __init_subclass__(cls, **kwargs):      
         """
         Register all subclasses of SimProcess by wrapping them in a
@@ -99,14 +103,10 @@ class SimProcess(SimTransaction):
         """
         super().__init_subclass__(**kwargs)
         
-        # Add a process element to the SimProcess elements dictionary
+        # Create and register a process element with the SimModel
         pe = SimProcessElement(cls) 
-        if pe.element_id in cls.elements:
-            msg = "SimProcess class with element ID {0} is already registered"
-            raise SimError(_ERROR_NAME, msg, pe.element_id)
-              
         logger.info("Creating and registering a process element for %s", pe.element_id)
-        cls.elements[pe.element_id] = pe
+        SimModel.model()._register_processElement(pe)
 
     @classmethod
     def final_initialize(cls):
@@ -421,7 +421,7 @@ class SimProcess(SimTransaction):
             resourcesToRelease = rsrcAssignment.resources
     
         # If the spec is a resource instance, convert it to an iterable
-        elif isinstance(releaseSpec, simprovise.core.resource.SimResource):
+        elif isinstance(releaseSpec, simprovise.modeling.resource.SimResource):
             resourcesToRelease = (releaseSpec,)
     
         # If the spec is a number (n) rather than resources,
@@ -600,6 +600,6 @@ if __name__ == '__main__':
         """
         """
   
-    for e in SimProcess.elements.values():
+    for e in SimModel.model().process_elements:
         print(e.element_id)
 

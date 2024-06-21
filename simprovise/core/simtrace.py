@@ -8,9 +8,11 @@
 from collections import namedtuple
 from enum import Enum
 import inspect, sys, os
-from simprovise.core import SimClock, SimLogging, SimError
 from simprovise.core.apidoc import apidoc, apidocskip
 import simprovise.core.configuration as simconfig
+from simprovise.core import SimError
+from simprovise.core.simclock import SimClock
+from simprovise.core.simlogging import SimLogging
 
 logger = SimLogging.get_logger(__name__)
  
@@ -332,7 +334,7 @@ def _set_fmt_widths():
      """
      global _object_fmt_width
      global _argument_fmt_width
-     from simprovise.core import SimModel
+     from simprovise.core.model import SimModel
      
      entity_classes = [e.element_class for e in SimModel.model().entity_elements]
      _object_fmt_width = max([len(cls.__name__) for cls in entity_classes])  + 6
@@ -432,29 +434,23 @@ def _write_trace_event_to_csv(evt):
      print('', file=_trace_file)
           
  
-if __name__ == '__main__':
-     from simprovise.core import (SimEntity, SimEntitySource, SimProcess,
-                                  SimLocation, SimSimpleResource)
-     import inspect
+#if __name__ == '__main__':
+     #from simprovise.modeling import (SimEntity, SimEntitySource, SimProcess,
+                                  #SimLocation, SimSimpleResource)
+     #import inspect
      
-     source = SimEntitySource("MockSource")
-     process = SimProcess()
-     entity = SimEntity(source, process)
-     loc = SimLocation("TestLocation")
-     rsrc1 = SimSimpleResource("TestResource1", loc)
-     rsrc2 = SimSimpleResource("TestResource2", loc)
-     _set_fmt_widths()
+     #source = SimEntitySource("MockSource")
+     #process = SimProcess()
+     #entity = SimEntity(source, process)
+     #loc = SimLocation("TestLocation")
+     #rsrc1 = SimSimpleResource("TestResource1", loc)
+     #rsrc2 = SimSimpleResource("TestResource2", loc)
+     #_set_fmt_widths()
      
-     initialize()
-     add_trace_column(loc, 'current_population', 'Location Population')
-     add_trace_column(loc, 'entries')
-     trace_event(entity, Action.MOVE_TO, [loc])
-     trace_event(entity, Action.ACQUIRED, (rsrc1, rsrc2))
-     trace_event(entity, Action.ACQUIRED, (rsrc1, rsrc1))
-     finalize()
-     
-
-     
-     
-    
-
+     #initialize()
+     #add_trace_column(loc, 'current_population', 'Location Population')
+     #add_trace_column(loc, 'entries')
+     #trace_event(entity, Action.MOVE_TO, [loc])
+     #trace_event(entity, Action.ACQUIRED, (rsrc1, rsrc2))
+     #trace_event(entity, Action.ACQUIRED, (rsrc1, rsrc1))
+     #finalize()

@@ -13,12 +13,18 @@ __all__ = ['SimResource', 'SimSimpleResource', 'SimResourcePool',
 from itertools import chain
 from inspect import isclass
 
-from simprovise.core import (SimCounter, SimUnweightedDataCollector, SimError,
-                            SimTime, SimClock, SimLogging, simtrace)
-from simprovise.core.agent import SimAgent, SimMsgType
-from simprovise.core.location import SimStaticObject
-from simprovise.core.simevent import SimEvent
+from simprovise.core import SimError, simtrace
+from simprovise.core.simclock import SimClock
 from simprovise.core.simexception import SimInterruptException
+from simprovise.core.datacollector import SimUnweightedDataCollector
+from simprovise.core.simlogging import SimLogging
+from simprovise.core.simtime import SimTime 
+from simprovise.core.simevent import SimEvent
+
+from simprovise.modeling import SimCounter
+from simprovise.modeling.agent import SimAgent, SimMsgType
+from simprovise.modeling.location import SimStaticObject
+
 from simprovise.core.apidoc import apidoc, apidocskip
 
 logger = SimLogging.get_logger(__name__)

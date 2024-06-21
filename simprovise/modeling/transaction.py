@@ -14,14 +14,15 @@
 #===============================================================================
 from greenlet import greenlet           # pylint: disable=E0611
 
-from simprovise.core import (SimClock, SimError, simevent)
-
+from simprovise.core import SimError, simevent
+from simprovise.core.simclock import SimClock
 from simprovise.core.simevent import SimEvent
-from simprovise.core.agent import SimMsgType
-from simprovise.core.counter import SimNullCounter
+from simprovise.modeling.counter import SimNullCounter
 from simprovise.core.datacollector import NullDataCollector
 from simprovise.core.apidoc import apidoc, apidocskip
-from simprovise.core import SimLogging
+from simprovise.core.simlogging import SimLogging
+from simprovise.modeling.agent import SimMsgType
+
 logger = SimLogging.get_logger(__name__)
 
 _TXN_ERROR = "SimTransaction Error"

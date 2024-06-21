@@ -20,7 +20,8 @@ import glob
 #import importlib.util
 import urllib, urllib.request, urllib.parse
 
-from simprovise.core import SimError, SimLogging
+from simprovise.core import SimError
+from simprovise.core.simlogging import SimLogging
 
 logger = SimLogging.get_logger(__name__)
 
@@ -177,7 +178,7 @@ class SimUtility(object):
         """
         parsedURL = urllib.parse.urlparse(urlorpath)
         return parsedURL.path and (parsedURL.scheme == 'file' or
-                                   parsedURL.netloc is not '')
+                                   parsedURL.netloc != '')
 
     @staticmethod
     def abspathToFileURL(abspath):

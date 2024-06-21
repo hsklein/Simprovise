@@ -7,18 +7,14 @@
 #===============================================================================
 __all__ = ['SimEntitySource']
 
-from collections import OrderedDict
-import copy
-import inspect
-
-from simprovise.core import (SimLocation, SimTime,
-                            SimClock, SimDistribution)
-from simprovise.core.location import SimStaticObject
-from simprovise.core.utility import SimUtility
-from simprovise.core.apidoc import apidoc, apidocskip
+from simprovise.core import SimError
+from simprovise.core.simlogging import SimLogging
+from simprovise.core.simclock import SimClock
+from simprovise.core.simtime import SimTime
 from simprovise.core.simevent import SimEvent
-from simprovise.core.utility import SimUtility
-from simprovise.core import SimLogging, SimError
+
+from simprovise.core.apidoc import apidoc, apidocskip
+from simprovise.modeling import SimLocation
 
 logger = SimLogging.get_logger(__name__)
 

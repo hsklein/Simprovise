@@ -6,10 +6,14 @@
 # Unit tests for SimResource and related classes
 #===============================================================================
 import unittest
-import simprovise.core
-from simprovise.core import *
-from simprovise.core.agent import SimAgent, SimMsgType
-from simprovise.core.location import SimStaticObject
+from simprovise.core.simclock import SimClock
+from simprovise.core import simevent, simtime, SimError
+from simprovise.core.datacollector import SimDataCollector
+from simprovise.core.simexception import SimTimeOutException
+from simprovise.modeling import *
+from simprovise.modeling.agent import SimAgent, SimMsgType
+from simprovise.modeling.location import SimStaticObject
+from simprovise.core.model import SimModel
 from simprovise.core.simtime import Unit as tu
 
 #print(globals().keys())
@@ -33,7 +37,7 @@ class RATestCaseBase(unittest.TestCase):
         self.eventProcessor = simevent.EventProcessor()
         MockProcess.resumedProcess = None
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         
         self.location = MockLocation()
         self.source = MockSource()
@@ -54,7 +58,7 @@ class RATestCaseBase(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
     
         
 class MockSource(SimEntitySource):
@@ -1377,7 +1381,7 @@ class ResourcePoolRequestProcessingTests(unittest.TestCase):
     def setUp(self):
         simevent.initialize()
         SimClock.initialize()
-        SimStaticObject.elements = {}        
+        SimModel.model().clear_registry_partial()
         self.eventProcessor = simevent.EventProcessor()        
                  
         rsrc = SimSimpleResource("TestResource")
@@ -1392,7 +1396,7 @@ class ResourcePoolRequestProcessingTests(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}    
+        SimModel.model().clear_registry_partial()
 
 class TestProcess2(SimProcess):
     rsrc = None
@@ -1463,7 +1467,7 @@ class AcquireTimeoutTests(unittest.TestCase):
     def setUp(self):
         simevent.initialize()
         SimClock.initialize()
-        SimStaticObject.elements = {}        
+        SimModel.model().clear_registry_partial()
         self.eventProcessor = simevent.EventProcessor()        
                  
         rsrc = SimSimpleResource("TestResource")
@@ -1478,7 +1482,7 @@ class AcquireTimeoutTests(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         
     def testNoTimeout1(self):
         """
@@ -1653,7 +1657,7 @@ class AssignmentRaceConditionTests(unittest.TestCase):
     def setUp(self):
         simevent.initialize()
         SimClock.initialize()
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         
         self.eventProcessor = simevent.EventProcessor()        
         #self.location = MockLocation()
@@ -1676,8 +1680,8 @@ class AssignmentRaceConditionTests(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
-        
+        SimModel.model().clear_registry_partial()
+       
     def testConcurrentRequests1(self):
         """
         Test start process 1 then 2, run < 2 minutes, both are executing

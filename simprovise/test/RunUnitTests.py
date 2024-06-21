@@ -18,7 +18,7 @@ from simprovise.test import simdowntime_test
 # on its own.
 #from simprovise.test import system_test1
 
-from simprovise.core import SimLogging
+from simprovise.core.simlogging import SimLogging
 import logging
 
 def run_tests():

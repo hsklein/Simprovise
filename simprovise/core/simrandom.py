@@ -69,8 +69,10 @@ import itertools
 from functools import partial
 import numpy as np
 
-import simprovise
-from simprovise.core import SimError, SimLogging, SimTime, simtime
+from simprovise.core import SimError
+from simprovise.core.simtime import SimTime
+from simprovise.core.simlogging import SimLogging
+
 from simprovise.core.simtime import Unit as tu
 from simprovise.core.apidoc import apidoc, apidocskip
 import simprovise.core.configuration as simconfig

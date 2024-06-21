@@ -19,12 +19,16 @@ import os
 from collections import namedtuple
 import tempfile
 
-from simprovise.core import (SimResource, SimLocation, SimEntitySource, SimEntitySink,
-                            SimTime, SimClock, simtime, SimError, SimLogging,
-                            simelement)
+from simprovise.core.simevent import SimEvent
+from simprovise.core.simlogging import SimLogging
+from simprovise.core.simtime import SimTime
+from simprovise.core.simclock import SimClock
+from simprovise.core import SimError, simrandom, simtime, simelement
 
-from simprovise.core.process import SimProcessElement
-from simprovise.core.entity import SimEntityElement
+from simprovise.modeling import (SimResource, SimLocation, SimEntitySource,
+                                 SimEntitySink)
+from simprovise.modeling.process import SimProcessElement
+from simprovise.modeling.entity import SimEntityElement
 
 _ELEMENT_TYPE_CLASSES = (SimProcessElement, SimResource, SimLocation, SimEntitySource,
                          SimEntitySink, SimEntityElement)

@@ -8,8 +8,10 @@
 __all__ = ['SimCounter']
 
 import collections, sys
-from simprovise.core import (SimClock, SimTimeWeightedDataCollector,
-                            SimError, SimLogging)
+from simprovise.core import SimError
+from simprovise.core.simclock import SimClock
+from simprovise.core.datacollector import SimTimeWeightedDataCollector
+from simprovise.core.simlogging import SimLogging
 
 from simprovise.core.apidoc import apidoc, apidocskip
 

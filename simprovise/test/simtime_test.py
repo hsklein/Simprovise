@@ -5,8 +5,8 @@
 #
 # Unit tests for SimTime class
 #===============================================================================
-from simprovise.core import *
-from simprovise.core.simtime import Unit as tu
+from simprovise.core import simtime, SimError
+from simprovise.core.simtime import SimTime, Unit as tu
 
 import unittest
 
@@ -21,7 +21,7 @@ class SimTimeTests(unittest.TestCase):
 
     def testAssign1(self):
         "Test: Assignment of invalid 3 for units raises SimException error"
-        self.assertRaises(simexception.SimError, lambda: simtime.SimTime(1, 3))
+        self.assertRaises(SimError, lambda: simtime.SimTime(1, 3))
 
     # 1/4/2012 - negative time intervals should be OK (needed for statistical calculations on time intervals)
     #def testAssign2(self):
@@ -178,11 +178,11 @@ class SimTimeTests(unittest.TestCase):
         
     def testCompare6a(self):
         "Test: SimTime < integer value raises a simexception.Error"
-        self.assertRaises(simexception.SimError, lambda: self.ti_30secs < 40)
+        self.assertRaises(SimError, lambda: self.ti_30secs < 40)
         
     def testCompare6b(self):
         "Test: integer value  == SimTime raises a simexception.Error"
-        self.assertRaises(simexception.SimError, lambda: 30 == self.ti_30secs)
+        self.assertRaises(SimError, lambda: 30 == self.ti_30secs)
         
     def testHash1(self):
         "Test: 120 seconds and 2 minutes hash to same value"
@@ -208,7 +208,7 @@ class SimTimeTests(unittest.TestCase):
     def testScalarComparison(self):
         "Test: comparing SimTime to scalar value raises when base time unit is not None"
         t1 = SimTime(2, tu.MINUTES)
-        self.assertRaises(simexception.SimError, lambda: t1 == 2)
+        self.assertRaises(SimError, lambda: t1 == 2)
         
     def testScalar(self):
         "Test to_scalar for various simtime base units"

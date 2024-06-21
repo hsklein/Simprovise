@@ -5,17 +5,17 @@
 #
 # Unit tests for the SimTransaction and related classes
 #===============================================================================
-from simprovise.core import (simevent, simtime, SimClock, SimTime,
-                             SimSimpleResource, SimResourceAssignmentAgent, SimError)
-from simprovise.core.transaction import (SimTransaction,
-                                         SimTransactionResumeEvent,
-                                         SimInterruptEvent)
-from simprovise.core.simtime import Unit as tu
-from simprovise.core.agent import SimAgent
-from simprovise.core.simexception import SimInterruptException, SimTimeOutException
-import unittest
+from simprovise.modeling import SimSimpleResource, SimResourceAssignmentAgent
+from simprovise.core import SimError, simevent, simtime
+from simprovise.modeling.transaction import (SimTransaction,
+                                             SimTransactionResumeEvent,
+                                             SimInterruptEvent)
+from simprovise.core.simtime import SimTime, Unit as tu
+from simprovise.core.simclock import SimClock
+from simprovise.modeling.agent import SimAgent
+from simprovise.core.simexception import SimInterruptException
 from heapq import heappop
-from simprovise.core.location import SimStaticObject
+import unittest
 
 ONE_MIN = simtime.SimTime(1, tu.MINUTES)
 TWO_MINS = simtime.SimTime(2, tu.MINUTES)

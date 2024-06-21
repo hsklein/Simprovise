@@ -47,7 +47,9 @@ from abc import ABCMeta, abstractmethod
 from heapq import heappop, heappush
 import itertools
 from greenlet import greenlet        # pylint: disable=E0611
-from simprovise.core import SimClock, SimTime, SimLogging
+from simprovise.core.simclock import SimClock
+from simprovise.core.simtime import SimTime
+from simprovise.core.simlogging import SimLogging
 from simprovise.core.apidoc import apidoc, apidocskip
 
 logger = SimLogging.get_logger(__name__)
@@ -206,26 +208,6 @@ class EventProcessor(object):
             SimClock.advance_to(until_time)
 
         return next(processCount)
-
-if __name__ == '__main__':
-    import time
-
-    class TestEvent(SimEvent):
-        def process_impl(self): pass
-
-    n = 100000
-    elist = [SimTime(199) for i in range(n)]
-    d = {}
-    cpustart = time.clock()
-    for e in elist:
-        d[e] = 42
-
-    for e in elist:
-        x = e in d
-        assert x, "not found"
-
-    cpuend = time.clock()
-    print(cpuend - cpustart)
 
 
 

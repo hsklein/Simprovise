@@ -1,13 +1,12 @@
 import sys
-from simprovise.core import simtime, SimTime
-from simprovise.core.simtime import Unit as tu
+from simprovise.core.simrandom import SimDistribution
+from simprovise.core.simtime import SimTime, Unit as tu
 ##simtime.set_base_unit(tu.MINUTES)
 
 
-from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
-                            SimProcess, SimDistribution, SimLocation,
-                            SimCounter, SimSimpleResource, SimQueue,
-                            simtrace)
+from simprovise.modeling import (SimEntity, SimEntitySource, SimEntitySink,
+                                 SimProcess, SimLocation, SimCounter,
+                                 SimSimpleResource, SimQueue)
 
 from simprovise.simulation import Simulation
 from simprovise.models.queuing_theory_calc import theory_results

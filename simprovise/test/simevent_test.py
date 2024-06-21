@@ -5,8 +5,9 @@
 #
 # Unit tests for the SimEvent and EventProcessor classes
 #===============================================================================
-from simprovise.core import simevent, simtime, SimClock, SimTime
-from simprovise.core.simtime import Unit as tu
+from simprovise.core import simevent, simtime
+from simprovise.core.simclock import SimClock
+from simprovise.core.simtime import SimTime, Unit as tu
 import unittest
 import copy
 from heapq import heappop

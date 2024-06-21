@@ -7,13 +7,14 @@
 #===============================================================================
 import sys
 from enum import Enum
-from simprovise.core import simtime, SimTime, simtrace
-from simprovise.core.simtime import Unit as tu
+from simprovise.core import simtime, simtrace
+from simprovise.core.simtime import SimTime, Unit as tu
+from simprovise.core.simrandom import SimDistribution
+from simprovise.core.model import SimModel
 
-from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
-                            SimProcess, SimDistribution, SimLocation,
-                            SimResourcePool, SimSimpleResource, SimQueue,
-                            SimModel, SimClock)
+from simprovise.modeling import (SimEntity, SimEntitySource, SimEntitySink,
+                                 SimProcess, SimLocation,
+                                 SimResourcePool, SimSimpleResource, SimQueue)
 
 from simprovise.simulation import Simulation
 from simprovise.models.queuing_theory_calc import theory_results

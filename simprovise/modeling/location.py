@@ -10,12 +10,18 @@
 #===============================================================================
 __all__ = ['SimLocation', 'SimRootLocation', 'SimQueue']
 
-from simprovise.core import (SimClock, SimTime, simelement, SimEntity, 
-                             SimError, SimCounter, SimUnweightedDataCollector,
-                             SimLogging)
 
-from simprovise.core.simobject import SimLocatableObject
+from simprovise.core import SimError, simelement
+from simprovise.core.simclock import SimClock
+from simprovise.core.simtime import SimTime
+from simprovise.core.datacollector import SimUnweightedDataCollector
+from simprovise.core.simlogging import SimLogging
 from simprovise.core.simelement import SimElement
+from simprovise.core.model import SimModel
+
+from simprovise.modeling import SimEntity, SimCounter
+from simprovise.modeling.simobject import SimLocatableObject
+
 from simprovise.core.apidoc import apidoc, apidocskip
 
 _STATICOBJ_ERROR_NAME = "SimStaticObjectError"
@@ -46,7 +52,7 @@ class SimStaticObject(SimLocatableObject, SimElement):
     """
     __slots__ = ('_name', '_parentlocation', '_datasets')
     
-    elements = {}
+    #elements = {}
 
     def __init__(self, elementName, parentLocation=None, initialLocation=None,  
                  moveable=False):
@@ -69,13 +75,9 @@ class SimStaticObject(SimLocatableObject, SimElement):
         self._name = elementName
         self._parentlocation = parentLocation
         
-        # Add the new static object to the static object elements dictionary
-        if self.element_id in SimStaticObject.elements:
-            msg = "Static object with element ID {0} is already registered"
-            raise SimError(_STATICOBJ_ERROR_NAME, msg, self.element_id)
-        
+        # Register the new static object with the SimModel
         logger.info("Registering static object %s ...", self.element_id)
-        SimStaticObject.elements[self.element_id] = self
+        SimModel.model()._register_staticObject(self)
         
         # Add the new static object to the parent location's collection of
         # children
@@ -570,7 +572,7 @@ class SimLocation(SimStaticObject):
        """
         # while other transient object types may be supported in the
         # future, for now, at least, they should always be SimEntities
-        assert isinstance(enteringObj, SimEntity), "on_enter called on non-SimEntity"
+        #assert isinstance(enteringObj, SimEntity), "on_enter called on non-SimEntity"
         if enteringObj in self:
             msg = "Object ({0}) cannot enter location {1}; it is already located there"
             raise SimError("SimLocationDuplicateEntryError",
@@ -606,7 +608,7 @@ class SimLocation(SimStaticObject):
         """
         # while other transient object types may be supported in the
         # future, for now, at least, they should always be SimEntities
-        assert isinstance(exitingObj, SimEntity),  "on_exit called on non-SimEntity"
+        #assert isinstance(exitingObj, SimEntity),  "on_exit called on non-SimEntity"
         if not exitingObj in self:
             msg = "Attempt to exit object ({0}) from a location ({1}) that it does not reside in"
             raise SimError("SimLocationInvalidExit", msg, str(exitingObj),
@@ -755,8 +757,8 @@ class SimQueue(SimLocation):
 
     
 if __name__ == '__main__':
-    from simprovise.core import SimProcess
-    from simprovise.core.simobject import SimTransientObject
+    from simprovise.modeling import SimProcess
+    from simprovise.modeling.simobject import SimTransientObject
     
     # Note that the code below that creates MockLocation objects fails when
     # SimModel.register_element() does issubclass(element.__class__, SimElement)

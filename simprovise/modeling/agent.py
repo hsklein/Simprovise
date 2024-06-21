@@ -9,7 +9,10 @@
 from collections import deque, namedtuple
 from contextlib import contextmanager
 
-from simprovise.core import (SimError, SimClock, SimLogging)
+from simprovise.core import SimError
+from simprovise.core.simclock import SimClock
+from simprovise.core.simlogging import SimLogging
+from simprovise.core.model import SimModel
 from simprovise.core.apidoc import apidoc, apidocskip
 from simprovise.core.apidoc import generating_docs
 
@@ -88,14 +91,14 @@ class SimAgent(object):
     :class:`~.resource.SimResource` or :class:`~.process.SimProcess`.
 
     """
-    agents = set()
+    #agents = set()
     
     @staticmethod
     def final_initialize_all():
         """
         Invoke :meth:`final_initialize` on all agents
         """
-        for agent in SimAgent.agents:
+        for agent in SimModel.model().agents:
             agent.final_initialize()
     
     def __init__(self):
@@ -119,8 +122,8 @@ class SimAgent(object):
         # nextQueuedMessage()
         self._msgPriorityFunc = {}
         
-        # Add this agent to the class-maintained set of agents
-        SimAgent.agents.add(self)
+        # Add this agent to the model-maintained set of agents
+        SimModel.model()._register_agent(self)
         
     def final_initialize(self):
         """
@@ -414,6 +417,10 @@ class SimAgent(object):
 
 if __name__ == '__main__':
     class TestAgent(SimAgent):
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.register_handler("TestType", self.handleMessage)
+            
         def handleMessage(self, msg):
             "R"
             remainder = msg.msgID % 3

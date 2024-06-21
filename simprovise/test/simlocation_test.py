@@ -5,9 +5,14 @@
 #
 # Unit tests for SimLocation and SimTransientObject classes
 #===============================================================================
-from simprovise.core import *
-from simprovise.core.simobject import SimTransientObject
-from simprovise.core.location import SimStaticObject
+from simprovise.modeling import *
+from simprovise.modeling.simobject import SimTransientObject
+from simprovise.modeling.location import SimStaticObject
+from simprovise.core.datacollector import SimDataCollector
+from simprovise.core.simclock import SimClock
+from simprovise.core.simtime import SimTime
+from simprovise.core.model import SimModel
+from simprovise.core import SimError
 import unittest
 
 class TestLocation(SimLocation):
@@ -48,7 +53,7 @@ def reinitialize():
     SimDataCollector.reinitialize()
     SimClock.initialize()
     # Hack to allow recreation of static objects for each test case
-    SimStaticObject.elements = {}
+    SimModel.model().clear_registry_partial()
 
    
 class SimEmptyLocationTests(unittest.TestCase):

@@ -8,13 +8,17 @@
 __all__ = ['SimEntity']
 
 import itertools
-
-from simprovise.core import SimClock, SimTime, SimCounter, SimUnweightedDataCollector
+from simprovise.core import SimError
+from simprovise.core.simclock import SimClock
+from simprovise.core.simlogging import SimLogging
+from simprovise.core.simtime import SimTime, Unit as tu
 from simprovise.core.simelement import SimClassElement
-from simprovise.core.simobject import SimTransientObject
+from simprovise.core.datacollector import SimUnweightedDataCollector
+from simprovise.core.model import SimModel
+from simprovise.modeling import SimCounter
+from simprovise.modeling.simobject import SimTransientObject
 from simprovise.core.apidoc import apidoc, apidocskip
 
-from simprovise.core import SimLogging, SimError
 logger = SimLogging.get_logger(__name__)
 
 _ERROR_NAME = "SimEntityError"
@@ -38,7 +42,6 @@ class SimEntity(SimTransientObject):
     __slots__ = ('__source', '__process', '__element', '__processElement',
                  '__createTime', '__destroyTime', '_id')
     
-    elements = {}
     
     @staticmethod
     def _init_baseclass():
@@ -46,9 +49,9 @@ class SimEntity(SimTransientObject):
         Put the base SimEntity class in the elements dictionary if it's
         empty
         """
-        if not SimEntity.elements:
+        if not SimModel.model().entity_elements:
             e = SimEntityElement(SimEntity) 
-            SimEntity.elements[e.element_id] = e
+            SimModel.model()._register_entityElement(e)
     
     def __init_subclass__(cls, **kwargs):      
         """
@@ -69,12 +72,8 @@ class SimEntity(SimTransientObject):
             
         # Add a process element to the SimProcess elements dictionary
         e = SimEntityElement(cls) 
-        if e.element_id in cls.elements:
-            msg = "SimEntity class with element ID {0} is already registered"
-            raise SimError(_ERROR_NAME, msg, e.element_id)
-              
         logger.info("Creating and registering an entity element for %s", e.element_id)
-        cls.elements[e.element_id] = e
+        SimModel.model()._register_entityElement(e)
 
     @classmethod
     def final_initialize(cls):
@@ -112,8 +111,8 @@ class SimEntity(SimTransientObject):
             
     def __init__(self, source, process):
         super().__init__(source)
-        import simprovise.core.process
-        assert isinstance(process, simprovise.core.process.SimProcess), "Process passed to SimEntity is not derived from SimProcess"
+        import simprovise.modeling.process
+        assert isinstance(process, simprovise.modeling.process.SimProcess), "Process passed to SimEntity is not derived from SimProcess"
         self.__source = source
         self.__process = process
         self.__createTime = SimClock.now()
@@ -272,7 +271,7 @@ if __name__ == '__main__':
         """
         """
         
-    for e in SimEntity.elements.values():
+    for e in SimModel.model().entity_elements:
         print(e.element_id, e.element_class, e.element_class.element)
 
         

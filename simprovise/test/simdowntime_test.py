@@ -8,13 +8,19 @@
 import unittest
 import itertools
 from simprovise.core import *
-from simprovise.core import simtime
-from simprovise.core.simtime import Unit as tu
-from simprovise.core.downtime import SimDowntimeAgent
-from simprovise.core.resource import SimResourceDownException
-from simprovise.core.agent import SimAgent, SimMsgType
+from simprovise.core import simtime, simevent, SimError
+from simprovise.core.simrandom import SimDistribution
+from simprovise.core.simclock import SimClock
+from simprovise.core.simtime import SimTime, Unit as tu
+from simprovise.core.model import SimModel
+from simprovise.modeling.downtime import (SimDowntimeAgent, DowntimeSchedule,
+                                          SimResourceFailureAgent,
+                                          SimScheduledDowntimeAgent)
+from simprovise.modeling.resource import SimResourceDownException
+from simprovise.modeling.agent import SimAgent, SimMsgType
 from simprovise.core.simexception import SimError
-from simprovise.core.location import SimStaticObject
+from simprovise.modeling import (SimEntity, SimEntitySource, SimProcess,
+                                 SimSimpleResource)
 
         
 class MockSource(SimEntitySource):
@@ -141,7 +147,7 @@ class BasicDowntimeTests(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         
     def testResourceUpAfterSetup(self):
         "Test: after setup, resource1 is up"
@@ -295,7 +301,7 @@ class TakedownRequestFailureTests(unittest.TestCase):
          
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         TestResourceTakedownNotHandled.handleBringup = True
         
     def testResource1UpAfterSetup(self):
@@ -486,7 +492,7 @@ class BasicDowntimeAcquireTests1(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
+        SimModel.model().clear_registry_partial()
         
     def testResourceNotAcquiredFromDownResource1(self):
         "Test: acquire blocks if requested resource is down"
@@ -634,8 +640,7 @@ class FailureAgentTests(unittest.TestCase):
                  
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
-        SimAgent.agents.clear()
+        SimModel.model().clear_registry_partial()
         
     def testResourceNotAcquiredFromDownResource1(self):
         "Test: acquire blocks if requested resource is down one minute before and still down"
@@ -728,8 +733,7 @@ class ExtendThroughDowntimeTests(unittest.TestCase):
         
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
-        SimStaticObject.elements = {}
-        SimAgent.agents.clear()
+        SimModel.model().clear_registry_partial()
         
     def testProcessCompletesWithoutException(self):
         "Test: acquire blocks if requested resource is down"
@@ -878,8 +882,7 @@ class ScheduledDowntimeAgentTests(unittest.TestCase):
                  
     def tearDown(self):
         # Hack to allow recreation of static objects/agents for each test case
-        SimStaticObject.elements = {}
-        SimAgent.agents.clear()
+        SimModel.model().clear_registry_partial()
         
     def testResourceDownAtFirstBreak1(self):
         "Test: resource down at start of first break"
@@ -948,8 +951,7 @@ class ScheduledDowntimeAgentTakedownFailTests(unittest.TestCase):
                  
     def tearDown(self):
         # Hack to allow recreation of static objects/agents for each test case
-        SimStaticObject.elements = {}
-        SimAgent.agents.clear()
+        SimModel.model().clear_registry_partial()
         TestResourceTakedownFail.takedown_successful = False
         
     def testResourceNotDownAtFirstBreak1(self):
@@ -1011,8 +1013,7 @@ class ScheduledDowntimeAgentTakedownDelayed(unittest.TestCase):
                  
     def tearDown(self):
         # Hack to allow recreation of static objects/agents for each test case
-        SimStaticObject.elements = {}
-        SimAgent.agents.clear()
+        SimModel.model().clear_registry_partial()
         TestResourceTakedownNotHandled.handleTakedown = False
         TestResourceTakedownNotHandled.handleBringup = True
         
