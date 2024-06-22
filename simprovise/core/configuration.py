@@ -38,10 +38,26 @@ class SimConfigParser(configparser.ConfigParser):
     validates the string setting value against an iterable of valid string
     values.
     """
+    def __init__(self):
+        """
+        """
+        super().__init__()
+        self._initialized = False
+        
+    def _initialize(self):
+        """
+        If not initialized, read the configuration file(s)
+        """
+        if self._initialized:
+            return
+        self.read_files()
+        self._initialized = True
+        
     def getint(self, section, option, minvalue=None, maxvalue=None, **kwargs):
         """
         Gets and returns an integer setting value. 
         """
+        self._initialize()
         try:            
             strvalue = self.get(section, option, **kwargs)
             value = super().getint(section, option, **kwargs)
@@ -69,6 +85,7 @@ class SimConfigParser(configparser.ConfigParser):
         exceptions are converted to :class:`~.simexception.SimError`
         exceptions.
         """
+        self._initialize()
         try:            
             strvalue = self.get(section, option, **kwargs)
             return super().getboolean(section, option, **kwargs)
@@ -85,6 +102,7 @@ class SimConfigParser(configparser.ConfigParser):
         value against a passed iterable of valid values. The validation
         is case-insensitive, and the value is returned lowercase.
         """
+        self._initialize()
         try:            
             value = self.get(section, option, **kwargs)
         except Exception as e:
@@ -175,10 +193,9 @@ class SimConfigParser(configparser.ConfigParser):
 def _init():
     """
     Create and initialize a SimConfigParser singleton instance.
-    TODO allow read_files to occur via lazy initialization?
     """
     config = SimConfigParser()
-    config.read_files()
+    #config.read_files()
     return config
     
 _config = _init()
