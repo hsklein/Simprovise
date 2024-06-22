@@ -106,7 +106,7 @@ class SimProcess(SimTransaction):
         # Create and register a process element with the SimModel
         pe = SimProcessElement(cls) 
         logger.info("Creating and registering a process element for %s", pe.element_id)
-        SimModel.model()._register_processElement(pe)
+        SimModel.model()._register_process_element(pe)
 
     @classmethod
     def final_initialize(cls):

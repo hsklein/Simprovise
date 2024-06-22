@@ -77,7 +77,7 @@ class SimStaticObject(SimLocatableObject, SimElement):
         
         # Register the new static object with the SimModel
         logger.info("Registering static object %s ...", self.element_id)
-        SimModel.model()._register_staticObject(self)
+        SimModel.model()._register_static_object(self)
         
         # Add the new static object to the parent location's collection of
         # children

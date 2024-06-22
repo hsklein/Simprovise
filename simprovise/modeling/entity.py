@@ -51,7 +51,7 @@ class SimEntity(SimTransientObject):
         #x = len(SimModel.model().entity_elements)
         #if not SimModel.model().entity_elements:
         e = SimEntityElement(SimEntity) 
-        SimModel.model()._register_entityElement(e)
+        SimModel.model()._register_entity_element(e)
     
     def __init_subclass__(cls, **kwargs):      
         """
@@ -66,7 +66,7 @@ class SimEntity(SimTransientObject):
         # Add an entity element to the SimModel registry
         e = SimEntityElement(cls) 
         logger.info("Creating and registering an entity element for %s", e.element_id)
-        SimModel.model()._register_entityElement(e)
+        SimModel.model()._register_entity_element(e)
 
     @classmethod
     def final_initialize(cls):

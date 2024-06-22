@@ -88,7 +88,7 @@ class SimModel(object):
         """
         self._agents.add(agent)
         
-    def _register_processElement(self, element):
+    def _register_process_element(self, element):
         """
         Add a SimProcessElement to the dictionary. This method should only
         be called by SimProcess.__init_subclass__()
@@ -98,7 +98,7 @@ class SimModel(object):
             raise SimError(_ERROR_NAME, msg, element.element_id)
         self._processElements[element.element_id] = element
         
-    def _register_entityElement(self, element):
+    def _register_entity_element(self, element):
         """
         Add a SimEntityElement to the dictionary. This method should only
         be called by SimEntity.__init_subclass__()
@@ -108,7 +108,7 @@ class SimModel(object):
             raise SimError(_ERROR_NAME, msg, element.element_id)
         self._entityElements[element.element_id] = element
        
-    def _register_staticObject(self, statObj):
+    def _register_static_object(self, statObj):
         """
         Add a SimStaticObject to the dictionary. This method should only
         be called by SimStaticObject.__init__()
