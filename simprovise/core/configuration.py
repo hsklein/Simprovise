@@ -14,7 +14,6 @@ _CONFIG_EXTENSION = '.ini'
 _SIMPROVISE_CFG_BASENAME = 'simprovise.ini'
 _MODEL_SCRIPT_ENV_VARNAME = 'SIMPROVISE_MODEL_SCRIPT'
 
-
 # Configuration .ini file section names
 _SIM_TIME = 'SimTime'
 _LOGGING = 'Logging'
@@ -23,27 +22,55 @@ SIM_TRACE = 'SimTrace'
 
 _ERROR_NAME = 'SimConfiguration Error'
 
-#def testset():
-    #print("**** configuration testset() *****")
-
 class SimConfigParser(configparser.ConfigParser):
     """
     A subclass of ConfigParser that overloads the :meth:`getint` and
     :meth:`getboolean` methods and provides an additional :meth:`getstring`
-    method.
+    method. Also implements a :meth:`read_files` method that reads a set of
+    .ini configuration files (see below) to initialize settings; these files
+    are read on the first attempt by client code to obtain a configuration
+    setting.
     
     All of these methods raise SimError exceptions (in place of the exceptions
     raised by the default ConfigParser). :meth:`getint` adds the ability
     to specify the minimum and/or maximum valid integer values. :meth:`getstring`
     validates the string setting value against an iterable of valid string
     values.
+    
+    Configuration Files:
+    
+    :meth:`read_files` reads up to four configuration files (if they exist)
+    in the following order, where <filename>.py is the main model script:
+    
+      - simprovise.ini in the simprovise installation directory
+      - simprovise.ini in the caller's working directory
+      - <filename>.ini in the same directory as <filename>.py 
+      - <filename>.ini in the caller's working directory 
+    
+    Setting values in later-read files supercede those from earlier-read
+    files.
+    
+    <filename> and it's path default to the value of environment variable
+    SIMPROVISE_MODEL_SCRIPT; if that variable is not set, it will default
+    to sys.argv[0]. That path may be explicitly overridden via
+    :func:`set_modelscript_path`. If this is called, it must be before any
+    client code reads a setting, which implies that it must be called before
+    the core simtime and simlogging modules are imported (since those
+    modules read configuration settings on import).
+    
+    TODO: a more robust approach to obtaining the model script path; the
+    one outlined above is admittedly a bit fragile/awkward, since we
+    cannot rely on core infrastructure (which learns to model path to late
+    to set it here.)     
     """
     def __init__(self):
         """
         """
         super().__init__()
         self._initialized = False
-        
+        self._modelscript_path = os.environ.get(_MODEL_SCRIPT_ENV_VARNAME,
+                                                sys.argv[0])      
+                
     def _initialize(self):
         """
         If not initialized, read the configuration file(s)
@@ -53,6 +80,18 @@ class SimConfigParser(configparser.ConfigParser):
         self.read_files()
         self._initialized = True
         
+    def set_modelscript_path(self, path):
+        """
+        Set the modelscript path. In order to take full effect, this must be
+        called before the any other caller obtains a configuration value
+        (causing the config parser to be initialized and configuration files
+        read). For now, at least, we raise an exception if that happens.
+        """
+        if self._initialized:
+            msg = "SimConfiguration - cannot set model script to {0} after configuration files have been read"
+            raise SimError(_ERROR_NAME, msg, path)
+        self._modelscript_path = path
+                   
     def getint(self, section, option, minvalue=None, maxvalue=None, **kwargs):
         """
         Gets and returns an integer setting value. 
@@ -128,41 +167,15 @@ class SimConfigParser(configparser.ConfigParser):
         
         Setting values in later-read files supercede those from earlier-read
         files.
-        
-        TODO:
-        We'd actually like to read configuration file's based on the
-        name of the model script, which may not be the same as thescript being executed
-        via the command line or equivalent - e.g., if our main script calls
-        simulation.execute_script(). Unfortunately, as currently built,
-        the configuration is read at the time that the simtime and simlogging
-        modules are loaded (in order to properly configure those modules) and
-        the filename is not available until after that point.
-        
-        The fix: while a refactoring/reorganization of the simprovise.core module
-         may be a good idea regardless -in order to reduce the number of modules 
-        that get imported on first touch (and reduce/eliminate the imports in __init__.py),
-        that probably won't be sufficient to solve this problem completely, since
-        execute_script() runs the model script in-process and requires SimTime
-        arguments. The only "easy" option that comes to mind is a bit of a hack:
-        communicate the model (or other) configuration filename out-of-band,
-        e.g. via environment variable before importing any simprovise modules.
-        A __slightly__ less hacky mechanism would require reorganizing so that
-        this module can be imported without creating an import of simtime/simlogging;
-        then the filename could be communicated via function call rather than
-        environment variable. That would also require lazily initialization here.
-        
-        Update: Below, we now do attempt to read a model script filename from
-        an environment variable. There is not yet any real infrastructure in place
-        to set it.
         """
         install_dir = os.path.split(os.path.dirname(__file__))[0]
-        script_dir = os.path.split(sys.argv[0])[0]
+        #script_dir = os.path.split(sys.argv[0])[0]
          
         install_cfg_filename = os.path.join(install_dir, _SIMPROVISE_CFG_BASENAME)
         local_cfg_filename = os.path.join(os.getcwd(), _SIMPROVISE_CFG_BASENAME)
         
-        script_filename = os.environ.get(_MODEL_SCRIPT_ENV_VARNAME, sys.argv[0])      
-        script_cfg_filename = os.path.splitext(script_filename)[0] + _CONFIG_EXTENSION
+        script_path = self._modelscript_path     
+        script_cfg_filename = os.path.splitext(script_path)[0] + _CONFIG_EXTENSION
         local_script_cfg_filename = os.path.join(os.getcwd(),
                                                  os.path.basename(script_cfg_filename))
         
@@ -192,13 +205,22 @@ class SimConfigParser(configparser.ConfigParser):
 
 def _init():
     """
-    Create and initialize a SimConfigParser singleton instance.
+    Create and initialize a SimConfigParser singleton instance. The
+    configuration files will be read lazily, on first request for a setting
+    value.
     """
     config = SimConfigParser()
-    #config.read_files()
     return config
     
 _config = _init()
+
+def set_modelscript_path(path):
+    """
+    Set the simulation model script path. Raises if called after the
+    configuration is read/initialized, since at that point, it;s too late to
+    modify the configuration.
+    """
+    _config.set_modelscript_path(path)
 
 #===============================================================================
 # SimTime setting accessors
@@ -313,6 +335,8 @@ def get_max_trace_events():
 
 if __name__ == '__main__':
     try:
+        scriptpath = "..\\models\\mm1.py"
+        set_modelscript_path(scriptpath)
         print("base time unit:", get_base_timeunit())
         print("logging enabled:", get_logging_enabled())
         print("logging level:", get_logging_level())
@@ -320,5 +344,8 @@ if __name__ == '__main__':
         print("max replications:", get_max_replications())
         print("trace enabled:", get_trace_enabled())
         print("trace type:", get_tracetype())
+        
+        # This should raise
+        set_modelscript_path(scriptpath)
     except Exception as e:
         print(e)
