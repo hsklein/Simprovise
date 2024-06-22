@@ -46,31 +46,24 @@ class SimEntity(SimTransientObject):
     @staticmethod
     def _init_baseclass():
         """
-        Put the base SimEntity class in the elements dictionary if it's
-        empty
+        Put the base SimEntity class in the elements dictionary.
         """
-        if not SimModel.model().entity_elements:
-            e = SimEntityElement(SimEntity) 
-            SimModel.model()._register_entityElement(e)
+        #x = len(SimModel.model().entity_elements)
+        #if not SimModel.model().entity_elements:
+        e = SimEntityElement(SimEntity) 
+        SimModel.model()._register_entityElement(e)
     
     def __init_subclass__(cls, **kwargs):      
         """
         Register all subclasses of SimEntity by wrapping them in a
         SimEntityElement and adding it to SimEntity.elements.
-        
-        Also initializes the elements list with the SimEntity class
-        itself, since models can create SimEntity objects directly.
-        
+       
         Pretty much straight from the PEP 487 document
         https://peps.python.org/pep-0487/#subclass-registration
        """
         super().__init_subclass__(**kwargs)
-        
-        # make sure the base SimEntity class is in the elements dictionary
-        # This should have been done on import (see below)
-        SimEntity._init_baseclass()
-            
-        # Add a process element to the SimProcess elements dictionary
+                    
+        # Add an entity element to the SimModel registry
         e = SimEntityElement(cls) 
         logger.info("Creating and registering an entity element for %s", e.element_id)
         SimModel.model()._register_entityElement(e)
@@ -260,9 +253,7 @@ class SimEntityElement(SimClassElement):
         self.counter = SimCounter(self, "Work-In-Process")
         self.timeDataCollector = SimUnweightedDataCollector(self, "Process-Time", SimTime)
 
-# __init_subclass__ won't be called if no SimEntity base classes are imported,
-# so we can't rely on __init_subclass__'s call to _init_baseclass(). So we'll do
-# it here.
+# Create a SimEntityElement for base class SimEntity
 SimEntity._init_baseclass()
 
 if __name__ == '__main__':
