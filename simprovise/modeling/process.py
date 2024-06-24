@@ -233,11 +233,8 @@ class SimProcess(SimTransaction):
             errorMsg = "Resource acquire() number requested ({0}) must be an integer greater than zero"
             raise SimError(_ACQUIRE_ERROR, errorMsg, numrequested)
         
-        @simtrace.trace
-        def trace():            
-            simtrace.trace_event(self.entity, simtrace.Action.ACQUIRING,
-                                 [resource]*numrequested)
-        trace()
+        simtrace.trace_event(self.entity, simtrace.Action.ACQUIRING,
+                             [resource]*numrequested)
 
         # Send a resource request message to the desired resource's assignment
         # agent (which may or may not be the resource itself)
@@ -299,11 +296,8 @@ class SimProcess(SimTransaction):
         assert isinstance(rsrcClass, type), "acquireFrom() rsrcClass parameter is not a class"
         assert agent, "Null agent passed to acquireFrom()"
         
-        @simtrace.trace
-        def trace():            
-            simtrace.trace_event(self.entity, simtrace.Action.ACQUIRING,
-                                 [rsrcClass.__name__] * numrequested)
-        trace()
+        simtrace.trace_event(self.entity, simtrace.Action.ACQUIRING,
+                             [rsrcClass.__name__] * numrequested)
         
         if numrequested <= 0 or int(numrequested) != numrequested:
             errorMsg = "Resource acquire() number requested ({0}) must be an integer greater than zero"
@@ -363,11 +357,8 @@ class SimProcess(SimTransaction):
         assert assignment.process is self, "Resource assignment does not specify this transaction"
         self.__resource_assignments.append(assignment)
         
-        @simtrace.trace
-        def trace():
-            simtrace.trace_event(self.entity, simtrace.Action.ACQUIRED,
-                                 assignment.resources)
-        trace()
+        simtrace.trace_event(self.entity, simtrace.Action.ACQUIRED,
+                             assignment.resources)
 
         # Finally, return the assignment
         return assignment
@@ -445,11 +436,8 @@ class SimProcess(SimTransaction):
         msgType = SimMsgType.RSRC_RELEASE
         msgData = (rsrcAssignment, resourcesToRelease)
            
-        @simtrace.trace
-        def trace():
-            simtrace.trace_event(self.entity, simtrace.Action.RELEASE,
-                                 resourcesToRelease)
-        trace()
+        simtrace.trace_event(self.entity, simtrace.Action.RELEASE,
+                             resourcesToRelease)
         
         # Note that we expect the resource assignment agent to handle this
         # message immediately.
