@@ -19,7 +19,9 @@ from simprovise.core.simelement import SimClassElement
 from simprovise.core.model import SimModel
 
 from simprovise.modeling.agent import SimMsgType
-from simprovise.modeling.resource import SimResourceDownException, SimResourceUpException
+from simprovise.modeling.resource import (SimResourceDownException,
+                                          SimResourceUpException,
+                                          SimResourceRequest)
 from simprovise.modeling import SimEntity, SimCounter
 from simprovise.modeling.transaction import SimTransaction, BaseInterruptEvent
 
@@ -67,18 +69,26 @@ class SimAcquireTimeOutEvent(BaseInterruptEvent):
         might inadvertently assign a resource that this process is about
         to request after timing out.
         
-        The call to _process_queued_requests will only return True
+        The call to process_queued_requests will only return True
         if this request was fulfilled; if it was not, we go ahead and
         wake up and raise an exception in the timed-out resource request via
         base class implementation (which also cancels events rendered moot
         by the timeout/interrupt), and  then asks the assignment agent
         to handle the timeout by remove the request and scheduling another
         round of resource assignments
+        
+        Finally, note that the throughRequest is passed as a
+        SimResourceRequest, which wraps the raw SimMessage object. This is
+        done because process_queued_requests() may be have model-specific
+        implementations, and we we're trying to hide the raw SimMessage
+        structure from modeling client code (both to make it simpler/more
+        obvious, and to protect modeling code from changes in the message
+        type-specific msgData)
         """
-        handled = self.assignmentAgent._process_queued_requests(self.requestMsg)
+        throughRequest = SimResourceRequest(self.requestMsg)
+        handled = self.assignmentAgent.process_queued_requests(throughRequest)
         if not handled:
             super().process_impl()
-            #self.assignmentAgent.request_timed_out(self.requestMsg)
 
         
 @apidoc
