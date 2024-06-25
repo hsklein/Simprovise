@@ -68,7 +68,7 @@ if _trace_enabled:
      logger.info("Event Trace Type: %s", _trace_type)
 
 # If not None/zero, Cut trace off at this many events
-_trace_max_events = simconfig.get_max_trace_events()
+_trace_max_events = simconfig.get_trace_maxevents()
 if _trace_enabled:
      logger.info("Maximum number of events to trace: %d", _trace_max_events)
 

@@ -324,12 +324,6 @@ def get_trace_destination():
     valid_values = ('stdout', 'file')
     return _config.getstring(SIM_TRACE, 'Destination', valid_values, fallback='table')
 
-def get_max_trace_events():
-    """
-    Return the maximum number of trace events to show/log.
-    """
-    return _config.getint(_SIM_RANDOM, 'MaxReplications', minvalue=0, fallback=100)
-
 
 
 
