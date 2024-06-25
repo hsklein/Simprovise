@@ -21,7 +21,7 @@ from simprovise.core.simlogging import SimLogging
 from simprovise.core.simtime import SimTime 
 from simprovise.core.simevent import SimEvent
 
-from simprovise.modeling import SimCounter
+from simprovise.modeling import SimCounter, SimEntity
 from simprovise.modeling.agent import SimAgent, SimMsgType
 from simprovise.modeling.location import SimStaticObject
 
@@ -69,8 +69,32 @@ class SimResourceAssignment(object):
         self._assignmentAgent = assignmentAgent
         self._resources = tuple(resources)
         self._assignTime = SimClock.now()
+        
+        # Validation
+        
+        # The assignment must contain at least one resource
         if len(resources) == 0:
-            raise SimError("A ResourceAssignment must be constructed with at least one resource")
+            msg =  "A ResourceAssignment must be constructed with at least one resource"
+            raise SimError(_RESOURCE_ERROR, msg)
+        
+        for r in resources:
+            # Each passed resource must be a SimLogging
+            if not isinstance(r, SimResource):
+                msg = "SimResourceAssignment constructed with a non-resource {0} object"
+                raise SimError(_RESOURCE_ERROR, msg, r)
+                
+            # Each passed resource must be managed by the passed assignment agent
+            if r.assignment_agent is not assignmentAgent:
+                msg = "SimResourceAssignment constructed with resource {0} that is not managed by assignment agent {1}"
+                raise SimError(_RESOURCE_ERROR, msg, r, assignmentAgent)
+            
+            # When a single resource is passed multiple times, the number of times
+            # cannot exceed the resource capacity
+            n = resources.count(r)
+            if n > r.capacity:
+                msg = "SimResourceAssignment constructed with {0} of resource {1} which exceeds it's capacity of {2}"
+                raise SimError(_RESOURCE_ERROR, msg, n, r, r.capacity)
+                
 
     def __str__(self):
         return "Resource Assignment: Transaction: " + str(self.process) + \
@@ -198,7 +222,7 @@ class SimAssignResourcesEvent(SimEvent):
     def process_impl(self):
         """
         """
-        self.assignmentAgent._process_queued_requests()
+        self.assignmentAgent.process_queued_requests()
         self.assignmentAgent.assignmentEvent = None
     
 
@@ -369,7 +393,7 @@ class ResourceAssignmentAgentMixin(object):
             self.assignmentEvent = SimAssignResourcesEvent(self)
             self.assignmentEvent.register()
 
-    def _process_queued_requests(self, throughRequest=None):
+    def process_queued_requests(self, throughRequest=None):
         """
         This method should be called only by SimAssignResourcesEvent.process_impl().
         It is responsible for (at least attempting) to fulfill resource requests in
@@ -398,17 +422,30 @@ class ResourceAssignmentAgentMixin(object):
         Note that if this implementation cannot fulfill an earlier/higher
         priority request remaining, it does NOT allow a later/lower priority
         request to "jump the queue". Some subclassed agents (resource pools in
-        particular) should probably choose to modify this behavior.
-        """
+        particular) will modify this behavior.
         
-        for request in self.queued_messages(SimMsgType.RSRC_REQUEST):
-            handled = self._process_request(request)
+        TODO make throughRequest of class SimResourceRequest, for benefit
+        of modeling client code
+        """        
+        for requestMsg in self.queued_messages(SimMsgType.RSRC_REQUEST):
+            handled = self._process_request_msg(requestMsg)
             if not handled:
                 return False
-            if throughRequest is not None and request is throughRequest:
+            if throughRequest is not None and requestMsg is throughRequest.raw_message:
                 return True
             
         return True
+    
+    def queued_resource_requests(self):
+        """
+        Returns the resource assignment agent's queued RSRC_REQUEST messages
+        wrapped as :class:`SimResourceRequest` objects.
+        
+        Primarily for the use of model-specific implementations of
+        process_queued_requests()
+        """
+        return [SimResourceRequest(msg)
+                for msg in self.queued_messages(SimMsgType.RSRC_REQUEST)]
     
     @apidocskip
     def cancel_request(self, msg):
@@ -422,7 +459,7 @@ class ResourceAssignmentAgentMixin(object):
         self.msg_queue.remove(msg)
         self._schedule_assignment_request_processing()
         
-    def _process_request(self, requestMsg):
+    def _process_request_msg(self, requestMsg):
         """
         Attempt to process a resource request, returning True if successful (and
         False otherwise). If successful, the message is handled so remove it
@@ -430,16 +467,26 @@ class ResourceAssignmentAgentMixin(object):
         """
         resourceAssignment = self._assign_from_request(requestMsg)
         if resourceAssignment:
-            # Do assignTo(s) and sendResponse
-            txn = requestMsg.msgData[0]
-            for resource in resourceAssignment.resources:
-                resource.assign_to(txn)
-            self.send_response(requestMsg, SimMsgType.RSRC_ASSIGNMENT, resourceAssignment)
-            # Handled, so remove the message from the queue and return True
-            self.msg_queue.remove(requestMsg)
+            self._process_assignment(requestMsg, resourceAssignment)
             return True
         else:
             return False
+        
+    def _process_assignment(self, requestMsg, resourceAssignment):
+        """
+        Actually do the work of resource assignment:
+        - Tell the resource object(s) themselves of the assignment via assign_to()
+        - Send a response message of type RSRC_ASSIGNMENT to the requesting entity
+        - Remove the request message from the queue since it is not handled.
+        """
+        assert resourceAssignment, "null resource assignment passed to _process_assignment()"
+        txn = requestMsg.msgData[0]
+        for resource in resourceAssignment.resources:
+            resource.assign_to(txn)
+        self.send_response(requestMsg, SimMsgType.RSRC_ASSIGNMENT, resourceAssignment)
+        # Handled, so remove the message from the queue and return True
+        self.msg_queue.remove(requestMsg)
+        
 
     def _assign_from_request(self, requestMsg):
         """
@@ -1059,7 +1106,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
     to the pool; in that case, the request processing (validation and
     assignment) is delegated to the base class implementations.
     
-    The pool provides its own implementation of _process_queued_requests()
+    The pool provides its own implementation of process_queued_requests()
     which allows sufficiently heterogenous requests of lower priority to
     be process and potentially assigned even after a higher priority
     request is not handled/assigned. The base class implementation assumes
@@ -1081,9 +1128,6 @@ class SimResourcePool(SimResourceAssignmentAgent):
     #TODO: currentAssignments(rsrcClass) method, maybe currentTransactions(rsrcClass)
     #TODO: think about optional pre-emption logic, either here and/or
     #      SimResourceAssignmentAgent.
-    # TODO Override _process_queued_requests() so that higher priority/earlier
-    # requests don't block non-overlapping assignments in a heterogenous resource
-    # pool - see ResourcePoolQueueingTests.testacquirePriorityrelease2()
 
     def __init__(self, *resources):
         super().__init__()
@@ -1178,7 +1222,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
         else:
             return isinstance(otherparms[0], SimResource)
         
-    def _process_queued_requests(self, throughRequest=None):
+    def process_queued_requests(self, throughRequest=None):
         """
         Resource Pool specific implementation.
         
@@ -1219,21 +1263,21 @@ class SimResourcePool(SimResourceAssignmentAgent):
         # If we handle every request in the queue successfully, we're done
         # If the caller specified a throughRequest (i.e, the caller is 
         # processing a SimTimeOutEvent), we're done regardless
-        handled = super()._process_queued_requests(throughRequest)
+        handled = super().process_queued_requests(throughRequest)
         if handled:
             return True
         elif throughRequest is not None:
             return False
              
-        # Starting with the first request that could not be assigned, go through
-        # the entire queue in priority order. For each request, check for any 
+        # Starting with the first request msg that could not be assigned, go through
+        # the entire queue in priority order. For each request msg, check for any 
         # overlap with earlier requests via is_blocked(). If there is no overlap,
-        # attempt to process the request. If the request cannot be assigned,
+        # attempt to process the request message. If the request cannot be assigned,
         # update the blocked_resources/blocked_rsrc_classes sets as required.
-        for request in self.queued_messages(SimMsgType.RSRC_REQUEST):
-            resource, rsrc_class, numRequested = get_request_data(request)
+        for requestMsg in self.queued_messages(SimMsgType.RSRC_REQUEST):
+            resource, rsrc_class, numRequested = get_request_data(requestMsg)
             if not is_blocked(resource, rsrc_class):
-                handled = self._process_request(request)
+                handled = self._process_request_msg(requestMsg)
                 if not handled:
                     if resource is not None:
                         blocked_resources.add(resource)
@@ -1316,3 +1360,132 @@ class SimResourcePool(SimResourceAssignmentAgent):
             assert False, "Should never reach this!!!"
 
 
+class SimResourceRequest(object):
+    """
+    """
+    def __init__(self, requestMsg):
+        """
+        """
+        assert requestMsg.msgType == SimMsgType.RSRC_REQUEST, " attempt to initialize SimResourceRequest with a non RSRC_REQUEST SimMessage"
+        self._requestMsg = requestMsg
+        self._assignment = None
+        
+    @property
+    def raw_message(self):
+        """
+        Return the :class::`~.agent.SimMessage` object that this class wraps
+        (of :class:`~.agent.SimMsgType` RSRC_REQUEST)
+        
+        :return: The underlying request message object.
+        :rtype:  :class:`~.agent.SimMessage`
+        
+        """
+        return self._requestMsg
+    
+    @property
+    def request_time(self):
+        """
+        Returns the time the request message was sent/made
+        
+        :return: The (simulated) time the request was made
+        :rtype:  :class:`~simprovise.core.simtime.SimTime`
+        """
+        return self._requestMsg.sendTime
+        
+    @property
+    def entity(self):
+        """
+        :return: The entity making the resource request
+        :rtype:  :class:`~.entity.SimEntity`
+        """
+        assert isinstance(self._requestMsg.sender, SimEntity), "SimResourceRequest is not a SimEntity"
+        return self._requestMsg.sender
+    
+    @property
+    def assignment_agent(self):
+        """
+        :return: The resource assignment agent managing the requested resource(s)
+        :rtype:  :class::`SimResourceAssignmentAgent`
+        """
+        return self._requestMsg.receiver
+    
+    @property
+    def process(self):
+        """
+        :return: The process making the resource request
+        :rtype:  :class:`~.process.SimProcess`
+        """
+        process, *otherparms = self._requestMsg.msgData
+        return process
+    
+    @property
+    def resource(self):
+        """
+        Returns the specific resource requested, or None if a the request is
+        for a :class:`SimResource` class
+        
+        :return: The specific resource requested, or None if a the request is
+                 for a :class:`SimResource` class
+        :rtype:  :class:`SimResource` or `None`
+        """
+        process, numRequested, *otherparms = self._requestMsg.msgData
+        if otherparms and isinstance(otherparms[0], SimResource):
+            return otherparms[0]
+        else:
+            return None
+    
+    @property
+    def resource_cls(self):
+        """
+        Returns the :class:`SimResource` class requested, or None if the
+        request is for a specific :class:`SimResource` instance.
+        
+        :return: The class resource requested, or None if a the request is
+                 for a specific :class:`SimResource` instance
+        :rtype:  subclass of :class:`SimResource` or `None`
+        """
+        process, numRequested, *otherparms = self._requestMsg.msgData
+        if otherparms and issubclass(otherparms[0], SimResource):
+            return otherparms[0]
+        else:
+            return None
+    
+    @property
+    def nrequested(self):
+        """
+        Returns the number :class:`SimResource`s requested, which typically
+        defaults to one.
+        
+        :return: The number of resources requested
+        :rtype:  `int`        
+        """
+        process, numRequested, *otherparms = self._requestMsg.msgData
+        return numRequested
+    
+    def make_assignment(self, resources):
+        """
+        Assign the passed resource(s) to the requesting :class:~`.entity.SimEntity`.
+        Also removes the request from the assignment agent's message queue,
+        since the request has now been handled/fulfilled.
+        
+        :param resources: The resource(s) to be assigned in fulfillment of this
+                          request.
+        :type resources:  An iterable to instances of class :class:`SimResource`
+        """
+        if self._assignment:
+            msg = "An assignment has already been made for resource request {0}"
+            raise SimError(_RESOURCE_ERROR, msg, self._requestMsg)
+        
+        assert self._requestMsg in self.assignment_agent.queued_messages(SimMsgType.RSRC_REQUEST), "request message already removed from queue"
+        
+        # Create the resource assignment (which will also validate)
+        assignment = SimResourceAssignment(self.process,
+                                           self.assignment_agent, resources)
+        
+        # Process the resource assignment  by sending it as a response to the 
+        # requesting entity and removing the request from the assignment agent's 
+        # message queue.
+        self.assignment_agent._process_assignment(self._requestMsg,
+                                                  assignment)
+        self._assignment = assignment
+            

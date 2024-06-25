@@ -179,11 +179,36 @@ class ResourceAssignmentTests(RATestCaseBase):
         self.assertEqual(ra.resource, rsrc)
         
     def testMultipleResourceProperty(self):
-        "Test:  ResourceAssignment resource property raises an Error when assignment is created with more than one distinct resource object"
+        "Test:  ResourceAssignment __name__ raises an Error when assignment is created with resource not managed by assignment agent"
         rsrc1 = SimSimpleResource("TestResource1", self.location, capacity=2)
         rsrc2 = SimSimpleResource("TestResource2", self.location)
-        ra = SimResourceAssignment(self.process, rsrc1, (rsrc1,rsrc2))
+        self.assertRaises(SimError, lambda: SimResourceAssignment(self.process, rsrc1, (rsrc1,rsrc2)))
+        
+    def testMultiCapacityResourceRaisesWithTooMany(self):
+        "Test:  ResourceAssignment resource property raises when initialized with more references to same resource than the resource capacity"
+        rsrc = SimSimpleResource("TestResource", self.location, capacity=2)
+        self.assertRaises(SimError, lambda: SimResourceAssignment(self.process, rsrc, (rsrc,rsrc, rsrc)))
+         
+
+class ResourcePoolAssignmentTests(RATestCaseBase):
+    "Test SimResourceAssignments for SimResourcePool assignment agents"
+    def setUp(self):
+        super().setUp()
+        self.rsrc1 = SimSimpleResource("TestResource1", capacity=2)
+        self.rsrc2 = SimSimpleResource("TestResource2", capacity=1)
+        self.pool = SimResourcePool(self.rsrc1, self.rsrc2)
+        
+    def testMultipleResourcePropertyRaises(self):
+        "Test:  ResourceAssignment resource property raises an Error when assignment is created with more than one distinct resource object"
+        ra = SimResourceAssignment(self.process, self.pool, (self.rsrc1, self.rsrc2))
         self.assertRaises(SimError, lambda: ra.resource)
+        
+    def testUnmanagedResourceAssignmentRaises(self):
+        "Test SimResourceAssignment with resource not in pool raises"
+        rsrc3 = SimSimpleResource("TestResource3", capacity=1)
+        self.assertRaises(SimError, lambda: SimResourceAssignment(self.process, self.pool,
+                                                                  (self.rsrc1, rsrc3)))
+        
 
 class ResourceAssignmentSubtractTests(RATestCaseBase):
     "Tests ResourceAssignment subtract and subtractAll methods"
@@ -192,7 +217,8 @@ class ResourceAssignmentSubtractTests(RATestCaseBase):
         self.rsrc = SimSimpleResource("TestResource1", self.location, capacity=2)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location)
-        self.ra = SimResourceAssignment(self.process, self.rsrc, (self.rsrc, self.rsrc2))
+        self.pool = SimResourcePool(self.rsrc, self.rsrc2, self.rsrc3)
+        self.ra = SimResourceAssignment(self.process, self.pool, (self.rsrc, self.rsrc2))
         
     def testSubtractAll1(self):
         "Test:  after ResourceAssignment.subtractAll, count property is zero"
@@ -236,6 +262,9 @@ class ResourceAssignmentContainsTests(RATestCaseBase):
         self.rsrc1 = SimSimpleResource("TestResource1", self.location, capacity=1)
         self.rsrc2 = SimSimpleResource("TestResource2", self.location, capacity=2)
         self.rsrc3 = SimSimpleResource("TestResource3", self.location)
+        self.rsrc1a = SimSimpleResource("TestResource1a", self.location, capacity=1)
+        self.rsrc2a = SimSimpleResource("TestResource2a", self.location, capacity=2)
+        self.pool = SimResourcePool(self.rsrc1a, self.rsrc2a)
         
     def testContain1(self):
         "Test:  assignment with single resource contains that resource"
@@ -254,43 +283,43 @@ class ResourceAssignmentContainsTests(RATestCaseBase):
         
     def testContain3(self):
         "Test:  assignment with two of same resource contains one of that resource"
-        ra = SimResourceAssignment(self.process, self.rsrc1, (self.rsrc2, self.rsrc2))
+        ra = SimResourceAssignment(self.process, self.rsrc2, (self.rsrc2, self.rsrc2))
         self.assertTrue(ra.contains((self.rsrc2,)))
         
     def testContain4(self):
-        "Test:  assignment with two of same resource contains one of that resource"
-        ra = SimResourceAssignment(self.process, self.rsrc1, (self.rsrc2, self.rsrc2))
+        "Test:  assignment with two of same resource contains two of that resource"
+        ra = SimResourceAssignment(self.process, self.rsrc2, (self.rsrc2, self.rsrc2))
         self.assertTrue(ra.contains((self.rsrc2, self.rsrc2)))
         
     def testContain5(self):
         "Test:  assignment with two of same resource does notcontain 3 of that resource"
-        ra = SimResourceAssignment(self.process, self.rsrc1, (self.rsrc2, self.rsrc2))
+        ra = SimResourceAssignment(self.process, self.rsrc2, (self.rsrc2, self.rsrc2))
         self.assertFalse(ra.contains((self.rsrc2,) * 3))
         
     def testContain6(self):
         "Test:  assignment with two of same resource does not contain a different resource"
-        ra = SimResourceAssignment(self.process, self.rsrc1, (self.rsrc2, self.rsrc2))
+        ra = SimResourceAssignment(self.process, self.rsrc2, (self.rsrc2, self.rsrc2))
         self.assertFalse(ra.contains((self.rsrc1, self.rsrc2)))
         
     def testContain7(self):
         "Test:  assignment with two different resource contains both of them"
-        ra = SimResourceAssignment(self.process, self.rsrc1, (self.rsrc1, self.rsrc2))
-        self.assertTrue(ra.contains((self.rsrc1, self.rsrc2)))
+        ra = SimResourceAssignment(self.process, self.pool, (self.rsrc1a, self.rsrc2a))
+        self.assertTrue(ra.contains((self.rsrc1a, self.rsrc2a)))
         
     def testContain8(self):
         "Test:  assignment with two different resource contains the first of them"
-        ra = SimResourceAssignment(self.process, self.rsrc1, (self.rsrc1, self.rsrc2))
-        self.assertTrue(ra.contains((self.rsrc1,)))
+        ra = SimResourceAssignment(self.process, self.pool, (self.rsrc1a, self.rsrc2a))
+        self.assertTrue(ra.contains((self.rsrc1a,)))
         
     def testContain9(self):
         "Test:  assignment with two different resource contains the 2nd of them"
-        ra = SimResourceAssignment(self.process, self.rsrc1, (self.rsrc1, self.rsrc2))
-        self.assertTrue(ra.contains((self.rsrc2,)))
+        ra = SimResourceAssignment(self.process, self.pool, (self.rsrc1a, self.rsrc2a))
+        self.assertTrue(ra.contains((self.rsrc2a,)))
         
     def testContain10(self):
         "Test:  assignment with two different resource does not contain two of the same"
-        ra = SimResourceAssignment(self.process, self.rsrc1, (self.rsrc1, self.rsrc2))
-        self.assertFalse(ra.contains((self.rsrc1, self.rsrc1)))
+        ra = SimResourceAssignment(self.process, self.pool, (self.rsrc1a, self.rsrc2a))
+        self.assertFalse(ra.contains((self.rsrc1a, self.rsrc1a)))
  
 class TestProcessSRP(TestProcess1):
     """
@@ -1718,6 +1747,7 @@ def makeTestSuite():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     suite.addTest(loader.loadTestsFromTestCase(ResourceAssignmentTests))
+    suite.addTest(loader.loadTestsFromTestCase(ResourcePoolAssignmentTests))
     suite.addTest(loader.loadTestsFromTestCase(ResourceAssignmentSubtractTests))
     suite.addTest(loader.loadTestsFromTestCase(ResourceAssignmentContainsTests))
     suite.addTest(loader.loadTestsFromTestCase(SimpleResourcePropertyTests))
