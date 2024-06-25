@@ -1,4 +1,0 @@
-Time,Object,Action,Arguments,Location Population,TestLocation:entries
-0,SimEntity 1,Move-to,TestLocation, 0, 0
-0,SimEntity 1,Acquired,TestLocation.TestResource2 TestLocation.TestResource1 , 0, 0
-0,SimEntity 1,Acquired,TestLocation.TestResource1 (2) , 0, 0
