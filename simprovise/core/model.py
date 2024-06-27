@@ -159,6 +159,13 @@ class SimModel(object):
         """
         return self._module
     
+    def loaded_from_script(self):
+        """
+        :return: True if the model was loaded via :meth:`load_model_from_script`
+        :rtype:  `bool`
+        """
+        return self._module is not None
+    
     @property
     def datasets(self):
         """
@@ -296,7 +303,7 @@ class SimModel(object):
             raise SimError(_ERROR_NAME, msg, process_cls, elementid)
                  
         
-logger.info("Creating SimModel singleton in module: %s", __name__)
+logger.info("Creating SimModel singleton in module: %s, pid %s", __name__, os.getpid())
 SimModel._theModel = SimModel()    
 
 if __name__ == '__main__':

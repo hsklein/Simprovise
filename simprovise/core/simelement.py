@@ -82,8 +82,17 @@ class SimElement(object):
     def get_full_class_name(cls):
         """
         Convenience method for code that needs to obtain a specific
-        Entity or Process Element from the :class:`~.model.SimModel`.
+        Entity or Process Element from the :class:`~.model.SimModel`;
+        the element ID for those objects is the module + class
+        names.
         
+        Note that a module name of '__mp_main__' is translated to
+        '__main__'. That ensures that a elements for entity or
+        process classes defined in a model script get the same ID
+        if  the model script is then imported by a separate process
+        created by multiprocessing.Pool.
+        (See https://stackoverflow.com/questions/72497140/in-python-multiprocessing-why-is-child-process-name-mp-main-is-there-a-way)
+               
         :param cls: The Python class to query
         :type cls:  `class`
         
@@ -92,7 +101,10 @@ class SimElement(object):
         :rtype:  `str`
         
         """
-        return cls.__module__ + '.' + cls.__qualname__        
+        modulename = cls.__module__
+        if modulename == '__mp_main__':
+            modulename = '__main__'
+        return modulename + '.' + cls.__qualname__        
     
     @property
     def full_class_name(self):

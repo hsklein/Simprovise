@@ -196,10 +196,19 @@ class Simulation(object):
         parallel, depending on system configuration.
         
         Can be invoked from any script, as well as the simprovise command line
-        interface.
+        interface. If invoked from a script, the top of the call stack should
+        be within that top-level script's __main__ guard, since this call
+        will ultimately involve use of a multiprocessing Pool.
         
-        :param modelpath:    The full path of the model script file.
-        :type modelpath:     str
+        If the top-level invoking script is the model script itself, the
+        modelpath parameter should be set to None, which will ensure  that
+        the model script is never loaded via `SimModel.load_model_from_script()`;
+        the replication processes created by the multiprocessing pool will
+        import the top-level script on their own, so an additional load
+        will generate errors.
+        
+        :param modelpath:    The full path of the model script file or None.
+        :type modelpath:     str or None
         
         :param warmupLength: The length of the simulation warmup period,
                              in simulated time. Defaults to zero
@@ -243,7 +252,10 @@ class Simulation(object):
         # get an absolute path after validating - will raise if invalid
         outputpath = Simulation._valid_outputpath(outputpath, overwrite)
         
-        model = SimModel.load_model_from_script(modelpath)
+        if not modelpath or SimModel.model().filename == modelpath:
+            model = SimModel.model()
+        else:           
+            model = SimModel.load_model_from_script(modelpath)
 
         replicator = SimReplicator(model, warmupLength, batchLength, nBatches)
         replicationParameters = SimReplicationParameters()
