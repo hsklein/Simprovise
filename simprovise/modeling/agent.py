@@ -136,7 +136,7 @@ class SimAgent(object):
         """
         pass
 
-    def send_message(self, toAgent, msgType, msgData):
+    def send_message(self, toAgent, msgType, msgData, msgClass=None):
         """
         Send a SimMessage-derived message to a specified recipient.  Returns
         both the sent message and any immediate responses.  (If there are no
@@ -169,7 +169,11 @@ class SimAgent(object):
         """
         assert toAgent, "Null toAgent (recipient) argument to sendMessage()"
         assert msgType, "Null msgType argument to sendMessage()"
+        assert msgClass is None or issubclass(msgClass, SimMessage), "msgClass is not a subclass of SimMessage"
 
+        if msgClass is None:
+            msgClass = SimMessage
+            
         @contextmanager
         def intercept_responses(toMsg):
             """
@@ -199,8 +203,8 @@ class SimAgent(object):
             yield responses
             self.interceptHandler = savedHandler
 
-        msg = SimMessage(_next_msgID(), msgType, SimClock.now(), self, toAgent,
-                         None, msgData)
+        msg = msgClass(_next_msgID(), msgType, SimClock.now(), self, toAgent,
+                       None, msgData)
         with intercept_responses(msg) as responses:
             toAgent.receive_message(msg)
         return msg, responses

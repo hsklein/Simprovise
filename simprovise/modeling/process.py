@@ -85,7 +85,8 @@ class SimAcquireTimeOutEvent(BaseInterruptEvent):
         obvious, and to protect modeling code from changes in the message
         type-specific msgData)
         """
-        throughRequest = SimResourceRequest(self.requestMsg)
+        #throughRequest = SimResourceRequest(*self.requestMsg)
+        throughRequest = self.requestMsg
         handled = self.assignmentAgent.process_queued_requests(throughRequest)
         if not handled:
             super().process_impl()
@@ -336,7 +337,7 @@ class SimProcess(SimTransaction):
         msgType = SimMsgType.RSRC_REQUEST
         response = None
         msg, responses = self.agent.send_message(assignmentAgent,
-                                                msgType, msgData)
+                                                msgType, msgData, SimResourceRequest)
         if responses:
             # If the assignment agent responded immediately, grab that response
             # (which should just be a resource assignment message)
