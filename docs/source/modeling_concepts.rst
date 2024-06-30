@@ -45,47 +45,86 @@ sink. In our bank model, the "leave the bank" portion of the process would be
 specified more along the lines of "move to the entity sink." Every model
 requires at least one entity sink.
 
+.. _agent-concept-label:
 Agents
 ======
 
+.. _transient-object-concept-label:
 Transient Objects
 =================
 
 'Transient Objects' are model objects that exist for only part of a simulation run.
 
+
+
+.. _entity-concept-label:
 Entities
 --------
 
+*Entities* are the fundamental objects that flow through a Simprovise simulation.
+They are are transitory objects typically representing units of work.
+For example, in the :ref:`bank tutorial <bank-1-tutorial-label>`, customers are 
+modeled as entities. Entities are objects of class `SimEntity` or a `SimEntity`
+subclass.
+
+Entities are created by :ref:`entity-source-concept-label`, along with an 
+accompanying :ref:`process <process-concept-label>`, which defines the work and
+actions performed by/on behalf of the entity. Every process must complete by
+moving the entity to an :ref:`entity sink <entity-sink-concept-label>`, where
+both the entity and process objects leave the simulation.
+
+.. _static-object-concept-label:
 Static Objects
 ==============
 
+.. _location-concept-label:
 Locations
 ---------
 
-Resources
----------
+*Locations* typically represent physical or logical locations. They may be
+nested - i.e., locations can contain other sublocations. Locations can also
+contain resources, entity sources and entity sinks.
+In our bank example, teller windows and the customer queue can be represented
+as locations.
 
+.. _entity-source-concept-label:
 Entity Sources
 --------------
 
+.. _entity-sink-concept-label:
 Entity Sinks
 ------------
 
 
+.. _resource-concept-label:
+Resources
+=========
+
+
+.. _resource-pool--concept-label:
+Resource Pools
+--------------
+
+.. _process-concept-label:
 Processes
 =========
 
+.. _counter-concept-label:
 Counters
 ========
 
+.. _simulated-time-concept-label:
 Simulated Time
 ==============
 
+.. _random-number-generation-concept-label:
 Pseudo-Random Value Generation
 ==============================
 
+.. _random-number-streams-concept-label:
 Random Number Streams
 ---------------------
 
+.. _random-number-distribution-concept-label:
 Sampling from Random Distributions
 ----------------------------------
