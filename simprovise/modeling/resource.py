@@ -1217,18 +1217,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
         the pool's resources if rsrcClass is None.
         """
         return [assg.process for assg in self.current_assignments(rsrcClass)]
-    
-    def _is_request_for_specific_resource(self, requestMsg):
-        """
-        Returns True if the request is actually for a specific resource object
-        (not a a resource class or any resource in the pool)
-        """
-        txn, numRequested, *otherparms = requestMsg.msgData
-        if not otherparms:
-            return False
-        else:
-            return isinstance(otherparms[0], SimResource)
-        
+            
     def process_queued_requests(self, throughRequest=None):
         """
         Resource Pool specific implementation.
@@ -1246,7 +1235,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
         
         Note that if an earlier/higher priority request specified a resource
         class, later requests that specify a subclass of that resource class
-        will be blocked as well.
+        (or a specific resource that is a subclass) will be blocked as well.
         """
         blocked_rsrc_classes = set()
         blocked_resources = set()
@@ -1258,14 +1247,6 @@ class SimResourcePool(SimResourceAssignmentAgent):
                 return True
             return False
                          
-        def get_request_data(request):
-            if self._is_request_for_specific_resource(request):
-                txn, numRequested, resource = request.msgData
-                return resource, resource.__class__, numRequested
-            else:
-                txn, numRequested, rsrc_class = request.msgData
-                return None, rsrc_class, numRequested
-           
         # Start by running the base class algorithm.
         # If we handle every request in the queue successfully, we're done
         # If the caller specified a throughRequest (i.e, the caller is 
@@ -1282,7 +1263,12 @@ class SimResourcePool(SimResourceAssignmentAgent):
         # attempt to process the request message. If the request cannot be assigned,
         # update the blocked_resources/blocked_rsrc_classes sets as required.
         for requestMsg in self.queued_resource_requests():
-            resource, rsrc_class, numRequested = get_request_data(requestMsg)
+            resource = requestMsg.resource
+            rsrc_class = requestMsg.resource_cls
+            if rsrc_class is None:
+                assert resource, "resource request contains neither a resource nor a resource class"
+                rsrc_class = resource.__class__
+                
             if not is_blocked(resource, rsrc_class):
                 handled = self._process_request_msg(requestMsg)
                 if not handled:
@@ -1303,7 +1289,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
         If the message is in fact for a specific resource, use the
         superclass implementation.
         """
-        if self._is_request_for_specific_resource(requestMsg):
+        if requestMsg.resource is not None:
             super()._validate_request(requestMsg)
             return
             
@@ -1338,7 +1324,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
         If the message is in fact for a specific resource, use the
         superclass implementation.
         """
-        if self._is_request_for_specific_resource(requestMsg):
+        if requestMsg.resource is not None:
             return super()._assign_from_request(requestMsg)
             
         # Extract the message data.
@@ -1443,8 +1429,11 @@ class SimResourceRequest(SimMessage):
         :rtype:  subclass of :class:`SimResource` or `None`
         """
         process, numRequested, *otherparms = self.msgData
-        if otherparms and issubclass(otherparms[0], SimResource):
-            return otherparms[0]
+        assert otherparms, "resource request message missing resource/class data"
+
+        p = otherparms[0]
+        if isinstance(p, type) and issubclass(p, SimResource):
+            return p
         else:
             return None
     
