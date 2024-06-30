@@ -487,9 +487,9 @@ class ResourceAssignmentAgentMixin(object):
         - Remove the request message from the queue since it is not handled.
         """
         assert resourceAssignment, "null resource assignment passed to _process_assignment()"
-        txn = requestMsg.msgData[0]
+        process = requestMsg.process
         for resource in resourceAssignment.resources:
-            resource.assign_to(txn)
+            resource.assign_to(process)
         self.send_response(requestMsg, SimMsgType.RSRC_ASSIGNMENT, resourceAssignment)
         # Handled, so remove the message from the queue and return True
         self.msg_queue.remove(requestMsg)
@@ -1327,13 +1327,8 @@ class SimResourcePool(SimResourceAssignmentAgent):
         if requestMsg.resource is not None:
             return super()._assign_from_request(requestMsg)
             
-        # Extract the message data.
-        txn, numRequested, *otherparms = requestMsg.msgData
-
-        if otherparms:
-            rsrcClass = otherparms[0]
-        else:
-            rsrcClass = None
+        numRequested = requestMsg.nrequested
+        rsrcClass = requestMsg.resource_cls
 
         if self.available(rsrcClass) < numRequested:
             # Not enough available resources to fulfill the request
@@ -1349,7 +1344,8 @@ class SimResourcePool(SimResourceAssignmentAgent):
                 rsrcsToAssign.extend((rsrc,) * n)
                 numNeeded -= n
                 if numNeeded == 0:
-                    return SimResourceAssignment(txn, self, rsrcsToAssign)
+                    process = requestMsg.process
+                    return SimResourceAssignment(process, self, rsrcsToAssign)
             assert False, "Should never reach this!!!"
 
 
@@ -1413,9 +1409,11 @@ class SimResourceRequest(SimMessage):
         :rtype:  :class:`SimResource` or `None`
         """
         process, numRequested, *otherparms = self.msgData
-        if otherparms and isinstance(otherparms[0], SimResource):
+        assert otherparms, "resource request message missing resource/class data"
+        if isinstance(otherparms[0], SimResource):
             return otherparms[0]
         else:
+            assert self.resource_cls, "Resource request specifies neither a resource nor resource class"
             return None
     
     @property
@@ -1435,6 +1433,7 @@ class SimResourceRequest(SimMessage):
         if isinstance(p, type) and issubclass(p, SimResource):
             return p
         else:
+            assert isinstance(p, SimResource), "Resource request specifies neither a resource nor resource class"
             return None
     
     @property
@@ -1490,12 +1489,14 @@ class SimResourceRequest(SimMessage):
         # Process the resource assignment  by sending it as a response to the 
         # requesting entity and removing the request from the assignment agent's 
         # message queue.
-        self.process_resource_assignment(assignment)
-        #self._assignment = assignment
+        self._process_resource_assignment(assignment)
         
-    def process_resource_assignment(self, assignment):
+    def _process_resource_assignment(self, assignment):
         """
-        TODO move agent code here?
+        For now at least, let the resource assignment agent do this,
+        since there might be assignment agent subclasses that modify
+        the behavior. We'll also keep this as a non-public API for
+        the time being.
         """
         self.assignment_agent._process_assignment(self, assignment)
         
