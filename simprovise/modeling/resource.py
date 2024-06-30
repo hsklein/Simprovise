@@ -261,32 +261,6 @@ class ResourceAssignmentAgentMixin(object):
     def request_priority_func(self, f):
         self.register_priority_func(SimMsgType.RSRC_REQUEST, f)
 
-    def _create_resource_assignment(self, txn, resource, numToAssign=1):
-        """
-        Create and return a SimResourceAssignment involving a single resource
-        object, though if this resource has capacity > 1, we may assign more
-        than one of that resource (up to its capacity).
-       
-        :param txn:        The transaction to which resources are to be assigned
-        :type txn:         :class:`~.process.SimProcess`
-        
-        :param resource:    Resource object to be assigned
-        :type resource:     :class:`SimResource`
-        
-        :param numToAssign: Resource object to be assigned
-        :type numToAssign:  int, range [1, resource capacity]
-        
-        :return:            Resource assignment as specified by above parameters
-        :rtype:             :class:`SimResourceAssignment`
- 
-         """
-        if numToAssign <= 0 or numToAssign > resource.capacity: 
-            msg = "Assignment for {0} of resource {1} is not in range 1-capacity ({2})"
-            raise SimError(_REQUEST_ERROR, msg, numToAssign,
-                           resource.element_id, resource.capacity)
-        
-        return SimResourceAssignment(txn, self, (resource,) * numToAssign)
-
     def _create_multiple_resource_assignment(self, txn, *resources):
         """
         Create and return a SimResourceAssignment from the passed resources,
@@ -522,13 +496,15 @@ class ResourceAssignmentAgentMixin(object):
 
         """
         # Extract the message data.
-        txn, numRequested, resource = requestMsg.msgData
+        nrequested = requestMsg.nrequested
+        resource = requestMsg.resource
+        process = requestMsg.process
         
-        assert numRequested > 0, "number of resources requested not greater than zero"
+        assert nrequested > 0, "number of resources requested not greater than zero"
         assert isinstance(resource, SimResource), "Resource request data does not specify an instance of class SimResource"
 
-        if numRequested <= resource.available:
-            return self._create_resource_assignment(txn, resource, numRequested)
+        if nrequested <= resource.available:
+            return SimResourceAssignment(process, self, (resource,) * nrequested)
         else:
             return None
 
@@ -1315,7 +1291,6 @@ class SimResourcePool(SimResourceAssignmentAgent):
             raise SimError(_REQUEST_ERROR, errorMsg, numRequested, self,
                            self.poolsize(rsrcClass), rsrcClass.__name__)
 
-
     def _assign_from_request(self, requestMsg):
         """
         Overridden method that will, if possible, create and return
@@ -1351,12 +1326,24 @@ class SimResourcePool(SimResourceAssignmentAgent):
 
 class SimResourceRequest(SimMessage):
     """
+    A subclass of the SimMessage namedtuple that:
+    a) Defines properties returning the basic SimMessage data fields, but 
+       withproperty names reflecting this specific message type
+    b) Defines properties extracting data from the message's msgData field
+    c) Adds methods for making/processing resource assignments
+       (including sending resource assignment response messages),
+       primarily for the benefit of model-specific ResourceAssignmentAgent
+       subclasses.
+       
+    SimProcess should pass this class when sending resource request
+    (SimMsgType RSRC_REQUEST) messages, so that the handling assignment
+    agent will create message objects of this type.
     """
     __slots__ = []
     if __debug__:
         def __new__(cls, *args, **kwargs):
             """
-            Confirm this is a RSRC_REQUEST message type.
+            Confirm this is a RSRC_REQUEST message typ before continuing.
             """
             newmsg = SimMessage.__new__(cls, *args, **kwargs)
             assert newmsg.msgType == SimMsgType.RSRC_REQUEST, " attempt to create SimResourceRequest with a non RSRC_REQUEST message type"
