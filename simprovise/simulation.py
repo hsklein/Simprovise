@@ -906,7 +906,7 @@ if __name__ == '__main__':
     warmupLength = SimTime(1000)
     batchLength = SimTime(10000)
     #batchLength = SimTime(0)
-    scriptpath = "models\\mm1.py"
+    scriptpath = "demos\\mm1.py"
     multi_replication = True
     nruns = 10
     

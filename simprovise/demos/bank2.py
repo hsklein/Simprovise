@@ -17,7 +17,6 @@ from simprovise.modeling import (SimEntity, SimEntitySource, SimEntitySink,
                                  SimResourcePool, SimSimpleResource, SimQueue)
 
 from simprovise.simulation import Simulation
-from simprovise.models.queuing_theory_calc import theory_results
 
 class Customer(SimEntity):
     """

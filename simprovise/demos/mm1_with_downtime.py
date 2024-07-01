@@ -9,7 +9,7 @@ from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
                             SimResourceFailureAgent)
 
 from simprovise.simulation import Simulation
-from simprovise.models.queuing_theory_calc import theory_results
+from simprovise.demos.queuing_theory_calc import theory_results
 
 serverCapacity = 4
 meanServiceTime = SimTime(6 * serverCapacity)

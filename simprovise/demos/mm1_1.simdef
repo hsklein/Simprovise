@@ -1,0 +1,104 @@
+{
+    "FileVersion": "0.5", 
+    "SimulationRunControl": {
+        "Warmup": [
+            "SimTime", 
+            60, 
+            0
+        ], 
+        "BatchLength": [
+            "SimTime", 
+            2000, 
+            0
+        ], 
+        "#Batches": 1
+    }, 
+    "StaticObjectDefinitions": [
+        {
+            "typeKey": "Simalytix.Core.Source", 
+            "objectName": "Source1", 
+            "simObjParms": {
+                "generatorDefinitions": [
+                    {
+                        "__simdata__": {
+                            "InterarrivalDistribution": "exponential", 
+                            "EntityClass": "Simalytix.Core.SimEntity", 
+                            "InterarrivalDistributionParameters": {
+                                "mean": [
+                                    "SimTime", 
+                                    12.0, 
+                                    0
+                                ], 
+                                "rnStream": 10
+                            }, 
+                            "ProcessClass": "SimMain.TestProcess"
+                        }, 
+                        "__simtype__": "SourceGeneratorDef"
+                    }
+                ]
+            }, 
+            "animObjParms": {
+                "position": [
+                    87, 
+                    569
+                ]
+            }, 
+            "childObjDefs": []
+        }, 
+        {
+            "typeKey": "Simalytix.Core.Sink", 
+            "objectName": "Sink", 
+            "simObjParms": {}, 
+            "animObjParms": {
+                "position": [
+                    1025, 
+                    554
+                ]
+            }, 
+            "childObjDefs": []
+        }, 
+        {
+            "typeKey": "Simalytix.Core.WorkLocation", 
+            "objectName": "WorkLocation1", 
+            "simObjParms": {}, 
+            "animObjParms": {
+                "position": [
+                    682, 
+                    333
+                ]
+            }, 
+            "childObjDefs": []
+        }, 
+        {
+            "typeKey": "Simalytix.Core.Resource", 
+            "objectName": "Resource1", 
+            "simObjParms": {}, 
+            "animObjParms": {
+                "position": [
+                    698, 
+                    251
+                ]
+            }, 
+            "childObjDefs": []
+        }, 
+        {
+            "typeKey": "Simalytix.Core.Queue", 
+            "objectName": "Queue1", 
+            "simObjParms": {}, 
+            "animObjParms": {
+                "rotation": 90, 
+                "position": [
+                    586, 
+                    331
+                ]
+            }, 
+            "childObjDefs": []
+        }
+    ], 
+    "GraphicDisplayParameters": {
+        "Width": 1200, 
+        "BackgroundURL": null, 
+        "Height": 900, 
+        "ScaleBackgroundImage": true
+    }
+}
