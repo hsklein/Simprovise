@@ -433,9 +433,11 @@ class SimulationResult(object):
         Save summary statistics for each dataset/run/batch as a comma-separated-
         values (csv) file.
 
-        Args:
-            filename (str): Absolute path to which csv file is saved. Extension
-                            would typically be '.csv', but this is not checked.
+        :param filename: Absolute path to which the csv file is saved. Extension
+                         would typically be '.csv', but this is neither checked
+                         nor required.
+        :type filename:  str
+
         """
         unitName = ('seconds', 'minutes', 'hours')
         def unitstr(dataset):
@@ -449,31 +451,59 @@ class SimulationResult(object):
         runs = database.runs()
         if not runs:
             raise SimError(_RESULT_ERROR, "Result database has no simulation runs")
+        #nbatches = database.last_batch(runs[0])
+        datasets = database.datasets
+        if not datasets:
+            raise SimError(_RESULT_ERROR, "Result database has no datasets")
+        
+        runs = database.runs()
+        assert runs, "No runs in output database"
         nbatches = database.last_batch(runs[0])
-
+        if len(runs) > 1 or nbatches == 0:
+            nsamples = len(runs)
+            sample_type = 'Run'
+        else:
+            nsamples = nbatches
+            sample_type = 'Batch'
+            
+        def print_row(dset, statistic_name, sample_values):
+            if sample_values.n == 0:
+                return
+            
+            print(dset.element_id, dset.name, unitstr(dset), statistic_name, 
+                  sep=',', end='', file=f)            
+            for value in sample_values:
+                print(',', value, end='', file=f)
+            print('', file=f) 
+                                
         with open(filename, 'w') as f:
-            print('ElementID', 'Dataset', 'Unit', 'Sample', 'Count', 'Mean',
-                  'Min', 'Max', '5th Percentile', '10th Percentile',
-                  '25th Percentile', 'Median', '75th Percentile',
-                  '90th Percentile', '95th Percentile',
-                  sep=',', file=f)
-            datasets = database.datasets
+            print('ElementID', 'Dataset', 'Unit', 'Statistic', sep=',', end='', file=f)
+            for i in range(nsamples):
+                print(',', sample_type, i+1, end='', file=f)
+            print('', file=f)
+            
             for dset in datasets:
                 dsetstats = self._get_sim_dataset_statistics(dset)
-                for i in range(dsetstats.nsamples):
-                    print(dset.element_id, dset.name, unitstr(dset),
-                          i+1, ' ', sep=',', end='', file=f)
-                    print(dsetstats.counts[i], ',', end='', file=f)
-                    print(dsetstats.means[i], ',', end='', file=f)
-                    print(dsetstats.mins[i], ',', end='', file=f)
-                    print(dsetstats.maxs[i], ',', end='', file=f)
-                    print(dsetstats.pct05s[i], ',', end='', file=f)
-                    print(dsetstats.pct10s[i], ',', end='', file=f)
-                    print(dsetstats.pct25s[i], ',', end='', file=f)
-                    print(dsetstats.medians[i], ',', end='', file=f)
-                    print(dsetstats.pct75s[i], ',', end='', file=f)
-                    print(dsetstats.pct90s[i], ',', end='', file=f)
-                    print(dsetstats.pct95s[i], file=f)
+                if dset.name == 'Entries':
+                    # For Entries datasets, the count is the only value
+                    print_row(dset, 'Count', dsetstats.counts)
+                elif dset.name == 'Utilization' or dset.name == 'DownTime':
+                    # For Utilization and DownTime, the mean is the only useful value
+                    print_row(dset, 'Mean', dsetstats.means)
+                else:
+                    # For other datasets, print the whole shabang
+                    print_row(dset, 'Count', dsetstats.counts)
+                    print_row(dset, 'Mean', dsetstats.means)
+                    print_row(dset, 'Min', dsetstats.mins)
+                    print_row(dset, 'Max', dsetstats.maxs)
+                    print_row(dset, '5th Percentile', dsetstats.pct05s)
+                    print_row(dset, '10th Percentile', dsetstats.pct10s)
+                    print_row(dset, '25th Percentile', dsetstats.pct25s)
+                    print_row(dset, 'Median', dsetstats.medians)
+                    print_row(dset, '75th Percentile', dsetstats.pct75s)
+                    print_row(dset, '90th Percentile', dsetstats.pct90s)
+                    print_row(dset, '95th Percentile', dsetstats.pct95s)
+ 
 
     def print_summary(self, rangetype=None):
         """
