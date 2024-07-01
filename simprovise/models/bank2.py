@@ -170,14 +170,22 @@ simtrace.add_trace_column(bank.merchant_teller, 'available', 'Merch: avail')
 
 
 if __name__ == '__main__':
+    import os
+    
     print("================ main=================")
     warmupLength = SimTime(100, tu.MINUTES)
     batchLength = SimTime(600, tu.MINUTES)
     #warmupLength = SimTime(10, tu.MINUTES)
     #batchLength = SimTime(60, tu.MINUTES)
     #bl = SimTime(10000)
+    modelname = os.path.splitext(os.path.split(__file__)[1])[0]
+    outdir = os.getcwd()
+    csvfilename = os.path.join(outdir, modelname) + '.csv'
+    print("csv file", csvfilename)
+    
     print("Running single execution...")
     with Simulation.execute(warmupLength, batchLength, 10,
                             outputpath=None, overwrite=False) as simResult:
         simResult.print_summary()
+        simResult.save_summary_csv(csvfilename)
  
