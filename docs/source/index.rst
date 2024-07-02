@@ -21,6 +21,7 @@ for model execution and output analysis.
    tutorial
    modeling_concepts
    data_collection
+   configuration
    command_line
    api_reference
    output_database
