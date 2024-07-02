@@ -54,21 +54,51 @@ class MerchantTeller(Teller):
     
 class SimTellerPool(SimResourcePool):
     """
+    A specialization of SimResourcePool that implements round 3 of
+    teller assignment logic: merchant and regular tellers each
+    prioritize their respective customer types, but will serve
+    customers of the other type if their own queue is empty -
+    i.e., if a regular teller is available, the regular customer
+    queue is empty, and there is a merchant customer in the
+    merchant queue, then assign that merchant customer to the
+    available regular teller.
     """
     def _queued_regular_requests(self):
         """
+        Convenience method that returns all queued resource
+        requests from regular customers
         """
         return [request for request in self.queued_resource_requests()
                 if isinstance(request.entity, RegularCustomer)]
         
     def _queued_merchant_requests(self):
         """
+        Convenience method that returns all queued resource
+        requests from merchant customers
         """
         return [request for request in self.queued_resource_requests()
                 if isinstance(request.entity, MerchantCustomer)]    
         
     def process_queued_requests(self, throughRequest=None):
         """
+        This is the method that should be overloaded to implement
+        customized resource assignment logic for the pool. It
+        implements the teller assignment logic described above.
+        
+        Requests are objects of class resource.SimResourceRequest;
+        we use method SimResourceRequest.assign_resource() to
+        assign a teller to the customer associated with that
+        request. assign_resource() takes care of all of the paperwork :-)
+        
+        Since this model does not use resource acquisition timeouts,
+        throughRequest will always be None and we don't have to
+        worry about it. Return True if all requests are handled/
+        assigned, False otherwise.
+        
+        TODO - consider getting rid of return values, since that
+        complicates things for client code. The code that cares
+        is the timeout event processor; it can check the assignment
+        agent queue to determine if the throughRequest was handled.
         """
         # Assign merchant customers to merchant tellers until we run
         # out of one or the other
@@ -97,7 +127,11 @@ class SimTellerPool(SimResourcePool):
                 teller = available_tellers.pop()
                 request.assign_resource(teller)
             else:
-                break
+                # There are outstanding requests we can't yet assign
+                return False
+        
+        # We assigned all requests to a teller
+        return True
                 
               
 class Bank(SimLocation):
@@ -137,7 +171,7 @@ class RegularTransaction(BankTransaction):
     customer.
     """
     mean_interarrival_time = SimTime(1, tu.MINUTES)
-    mean_service_time = SimTime(3, tu.MINUTES) 
+    mean_service_time = SimTime(2, tu.MINUTES) 
     st_generator = SimDistribution.exponential(mean_service_time)
 
     def run(self):
@@ -156,8 +190,8 @@ class MerchantTransaction(BankTransaction):
     """
     Represents a merchant transaction (by a merchant customer)
     """
-    mean_interarrival_time = SimTime(6, tu.MINUTES)
-    mean_service_time = SimTime(4, tu.MINUTES)
+    mean_interarrival_time = SimTime(4, tu.MINUTES)
+    mean_service_time = SimTime(3, tu.MINUTES)
     st_generator = SimDistribution.exponential(mean_service_time)
 
     def run(self):
@@ -176,7 +210,7 @@ class MerchantTransaction(BankTransaction):
 # a bank.
 source = SimEntitySource("Source")
 sink = SimEntitySink("Sink")
-bank = Bank(name="Bank", nRegularTellers=4, nMerchantTellers=1)
+bank = Bank(name="Bank", nRegularTellers=2, nMerchantTellers=1)
 
 # Define and create the (customer) entity generators for the model's entity
 # source - one generator for regular customer entities, one for merchant customers.
@@ -197,8 +231,8 @@ if __name__ == '__main__':
     print("debug:", __debug__)
     warmupLength = SimTime(100, tu.MINUTES)
     batchLength = SimTime(600, tu.MINUTES)
-    warmupLength = SimTime(10, tu.MINUTES)
-    batchLength = SimTime(60, tu.MINUTES)
+    #warmupLength = SimTime(10, tu.MINUTES)
+    #batchLength = SimTime(60, tu.MINUTES)
     #bl = SimTime(10000)
     print("Running single execution...")
     with Simulation.execute(warmupLength, batchLength, 10,
