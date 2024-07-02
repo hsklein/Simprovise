@@ -11,9 +11,8 @@
 # - Classes that query/process an output database in order to generate
 #   data for output displays (charts and tables)
 #===============================================================================
-___all__ = ['SimDatabaseManager', 'SimArchivedOutputDatabase', 'SimSummaryData', 
-           'SimTimeSeriesData', 'SimOutputHistogramData', 'SimPercentileData',
-           'SimDatasetSummaryData']
+___all__ = ['SimDatabaseManager', 'SimArchivedOutputDatabase', 'SimTimeSeriesData',
+            'SimOutputHistogramData', 'SimDatasetSummaryData']
 
 import sqlite3
 import os
