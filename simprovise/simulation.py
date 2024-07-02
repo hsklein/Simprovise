@@ -29,6 +29,7 @@ _ERROR_NAME = "Simulation Error"
 _RESULT_ERROR = "Simulation Result Error"
 _MIN_IQR_RUNS = 4
 _DEFAULT_OUTPUTDB_EXT = ".simoutput"
+_NAN = float('nan')
 
 logger = SimLogging.get_logger(__name__)
 
@@ -837,25 +838,31 @@ class SimSample(object):
         """
         Return the sample mean, converted to SimTime as required
         """
-        return self._convertSimTime(np.mean(self.values))
+        if self.values:            
+            return self._convertSimTime(np.mean(self.values))
+        else:
+            return _NAN
 
     @property
     def median(self):
         """
         Return the sample median, converted to SimTime as required
         """
-        return self._convertSimTime(np.median(self.values))
+        if self.values:           
+            return self._convertSimTime(np.median(self.values))
+        else:
+            return _NAN
 
     @property
     def stdev(self):
         """
         Return the sample standard deviation, converted to SimTime as required.
-        If n <= 1, returns None
+        If n <= 1, returns NaN
         """
         if self.n > 1:
             return self._convertSimTime(np.std(self.values, ddof=1))
         else:
-            return None
+            return _NAN
 
     @property
     def stderr(self):
@@ -868,7 +875,7 @@ class SimSample(object):
             se =  np.std(self.values, ddof=1) / np.sqrt(self.n)
             return self._convertSimTime(se) 
         else:
-            return None
+            return _NAN
 
     @property
     def iqr(self):
@@ -876,16 +883,22 @@ class SimSample(object):
         Return the sample interquartile range, converted to SimTimes as
         required
         """
-        return (self._convertSimTime(np.percentile(self.values, 25)),
-                self._convertSimTime(np.percentile(self.values, 75)))
+        if self.values:           
+            return (self._convertSimTime(np.percentile(self.values, 25)),
+                    self._convertSimTime(np.percentile(self.values, 75)))
+        else:
+            return (_NAN, _NAN)
 
     @property
     def minmaxrange(self):
         """
         Return the sample range (min, max), converted to SimTimes as required
         """
-        return (self._convertSimTime(min(self.values)),
-                self._convertSimTime(max(self.values)))
+        if self.values:           
+            return (self._convertSimTime(min(self.values)),
+                    self._convertSimTime(max(self.values)))
+        else:
+            return (_NAN, _NAN)
 
     def __getitem__(self, i):
         """
