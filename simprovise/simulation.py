@@ -810,6 +810,10 @@ class SimSample(object):
     statistic over multiple batches or replications, allowing us, for example
     to estimate standard error of the mean (SimSample.mean for a SimSample
     containing mean values each of multiple replications.)
+    
+    If there are no values in the sample, the summary statistic properties
+    return NaN (float('nan')). (Amongst other things, this ensures that
+    the return value can be formatted by code above that expects a number.)
     """
     def __init__(self, dataset):
         """
