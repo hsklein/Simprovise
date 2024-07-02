@@ -3,7 +3,7 @@ from simprovise.runcontrol.replication import (SimReplication,
                                                SimReplicationParameters,
                                                SimRunControlParameters)
 from simprovise.core.model import SimModel
-from simprovise.core.location import SimStaticObject
+from simprovise.modeling.location import SimStaticObject
 from simprovise.database import *
 from simprovise.simulation import Simulation
 import logging

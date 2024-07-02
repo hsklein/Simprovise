@@ -7,11 +7,12 @@ system_test1 should run identical unit tests against both models.
 import sys
 import itertools
 
-from simprovise.core import simtime, SimTime
-from simprovise.core import (SimEntity, SimEntitySource, SimEntitySink,
-                            SimProcess, SimDistribution, SimLocation,
-                            SimSimpleResource, SimQueue)
-from simprovise.core.simtime import Unit as tu
+from simprovise.core import simtime
+from simprovise.modeling import (SimEntity, SimEntitySource, SimEntitySink,
+                                 SimProcess, SimLocation,
+                                 SimSimpleResource, SimQueue)
+from simprovise.core.simtime import SimTime, Unit as tu
+from simprovise.core.simrandom import SimDistribution
 
 from simprovise.simulation import Simulation
 
