@@ -98,7 +98,8 @@ class SimProcess(SimTransaction):
     def __init_subclass__(cls, **kwargs):      
         """
         Register all subclasses of SimProcess by wrapping them in a
-        SimProcessElement and adding it to the SimProcess.elements list.
+        SimProcessElement and registering that element with the SimModel
+        singleton.
         
         Pretty much straight from the PEP 487 document
         https://peps.python.org/pep-0487/#subclass-registration.
