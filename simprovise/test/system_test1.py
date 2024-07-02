@@ -72,7 +72,6 @@ class ReplicatorTests(unittest.TestCase):
     def batchLength(self): return self.__class__._batchLength
 
     def summaryDsetData(self, elementID, datasetName, run=1, batch=None):
-        summarydata = SimSummaryData(self.dbMgr.database, run, elementID, batch)
         dset = self.dbMgr.database.get_dataset(elementID, datasetName)
         sdata = SimDatasetSummaryData(self.dbMgr.database, dset, run, batch)
         return sdata

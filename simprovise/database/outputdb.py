@@ -12,7 +12,8 @@
 #   data for output displays (charts and tables)
 #===============================================================================
 ___all__ = ['SimDatabaseManager', 'SimArchivedOutputDatabase', 'SimSummaryData', 
-           'SimTimeSeriesData', 'SimOutputHistogramData', 'SimPercentileData']
+           'SimTimeSeriesData', 'SimOutputHistogramData', 'SimPercentileData',
+           'SimDatasetSummaryData']
 
 import sqlite3
 import os
@@ -1263,7 +1264,7 @@ class SimSummaryData(object):
     Class that retrieves summary statistics from an output database, primarily for display in
     output table views on the simulation dashboard.
 
-    TODO Add median?
+    07/01/24 - basically deprecated, left in for historical note for the moment.
     """
     def __init__(self, outputDb, run, elementID, batch=None):
         """
@@ -1344,6 +1345,8 @@ class SimPercentileData(object):
     """
     Class that retrieves percentile values from an output database for a
     specified dataset, batch and run.
+    
+    07/01/24 - basically deprecated, left in for historical note for the moment.
     """
     def __init__(self, outputDb):
         """
@@ -1406,6 +1409,184 @@ class SimPercentileData(object):
                 currPercentile += 1
 
         return percentile
+
+
+class SimDatasetSummaryData(object):
+    """
+    Class that retrieves all summary statistics - count, mean, min,
+    max and percentiles - for a specified dataset, batch and run.
+    
+    Replaces both SimSummaryData and SimPercentileData, improving
+    output reporting performance by a factor of roughly two.
+    
+    Database retrieval and statistic calculations are performed lazily,
+    when the first client request to a statistic is made.
+    
+    :param outputdb: An open output database
+    :type outputdb:  :class:`SimOutputDatabase`
+    
+    :param dataset:  A dataset in the open database
+    :type dataset:   namedtyple :class:`DbDataset`
+    
+    :param run:      Run number
+    :type run:       `int`
+    
+    :param batch:    Batch number - defaults to the last batch if None
+    :type batch:     `int` or None
+    
+    """
+    def __init__(self, outputDb, dataset, run, batch=None):
+        """
+        """
+        self.outputDb = outputDb
+        self.dataset = dataset
+        self.run = run
+        if batch is None:
+            self.batch = self.outputDb.last_batch(run)
+        else:
+            self.batch = batch
+          
+          
+        self._percentiles = [None] * 101
+        self._mean = None
+        self._min = None
+        self._max = None
+        self._count = None
+        
+    @property
+    def mean(self):
+        """
+        Return mean dataset value for dataset/run/bath
+        """
+        self._calculate()
+        return self._mean
+        
+    @property
+    def min(self):
+        """
+        Return minimum dataset value for dataset/run/bath
+        """
+        self._calculate()
+        return self._min
+        
+    @property
+    def max(self):
+        """
+        Return maximum dataset value for dataset/run/bath
+        """
+        self._calculate()
+        return self._max
+        
+    @property
+    def count(self):
+        """
+        Return the number of dataset value for dataset/run/bath
+        """
+        self._calculate()
+        return self._count
+        
+    @property
+    def percentiles(self):
+        """
+        Return dataset value percentiles for dataset/run/bath
+        """
+        self._calculate()
+        return self._percentiles    
+
+    def _calculate(self):
+        """
+        if not done already, fetch partially summarized data values for the
+        dataset/run/batch and calculate the statistics.
+        """
+        if self._count is not None:
+            return
+        
+        rows = self._fetch_data(self.outputDb, self.dataset, self.run, self.batch)
+        if not rows:
+            self._count = 0
+            return
+        
+        self._count = sum(row[2] for row in rows)
+        self._mean = self._calculate_mean(rows)
+        self._min = min(row[0] for row in rows)
+        self._max = max(row[0] for row in rows)
+        self._percentiles = self._calculate_percentiles(rows)
+
+    def _fetch_data(self, outputDb, dataset, run, batch):
+        """
+        Retrieve datasetvalue data for the dataset/run/batch
+               
+        Each retrieved row consists of three values:
+        - a dataset value
+        - a weight for that value
+        - the count of that value (number of datasetvalue rows with that
+          value for the dataset/run/batch)
+        
+        For time-weighted datasets, the weight is the total accumulated
+        simulated time for that value within the dataset.row/batch.
+        
+        For non-time-weighted datasets, the weight is the same as the count.
+        
+        Assume that dataset was flushed at startTime.
+        The choice of different queries (time-weighted vs. non-time-weighted
+        datasets) is a performance optimization.  Execution time for
+        non-time-weighted is reduced by better than 80%.
+        """
+        datasetid = self.outputDb.get_dataset_id(dataset)
+        if dataset.istimeweighted:
+            batchStartTm, batchEndTm = outputDb.batch_time_bounds(run, batch)
+            sqlstr = """
+                SELECT value,
+                        SUM(CASE WHEN totimestamp IS NULL THEN ?
+                               ELSE totimestamp END - simtimestamp),
+                       COUNT(value)
+                     FROM datasetvalue
+                     WHERE dataset = ? AND run = ? AND batch = ?
+                     GROUP BY value;
+                    """
+            result = outputDb.runQuery(sqlstr, batchEndTm, datasetid, run, batch)
+        else:
+            sqlstr = """
+                SELECT value, COUNT(value), COUNT(value)
+                     FROM datasetvalue
+                     WHERE dataset = ? AND run = ? AND batch = ?
+                     GROUP BY value;
+                    """
+            result = outputDb.runQuery(sqlstr, datasetid, run, batch)
+        return result
+
+    def _calculate_percentiles(self, rows):
+        """
+        Calculate and return a list of percentile values (0 through 100) based
+        on the data in the passed row collection.
+        """
+        totalweight = sum(row[1] for row in rows)
+        percentile = [None] * 101
+        cumweight = 0
+        currPercentile = 0
+        for row in rows:
+            value, weight, count = row
+            cumweight += weight
+            while 100.0 * cumweight / totalweight >= currPercentile:
+                percentile[currPercentile] = value
+                currPercentile += 1
+
+        return percentile
+    
+    def _calculate_mean(self, rows):
+        """
+        Calculate the mean dataset value for the passed rows. We use
+        the second row value (weight) to time-weight the mean for
+        time-weighted datasets. For non-time-weighted datasets,
+        the weight has already been set to the count, so this calculation
+        works for both types of datasets.
+        """
+        totalweight = sum(row[1] for row in rows)
+        valuesums = sum(row[0] * row[1] for row in rows)
+        if totalweight:
+            return valuesums / totalweight
+        else:
+            return None
 
 
 

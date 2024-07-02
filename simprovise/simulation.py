@@ -19,8 +19,7 @@ import numpy as np
 from simprovise.core.model import SimModel
 from simprovise.runcontrol.replication import (SimReplication, SimReplicator)
 from simprovise.runcontrol.simruncontrol import (SimReplicationParameters)
-from simprovise.database import (SimDatabaseManager, SimSummaryData,
-                                SimPercentileData)
+from simprovise.database import (SimDatabaseManager, SimDatasetSummaryData)
 from simprovise.core import SimError
 from simprovise.core.simlogging import SimLogging
 from simprovise.core.simtime import SimTime
@@ -757,10 +756,8 @@ class SimDatasetStatistics(object):
             # For Entries datasets, all values are  the count
             for run in runs:
                 for batch in batches:
-                    sdata = SimSummaryData(database, run,
-                                           dataset.element_id, batch)
-                    dsdata = sdata.get_raw_data(dataset)
-                    count = dsdata.count
+                    sdata = SimDatasetSummaryData(database, dataset, run, batch)
+                    count = sdata.count
                     self.counts.append(count)
                     self.means.append(count)
                     self.mins.append(count)
@@ -773,17 +770,18 @@ class SimDatasetStatistics(object):
                     self.pct90s.append(count)
                     self.pct95s.append(count)
         else:
-            pctileData = SimPercentileData(database)
+            #pctileData = SimPercentileData(database)
             for run in runs:
                 for batch in batches:
-                    sdata = SimSummaryData(database, run,
-                                           dataset.element_id, batch)
-                    dsdata = sdata.get_raw_data(dataset)
-                    self.counts.append(dsdata.count)
-                    self.means.append(dsdata.mean)
-                    self.mins.append(dsdata.min)
-                    self.maxs.append(dsdata.max)
-                    percentiles = pctileData.get_percentiles(dataset, run, batch)
+                    #sdata = SimSummaryData(database, run,
+                                           #dataset.element_id, batch)
+                    #dsdata = sdata.get_raw_data(dataset)
+                    sdata = SimDatasetSummaryData(database, dataset, run, batch)
+                    self.counts.append(sdata.count)
+                    self.means.append(sdata.mean)
+                    self.mins.append(sdata.min)
+                    self.maxs.append(sdata.max)
+                    percentiles = sdata.percentiles
                     self.medians.append(percentiles[50])
                     self.pct05s.append(percentiles[5])
                     self.pct10s.append(percentiles[10])
@@ -908,7 +906,7 @@ if __name__ == '__main__':
     #batchLength = SimTime(0)
     scriptpath = "demos\\mm1.py"
     multi_replication = True
-    nruns = 10
+    nruns = 50
     
     #SimLogging.set_level(logging.WARN)
     #SimLogging.set_level(logging.INFO, 'simprovise.core.process')
