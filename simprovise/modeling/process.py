@@ -69,26 +69,20 @@ class SimAcquireTimeOutEvent(BaseInterruptEvent):
         might inadvertently assign a resource that this process is about
         to request after timing out.
         
-        The call to process_queued_requests will only return True
-        if this request was fulfilled; if it was not, we go ahead and
+        We determine whether or not the throughRequest was filled by checking
+        the request queue; if the request was handled, it will no longer 
+        be in the queue. If the throughRequest was not handled, we go ahead and
         wake up and raise an exception in the timed-out resource request via
         base class implementation (which also cancels events rendered moot
         by the timeout/interrupt), and  then asks the assignment agent
         to handle the timeout by remove the request and scheduling another
         round of resource assignments
-        
-        Finally, note that the throughRequest is passed as a
-        SimResourceRequest, which wraps the raw SimMessage object. This is
-        done because process_queued_requests() may be have model-specific
-        implementations, and we we're trying to hide the raw SimMessage
-        structure from modeling client code (both to make it simpler/more
-        obvious, and to protect modeling code from changes in the message
-        type-specific msgData)
         """
-        #throughRequest = SimResourceRequest(*self.requestMsg)
         throughRequest = self.requestMsg
-        handled = self.assignmentAgent.process_queued_requests(throughRequest)
-        if not handled:
+        self.assignmentAgent.process_queued_requests(throughRequest)
+        if throughRequest in self.assignmentAgent.queued_resource_requests():
+            # throughRequest was not handled, so go ahead and raise per
+            # base class implementation
             super().process_impl()
 
         
