@@ -922,8 +922,7 @@ class SimResource(SimStaticObject):
     @property
     def up(self):
         """
-        Returns True if the resource has been taken down (for a failure
-        or other reason)
+        Returns True if the resource is not down.
         """
         return not self.down
     
