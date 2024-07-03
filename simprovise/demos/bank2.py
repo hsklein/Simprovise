@@ -1,12 +1,22 @@
 #===============================================================================
-# MODULE bank1
+# MODULE bank2
 #
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
-# Defines one iteration of the bank demo model.
+# Defines the second iteration of the bank demo/tutorial model. This model
+# adds merchant customers, merchant teller(s) and a separate merchant customer 
+# queue to the model. Merchant tellers may also service regular customers if
+# the merchant customer queue is empty. Regular tellers only service regular
+# customers.
+#
+# The model is implemented by subclassing transaction, customer and teller
+# classes into "merchant" and "regular" subtypes. Both types of tellers are
+# managed by a resource pool with a priority function that assigns higher
+# priority to merchant customers. When acquiring a teller resource, merchant
+# customers specifically request a merchant teller; regular customers request
+# a teller of any type (by specifying the base teller class in their request).
 #===============================================================================
 import sys
-from enum import Enum
 from simprovise.core import simtime, simtrace
 from simprovise.core.simtime import SimTime, Unit as tu
 from simprovise.core.simrandom import SimDistribution
