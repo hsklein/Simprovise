@@ -517,7 +517,7 @@ class SimReplicator(QObject):
         responsibility of the replicator's owner/caller)
         """
         if self.__initializedDbPath:
-            logger.info("removing temporary file: ", self.__initializedDbPath)
+            logger.info("removing temporary file: %s", self.__initializedDbPath)
             os.remove(self.__initializedDbPath)
             self.__initializedDbPath =  None
 
