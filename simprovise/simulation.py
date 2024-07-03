@@ -591,11 +591,13 @@ class SimulationResult(object):
                                         mw=meanwidth, mn=sdwidth, mr=iqrwidth)
         else:
             colwidth = meanwidth
-            header1fmt = '{:{ew}} {:{nw}} {:^{cw}} {:^{cw}} {:^{cw}} {:^{cw}} {:^{cw}}'
-            header1 = header1fmt.format('Element ID', 'Dataset', 'Sample Mean',
+            header1fmt = '{:{ew}} {:{nw}} {:^{numw}} {:^{cw}} {:^{cw}} {:^{cw}} {:^{cw}} {:^{cw}}'
+            header1 = header1fmt.format('Element ID', 'Dataset',
+                                        'Sample Size', 'Sample Mean',
                                         '25th Percentile', 'Median',
                                         '75th Percentile', 'Max',
-                                        ew=eidwidth, nw=namewidth, cw=colwidth)
+                                        ew=eidwidth, nw=namewidth, numw=numwidth,
+                                        cw=colwidth)
             header2 = ''
 
         print('-' * len(header1))
@@ -627,7 +629,8 @@ class SimulationResult(object):
                       _range_to_string(rangeprop.fget(dsetstats.maxs), numwidth, False)
                      )
             else:
-                print(_value_to_string(dsetstats.means.mean, numwidth),
+                print(_value_to_string(dsetstats.counts.mean, numwidth, False),
+                      _value_to_string(dsetstats.means.mean, numwidth),
                       _value_to_string(dsetstats.pct25s.mean, numwidth),
                       _value_to_string(dsetstats.medians.mean, numwidth),
                       _value_to_string(dsetstats.pct75s.mean, numwidth),
