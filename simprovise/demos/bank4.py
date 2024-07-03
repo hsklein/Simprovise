@@ -1,27 +1,48 @@
 #===============================================================================
-# MODULE bank3
+# MODULE bank4
 #
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
-# Defines the third iteration of the bank demo/tutorial model. This model
-# modifies the teller assignment logic my allowing tellers of either type
-# (merchant or regular) to serve customers of the other type if their "own"
-# queue is empty.
+# Defines the fourth iteration of the bank demo/tutorial model. This model
+# adds a quit/renege behavior for regular customers; if they are waiting
+# in the queue for a certain length of time, they quit the queue and leave
+# the bank without getting service.
 #
-# This is implemented by creating a model-specific subclass of SimResourcePool
-# with a specialized process_queued_requests() method implementation. This 
-# method is called by the simulation whenever it is time to (at least attempt)
-# to assign resource(s) (tellers, in this case) to entities (customers).
+# It also adds several custom datasets:
+# - CompletedProcessTime, which collects process times for regular customers
+#   who do NOT quit
+# - QuittedProcessTime, which collects process times for regular customers
+#   who DO quit - i.e., it collects the lengths of time they waited before
+#   quitting the line.
+# - WaitingCustomers, which collects time-weighted data on how many total
+#   customers (both regular and merchant) are waiting in their respective
+#   queues.
+#
+# The regular customer quit behavior is implemented by sampling a quit-after
+# time from a uniform distribution and making that a timeout value to the
+# teller resource acquisition call and code that handles the SimTimeOutException
+# that is raised if the acquire() call times out.
+#
+# The two new process time datasets are have via unweighted (as in not
+# time-weighted) data collectors that are added to the RegularTransaction class.
+# The WaitingCustomers dataset is implemented via a new SimCounter attribute in
+# the Bank class.
+#
+# The process time data collection is done by adding values in the
+# RegularTransaction run() code. The waiting customers data is collected by
+# incrementing/decrementing the counter in run() code within for both 
+# bank transaction process classes.
 #===============================================================================
-import sys
-from simprovise.core import simtime, simtrace
+from simprovise.core import simtime, simtrace, SimTimeOutException
 from simprovise.core.simtime import SimTime, Unit as tu
 from simprovise.core.simrandom import SimDistribution
 from simprovise.core.model import SimModel
 
+from simprovise.core.datacollector import SimUnweightedDataCollector, SimClock
+
 from simprovise.modeling import (SimEntity, SimEntitySource, SimEntitySink,
-                                 SimProcess, SimLocation,
-                                 SimResourcePool, SimSimpleResource, SimQueue)
+                                 SimProcess, SimLocation, SimResourcePool,
+                                 SimSimpleResource, SimQueue, SimCounter)
 
 from simprovise.simulation import Simulation
 
@@ -155,6 +176,8 @@ class Bank(SimLocation):
         
         self.regular_queue = SimQueue("RegularQueue", self)
         self.merchant_queue = SimQueue("MerchantQueue", self)
+        
+        self.waiting_customer_counter = SimCounter(self, 'WaitingCustomers')
 
 
 class BankTransaction(SimProcess):
@@ -170,18 +193,47 @@ class RegularTransaction(BankTransaction):
     mean_interarrival_time = SimTime(1, tu.MINUTES)
     mean_service_time = SimTime(2, tu.MINUTES) 
     st_generator = SimDistribution.exponential(mean_service_time)
+    
+    # Bounds of time to quit the queue
+    min_quit_time =  SimTime(5, tu.MINUTES)
+    max_quit_time =  SimTime(30, tu.MINUTES)
+    quit_time_generator = SimDistribution.uniform(min_quit_time, max_quit_time)
 
     def run(self):
         bank = SimModel.model().get_static_object("Bank")
         sink = SimModel.model().get_static_object("Sink")
         service_time = next(RegularTransaction.st_generator)
+        quit_time = next(RegularTransaction.quit_time_generator)
         customer = self.entity
+        startTime = SimClock.now()
+        bank.waiting_customer_counter.increment()
         customer.move_to(bank.regular_queue)
-        with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
+        try:
+            teller_assignment = self.acquire_from(bank.teller_pool, Teller,
+                                                  timeout=quit_time)
+        except SimTimeOutException:
+            # Abandon the queue and the rest of the process
+            customer.move_to(sink)
+            quit_pt_datacollector.add_value(SimClock.now() - startTime)
+            bank.waiting_customer_counter.decrement()
+            return
+            
+        with teller_assignment:
             teller = teller_assignment.resource
+            bank.waiting_customer_counter.decrement()
             customer.move_to(bank.teller_counter)
             self.wait_for(service_time)
+            
         customer.move_to(sink)
+        cpt_datacollector.add_value(SimClock.now() - startTime)
+
+cpt_datacollector = SimUnweightedDataCollector(RegularTransaction,
+                                               "CompletedProcessTime",
+                                               simtime.SimTime)      
+quit_pt_datacollector = SimUnweightedDataCollector(RegularTransaction,
+                                                   "QuittedProcessTime",
+                                                   simtime.SimTime)      
+
 
 class MerchantTransaction(BankTransaction):
     """
@@ -196,9 +248,11 @@ class MerchantTransaction(BankTransaction):
         sink = SimModel.model().get_static_object("Sink")
         service_time = next(MerchantTransaction.st_generator)
         customer = self.entity
+        bank.waiting_customer_counter.increment()
         customer.move_to(bank.merchant_queue)
         with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
             teller = teller_assignment.resource
+            bank.waiting_customer_counter.decrement()
             customer.move_to(bank.teller_counter)
             self.wait_for(service_time)
         customer.move_to(sink)

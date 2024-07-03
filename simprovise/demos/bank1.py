@@ -3,11 +3,19 @@
 #
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
-# Defines one iteration of the bank demo model.
+# Defines the first (and simplest) tutorial bank model, which is essentially
+# a dressed-up M/M/c queuing model, where c is the number of tellers:
+#
+# - Bank customers enter the bank with exponentially distributed interarrival 
+#   times.
+# - When customers arrive, they enter a queue (if infinite capacity)
+# - When customers reach the head of the queue, they wait for the next
+#   available teller
+# - Once a teller becomes available, they move to that teller and hold it
+#   for an exponentially distributed service time
+# - After completion, the customer leaves the bank.
 #===============================================================================
 import sys, os
-from enum import Enum
-#print("*********importing bank1****** pid:", os.getpid())
 from simprovise.core import simtime, simtrace
 from simprovise.core.simtime import SimTime, Unit as tu
 from simprovise.core.simrandom import SimDistribution
