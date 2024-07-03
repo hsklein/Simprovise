@@ -39,37 +39,53 @@ class Dataset(object):
     See :class:`SimDataCollector` for a more complete description of
     interaction between data collectors, datasets and datasinks.
     
-    :param element:        The data collection element for which data are
-                           to be collected.
-    :type element:         :class:`~.simelement.SimElement`
+    :param element:        The data collection element for which data are to
+                           be collected. Can also be specified as a class
+                           (e.g. SimProcess subclass) that has a
+                           :class:`~.simelement.SimClassElement` associated
+                           with it
+    :type element:         :class:`~.simelement.SimElement` or `class`
     
     :param name:           The name of the dataset. Dataset names must be
-                           unique within the element.
-    :type name:            str
+                           non-null and unique within the element.
+    :type name:            `str`
     
     :param datacollector:  The data collector associated with this dataset
     :type datacollector:   :class:`~.datacollector.SimDatacollector`     
     
     :param valueType:      The Python numeric type of the data values
-                           collected
-    :type valueType:       Type
+                           collected, or :class:`simtime.SimTime`
+    :type valueType:       `int`, `float` or :class:`~.simtime.SimTime`
    
     :param isTimeWeighted: If True, the data values collected represent
                            state and will be weighted by time in that state.                          
-    :type isTimeWeighted:  bool
+    :type isTimeWeighted:  `bool`
      
     """
     __slots__ = ('__element', '__dataCollector', '__name', '__valueType',
                  '__isTimeWeighted', '__batchNumber', '__timeUnit')
 
     def __init__(self, element, dataCollector, name, valueType, isTimeWeighted):
-        # TODO all parameters should be non-null. registerDataset() should
-        # raise if the dataset name is a duplicate
+        assert element is not None, "Dataset element must be non-null"
+        assert dataCollector is not None, "Dataset dataCollector must be non-null"
+        assert name, "Dataset name must be non-null"
+        
+        if isinstance(element, type):
+            # element is actually a class; it should be one that has an
+            # element (SimClassElement) associated via class attribute
+            # element
+            cls = element
+            try:                    
+                element = cls.element
+            except AttributeError:
+                errstr = "Failure extracting element from class {0} - not a process or entity class?"
+                raise SimError(_ERROR_NAME, errstr, cls)
+        
         self.__element = element
         self.__dataCollector = dataCollector
         self.__name = name
         self.__valueType = valueType
-        self.__isTimeWeighted = isTimeWeighted
+        self.__isTimeWeighted = bool(isTimeWeighted)
         self.__timeUnit = None
         self.__batchNumber = None
         self.__element.register_dataset(self)
@@ -227,14 +243,12 @@ class SimDataCollector(metaclass=ABCMeta):
         Initialize the entries and datasink members. If an element is specified, also
         create a dataset.
         """
-        # TODO all parameters should be non-null
         self.__entries = 0
         self.__datasink = NullDataSink()
         dset = None
-        if element is not None:
+        if element is not None:                
             dset = Dataset(element, self, datasetName, datasetValueType, isTimeSeriesDataset)
         self.__dataset = dset
-        #self.initialize()
         SimDataCollector.collectorList.append(self)
 
     @apidocskip
@@ -288,8 +302,11 @@ class SimUnweightedDataCollector(SimDataCollector):
     data. Process time is a typical example of unweighted data.
 
     :param element:         The data collection element object for which
-                            this object is collecting data
-    :type element:          :class:`~.simelement.SimElement`
+                            this object is collecting data. Can also specify
+                            a class (e.g. SimProcess subclass) that has
+                            a :class:`~.simelement.SimClassElement` associated
+                            with it
+    :type element:          :class:`~.simelement.SimElement` or `class`
     
     :param datasetNamename: The name of the  to-be-created dataset associated
                             associated with this collector. Must be unique
@@ -313,8 +330,11 @@ class SimTimeWeightedDataCollector(SimDataCollector):
     work-in-process.
 
     :param element:         The data collection element object for which
-                            this object is collecting data
-    :type element:          :class:`~.simelement.SimElement`
+                            this object is collecting data. Can also specify
+                            a class (e.g. SimProcess subclass) that has
+                            a :class:`~.simelement.SimClassElement` associated
+                            with it
+    :type element:          :class:`~.simelement.SimElement` or `class`
     
     :param datasetNamename: The name of the  to-be-created dataset associated
                             associated with this collector. Must be unique
