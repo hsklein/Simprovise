@@ -59,7 +59,7 @@ class MerchantTeller(Teller):
     def __str__(self):
         return "MerchantTeller"
     
-class SimTellerPool(SimResourcePool):
+class TellerPool(SimResourcePool):
     """
     A specialization of SimResourcePool that implements round 3 of
     teller assignment logic: merchant and regular tellers each
@@ -150,7 +150,7 @@ class Bank(SimLocation):
                                               self.teller_counter,
                                               capacity = nMerchantTellers)
         
-        self.teller_pool = SimTellerPool(self.regular_teller, 
+        self.teller_pool = TellerPool(self.regular_teller, 
                                          self.merchant_teller)
         
         self.regular_queue = SimQueue("RegularQueue", self)

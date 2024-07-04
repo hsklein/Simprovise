@@ -34,7 +34,7 @@ both the customer arrival rate and customer service time (time spent at a
 teller) are based on sampling from a psuedo-random distribution. For this
 model, we will make both the interrarrival time and the service times 
 exponentially distributed. In effect, this makes our bank model a slightly
-dressed-up version of an m/m/n queue (where n is the number of tellers).
+dressed-up version of an m/m/c queue (where c is the number of tellers).
 
 Building the Model
 ------------------
@@ -642,14 +642,137 @@ resource pools and queue prioritization while also leveraging the Python class
 hierarchy for simulation objects. But there is one obvious gap in our teller 
 assignment logic: what happens if there are waiting merchant customers, available
 regular tellers, and no regular customers in the queue? Perhaps in that case, we
-would like regular tellers to handle merchant customers. Our next model will address
-that via a subclassed Resource Pool that implements a custom resource assignment
-algorithm.
+would like regular tellers to handle merchant customers. Our next model (bank3.py) 
+will address that via a subclassed Resource Pool that implements a custom resource 
+assignment algorithm.
 
+A Little Bit of Background...
+------------------------------
 
+Before we dive into the code for our next bank model, it's worth looking under the covers
+to see what happens when an entity/process request a resource via :meth:`acquire` or 
+:meth:`acquire_from`.
 
-Adding a Merchant Teller
-------------------------
+Every resource in a Simprovise model is managed by a resource assignment agent. 
+When a process calls acquire(resource) it is actually sending a resource request 
+message to the assignment agent managing that resource. In this case, the acquire_from()
+call is sending that request to the resource pool, which is the assignment agent for
+all of the resources in the pool. At this point, the calling process is suspended
+until it receives a response from the assignment agent. It is the assignment agent's 
+job to fulfill these requests by assigning a resource or resources to that request.
+Of course the requested resource(s) may not be available, or there may be other 
+requests asking for the same resource(s). So incoming resource requests are placed 
+in a queue, which triggers a call to a key resource assignment agent method, 
+:meth:`process_queued_requests`.
+
+:meth:`process_queued_requests` can assign available resources to zero or more requests 
+in the queue; when it does so, it notifies the process(s) via a resource assignment
+message and removes those request message(s) from the queue. When the process
+receives the assignment message, it is "woken up" and the process continues.
+
+:meth:`process_queued_requests` is triggered by any event that might create the conditions
+that allow requests in the queue to be fulfilled by a resource assignment, including
+(but not limited to) new resource requests and resource releases. As such it 
+is the key method implementing resource assignment logic. The built-in
+:class:`SimResourcePool` has it's own, fairly sophisticated implementation of 
+:meth:`process_queued_requests`, but this may not work for all models. When this is the
+case, we can create our own model-specific subclass of :class:`SimResourcePool` and
+overload :meth:`process_queued_requests` with model-specific code.
+
+That is what we are going to do here.
+
+Building the Model
+-------------------
+
+As noted above, we are going to create a new subclass of :class:`SimResourcePool`, 
+:class:`TellerPool`. Before we look the code for that class, a few details:
+
+* :meth:`process_queued_requests` takes one parameter, throughRequest. The only
+  time this parameter has a value other than `None` is when this method
+  is called in response to a resource acquire timeout (and even then, the
+  parameter exists to handle a corner case). Since this model does not
+  yet include resource acquire timeouts, we can ignore throughRequest for
+  now.
+* :class:`SimResourcePool` (and all resource assignment agent classes) has a 
+  queued_resource_requests() methods that returns all resource requests.
+  If a priority function has been assigned to the agent (as we did in bank2),
+  the requests are returned in priority order (and FIFO within priority);
+  otherwise they are returned in FIFO order.
+* All resource requests are objects of class 
+  :class:`.resource.SimResourceRequest`. This class provides property
+  accessors for the request parameters and an assign_resource() method
+  that does all of the work of fulfilling a request - sending the 
+  assignment back to the requesting process and removing the request
+  from the queue.
+* The :class:`SimResourcePool` base class provides an 
+  :meth:`available_resources` method which takes a resource class argument;
+  it returns all available resources in the pool of the specified class.
+  (including subclasses of the specified class)
+  
+TellerPool implements a couple of internal helper methods::
+
+    def _queued_regular_requests(self):
+        """
+        Convenience method that returns all queued resource
+        requests from regular customers
+        """
+        return [request for request in self.queued_resource_requests()
+                if isinstance(request.entity, RegularCustomer)]
+        
+    def _queued_merchant_requests(self):
+        """
+        Convenience method that returns all queued resource
+        requests from merchant customers
+        """
+        return [request for request in self.queued_resource_requests()
+                if isinstance(request.entity, MerchantCustomer)]  
+
+These methods return the subset of requests made by regular and 
+merchant customers, respectively.
+
+process_queued_requests() then does all of the work (for brevity's sake,
+the docstring is omitted)::
+
+    def process_queued_requests(self, throughRequest=None):
+        # Assign merchant customers to merchant tellers until we run
+        # out of one or the other
+        available_tellers = self.available_resources(MerchantTeller)
+        for request in self._queued_merchant_requests():
+            if available_tellers:
+                teller = available_tellers.pop()
+                request.assign_resource(teller)
+            else:
+                break
+          
+        # Do the same for regular customers and tellers
+        available_tellers = self.available_resources(RegularTeller)
+        for request in self._queued_regular_requests():
+            if available_tellers:
+                teller = available_tellers.pop()
+                request.assign_resource(teller)
+            else:
+                break
+            
+        # If there are unassigned tellers of any type left over and any  
+        # customers remaining, assign customers to any type of teller
+        available_tellers = self.available_resources(Teller)
+        for request in self.queued_resource_requests():
+            if available_tellers:
+                teller = available_tellers.pop()
+                request.assign_resource(teller)
+            else:
+                break
+                       
+The rest of the model is essentially the same as bank2; the only difference
+is that both merchant and regular processes request generic `Teller`
+resources, not `MerchantTeller` or `RegularTeller`::
+
+    with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
+        teller = teller_assignment.resource
+        customer.move_to(bank.teller_counter)
+        self.wait_for(service_time)
+    customer.move_to(sink)
+
 
 Bank Model: Abandoning the Queue and Adding Custom Data Collection
 ==================================================================
