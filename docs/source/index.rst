@@ -18,6 +18,7 @@ for model execution and output analysis.
 
    introduction
    installation
+   quickstart
    tutorial
    modeling_concepts
    data_collection

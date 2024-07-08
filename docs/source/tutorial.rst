@@ -1,5 +1,5 @@
 =====================
-Tutorial / Quickstart
+Tutorial 
 =====================
 
 .. _bank-1-tutorial-label:
@@ -634,6 +634,7 @@ Simulation Results/Analysis
     Bank.MerchantQueue                   Time                 4.85 minutes      0.52 minutes      2.56 minutes      7.02 minutes     25.20 minutes
 
 
+.. _bank-3-tutorial-label:
 Bank Model Round 3: Adding Assignment Flexibility
 =================================================
 
@@ -654,8 +655,9 @@ to see what happens when an entity/process request a resource via :meth:`acquire
 :meth:`acquire_from`.
 
 Every resource in a Simprovise model is managed by a resource assignment agent. 
-When a process calls acquire(resource) it is actually sending a resource request 
-message to the assignment agent managing that resource. In this case, the acquire_from()
+When a process calls :meth:`acquire` it is actually sending a resource request 
+message to the assignment agent managing the call's resource argument. In this case, 
+the :meth:`~modeling.resource.acquire_from`
 call is sending that request to the resource pool, which is the assignment agent for
 all of the resources in the pool. At this point, the calling process is suspended
 until it receives a response from the assignment agent. It is the assignment agent's 
@@ -694,7 +696,7 @@ As noted above, we are going to create a new subclass of :class:`SimResourcePool
   yet include resource acquire timeouts, we can ignore throughRequest for
   now.
 * :class:`SimResourcePool` (and all resource assignment agent classes) has a 
-  queued_resource_requests() methods that returns all resource requests.
+  :meth:`queued_resource_requests` method that returns all resource requests.
   If a priority function has been assigned to the agent (as we did in bank2),
   the requests are returned in priority order (and FIFO within priority);
   otherwise they are returned in FIFO order.
@@ -764,19 +766,43 @@ the docstring is omitted)::
                 break
                        
 The rest of the model is essentially the same as bank2; the only difference
-is that both merchant and regular processes request generic `Teller`
-resources, not `MerchantTeller` or `RegularTeller`::
+is that both merchant and regular processes request generic :class:`Teller`
+resources, not :class:`MerchantTeller` or :class:`RegularTeller`. Below is
+the :class:`MerchantTransaction` :meth:`run`::
 
-    with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
-        teller = teller_assignment.resource
-        customer.move_to(bank.teller_counter)
-        self.wait_for(service_time)
-    customer.move_to(sink)
+    def run(self):
+        bank = SimModel.model().get_static_object("Bank")
+        sink = SimModel.model().get_static_object("Sink")
+        service_time = next(MerchantTransaction.st_generator)
+        customer = self.entity
+        customer.move_to(bank.merchant_queue)
+        with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
+            teller = teller_assignment.resource
+            customer.move_to(bank.teller_counter)
+            self.wait_for(service_time)
+        customer.move_to(sink)
 
+This code was also modified to demonstrate another feature - the ability
+to obtain references to static objects (locations, queues, resources, sources
+and sinks) via the :class:`SimModel` registry via :meth:`get_static_object`
+using an Element ID. (The bank and sink are top-level objects; the bank's
+teller counter location could be accessed via element ID 'Bank.TellerCounter')
 
-Bank Model: Abandoning the Queue and Adding Custom Data Collection
-==================================================================
+.. _bank-4-tutorial-label:
+Bank Model Round 4: Abandoning the Queue and Adding Custom Data Collection
+==========================================================================
 
+The next version of our bank model will add some behavior to our regular
+customers; if the queue is taking to long, they will bail out of the line
+and leave the bank.
 
-Bank Model: Adding Breaks
-=========================
+.. _bank-5-tutorial-label:
+Bank Model Round 5: Adding Breaks and Custom Down Time Algorithms
+=================================================================
+
+The last versions of our bank model will implement scheduled breaks, or
+down time, for our teller resources. Creating and implementing a break
+schedule is relatively easy; the more challenging problem: how to handle
+customers that the teller is serving when they are supposed to go on break.
+We will implement several approaches (some more realistic than others)
+that demonstrate different Simprovise capabilities in this area.

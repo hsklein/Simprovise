@@ -1,16 +1,16 @@
 ============================
 Simprovise Modeling Concepts
-============================
+======================entity======
 
 This section describes the conceptual building blocks that can be used to
 construct and represent a model in Simprovise. These building blocks include:
 
-* Entities
-* Locations
-* Processes
-* Resources
-* Entity Sources
-* Entity Sinks
+* :ref:`entity-concept-label`
+* :ref:`location-concept-label`
+* :ref:`process-concept-label`
+* :ref:`resource-concept-label`
+* Entity :ref:`entity-source-concept-label`
+* Entity :ref:`entity-sink-concept-label`
 
 'Entities' are transitory objects typically representing units of work in a
 simulation model. In a simple model simulating a bank lobby, customers would
@@ -84,6 +84,9 @@ Locations
 *Locations* typically represent physical or logical locations. They may be
 nested - i.e., locations can contain other sublocations. Locations can also
 contain resources, entity sources and entity sinks.
+
+Moveable objects - primarily entities - can move between locations.
+
 In our bank example, teller windows and the customer queue can be represented
 as locations.
 
@@ -91,15 +94,64 @@ as locations.
 Entity Sources
 --------------
 
+*Entity Sources* are location objects that create new entities and place them in
+the simulation. New entities are always paired with a process object (also 
+created by the entity source). Once an entity is created and initialized,
+the paired process is started, which will send the entity on it's way.
+The typical :meth:`run` of a process will begin by immediately moving the
+entity to another location.
+
+Entity Sources create entities and processes via one or more Entity
+Generators. These generators typically specify:
+
+* The class of the entity objects to create
+* The class of paired process objects to create
+* A distribution defining the rate at which entities are created
+
 .. _entity-sink-concept-label:
 Entity Sinks
 ------------
 
+*Entity Sinks* are locations objects where entities go to exit the simulation.
+Every process :meth:run method should end by moving the entity to an entity
+sink.
 
 .. _resource-concept-label:
 Resources
 =========
 
+*Resources* are capacity-constrained objects required to complete some or 
+all parts of a process. In our bank demo/tutorial, tellers are resources.
+Some of the real world objects that might be represented by resources in
+a simulation are:
+
+* Human workers
+* Space in a capacity-constrained location
+* Machines or equipment
+* Tools
+
+Processes obtain resources through either the :meth:`acquire` or 
+:meth:`acquire_from` methods - :meth:`acquire` is used to acquire a specific
+resource object (or objects), while :meth:`acquire_from` acquires a more
+looesly specified resource (by specifying a resource class).
+:meth:`acquire_from` is typically used to request resource(s) from a 
+resource pool. 
+
+Since resources are capacity constrained, they may not be available at the
+time that the process attempts to acquire them; when that is the case,
+the process :meth:`acquire` or :meth:`acquire_from` call will block until
+the requested resource becomes available and is assigned to the process.
+
+That assignment is performed by a resource assignment agent. 
+Every resource has a resource assignment agent, which functions as the
+resource's gatekeeper, assigning it to the correct process when it is/becomes
+available. A resource can act as it's own agent, as with 
+:class:`SimSimpleResource`. A single agent can also manage assignments for
+multiple resources, as with :class:`SimResourcePool`. 
+If the resource assignment algorithms implemented by these classes to
+not reflect the required behavior of modeling project, the modeler
+may implement customized assignment logic by subclassing an assignment
+agent class.
 
 .. _resource-pool--concept-label:
 Resource Pools
