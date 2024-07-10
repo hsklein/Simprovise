@@ -749,6 +749,26 @@ class SimDistribution(object):
     # TODO Add  , poisson, power distributions from numpy
     
     @staticmethod
+    def get_random_generator(streamNum=1):
+        """
+        Returns the pseudo-random number generator for a specified stream,
+        for client code that needs to access that directly (e.g., to use
+        a distribution not supported by :class:`SimDistribution`).
+        
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
+        
+        :return: The requested PRNG
+        :rtype:  :class:`numpy.random.Generator`
+        """
+        # validate the selected random number stream
+        if streamNum <= 0 or streamNum > max_streams():
+            msg = "Requested stream number ({0}) must be in range 1 - {1}"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, streamNum, max_streams())
+
+        return _rng[streamNum-1]
+    
+    @staticmethod
     def _scalar_args(*args):
         """
         Takes the list of passed positional arguments, converting any SimTime
