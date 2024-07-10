@@ -160,7 +160,7 @@ class SimAgent(object):
         :param msgData: Message content
         :type msgData:  Varies by message type
 
-         :return:       The message created and sent by this call and a list
+        :return:        The message created and sent by this call and a list
                         of any response messages sent immediately by the message
                         recipient (which may be empty, if the recipient did not
                         immediately respond)
