@@ -8,37 +8,37 @@
 # provides a set of static methods for creating number generators (both
 # pseudo-random and transparently deterministic, e.g. round-robin).
 #
-# The simulator currently allows models to specify the use of up to 2000
-# separate, independent random number streams per simulation run. It also 
-# currently allows for up to 100 simulation replication runs.  This implies 
-# the need for up to 2000x100 (200,000) separate, independent pseudo-random 
-# number streams.
-#
-# While we might simply use 200,000 different seed values (one per stream),
-# most pseudo-random number generators (PRNGs) do not provide any guarantees
-# of independence for generators with arbitrarily different seeds. Good
-# generators should have the characteristic that non-overlapping substreams of
-# a single generated stream should pass tests of independence.
-#
-# The underlying pseudo-random bit generator currently in use is the PCG64DXSM
-# generator provided by the numpy random module. This generator is reasonably
+# We use NumPy's random module for both random number generation and
+# probability distribution sampling (via those generators). NumPy provides
+# a number of generators (or to be precise, bit generators); we are currently
+# using the PCG64DXSM bit generator, which is likely to become the default
+# generator in a future NumPy release. This generator is reasonably
 # efficient, has a sufficiently long period (2**128) and a very fast function
-# for jumping ahead in a stream, allowing us to deterministically create 
-# generators for an arbitrarily high number of large (> 2**50), sufficiently 
-# independent substreams.
+# for jumped() implementation, which is our chosen technique for generating
+# multiple independent streams (see below).
 #
-# In constrast, the Mersenne Twister (MT19377) PRNG that ships with the
-# standard Python random module has an orders-of-magnitude slower jump ahead
-# function; creating 200,000 independent generators through that method
-# currently (2024) requires an hour or more on a reasonably powerful laptop.
-# An earlier version of this module using the MT generator got around this by
-# creating these generators offline and saving their states to a file to be
-# read by the simulator at run time. Since each generator state consists of
-# 624 unsigned ints, that file gets quite large for a large number of streams.
+# The simulator allows models to use essentially any number of independent
+# random number streams per simulation run; the maximum number is
+# configurable, and currently defaults to 2000. The maximum number of
+# independent replications allowed is also configurable, with a current
+# default of 100. With those defaults, the simulator requires up to 200,000
+# (2000 x 100) independent random number streams.
 #
-# The initialization method initializes a list of random.Random number 
-# generator instances for a specified run/replication number, one per stream 
-# (i.e., a list of 2000 RNGs).
+# NumPy recommends the use of either spawn() or jumped() to generate
+# independent bit generators from a single base generator; see:
+#
+# https://numpy.org/doc/stable/reference/random/parallel.html#id8
+#
+# We are currently using jumped(), though spawn should work as well. 
+# When we think of the 2000 x 100 array of bit generators, we can think of 
+# them as being created by a 2000 x 100 array of jumps; the first row is 0-1999, 
+# the second 2000-3999, and so on. The first generator in the first row 
+# (run 1, stream 1) is zero jumps from the base generator while he last 
+# generator in that row (run 1, stream 2000) is 1999 jumps from the base.
+# And run 2, stream 1 is 2000 jumps from the base.
+#
+# This technique should support more than sufficient stream independence
+# for millions of streams, which should be adequate for our purposes.
 #
 # SimDistribution provides static methods that return generators for a
 # variety of NumPy-implemented probablility distributions. When it makes sense,
@@ -53,10 +53,6 @@
 # modeling code to ensure that different model components sample from
 # different, independent random number streams. The default streamNum is 1.
 # 
-# he static method number_generator() that returns
-# a Python generator function that generates values in a (possibly)
-# pseudo-random distribution. For example:
-#
 # SimDistribution also provides static methods that enable a UI to inform the 
 # user of available distributions and their arguments, as well as facilitate 
 # the serialization of distribution specifications in a simulation model 
@@ -79,26 +75,20 @@ import simprovise.core.configuration as simconfig
 
 logger = SimLogging.get_logger(__name__)
 
-_BASE_SEED = 1976
+# Base seed generated via a one-time offline call to secrets.randbits(), per
+# https://numpy.org/doc/stable/reference/random/index.html#recommend-secrets-randbits
+_BASE_SEED = 339697402671268427564149969060011333618
 _BASE_BIT_GENERATOR = np.random.PCG64DXSM(seed=_BASE_SEED)
 
-# The number of independent streams allowed per model (run) TODO: make configurable
+# The number of independent streams allowed per model (run) 
 _NSTREAMS = simconfig.get_PRNstreams_per_run()
 logger.info("Initialized random number streams per run to %d based on configuration setting",
             _NSTREAMS)
 
-# The maximum number of replications (runs) supported TODO: make configurable
+# The maximum number of replications (runs) supported 
 _MAX_REPLICATIONS = simconfig.get_max_replications()
 logger.info("Initialized maximum replications/max run number to %d based on configuration setting",
             _MAX_REPLICATIONS)
-
-# We obtain (sufficiently) independent streams by starting with a base
-# generator and advancing/jumping ahead by a delta value
-_STREAM_DELTA = pow(2,48) * 42
-
-# To obtain a separate set of streams for each run, we start by jumping ahead of
-# all the streams created for earlier runs
-_RUN_DELTA = _STREAM_DELTA * _NSTREAMS
 
 _RNG_INITIALIATION_ERROR = "Random Number Generator Initialization Error"
 _RAND_PARAMETER_ERROR = "Invalid Psuedo-Random Distribution Parameter(s)"
@@ -174,14 +164,27 @@ def initialize(run_number=1):
     
     # start by jumping ahead based on the run number, and adding
     # one stream delta increment for good measure
-    runjumps = (run_number - 1) * _RUN_DELTA + _STREAM_DELTA
-    bit_generator = _BASE_BIT_GENERATOR.jumped(runjumps)
+    #runjumps = (run_number - 1) * _RUN_DELTA + _STREAM_DELTA
+    
+    # We need separate, independent bit generators for each stream in each run.
+    # (Each bit generator is used to initialize a separate NumPy Generator 
+    # object, which actually generates the psuedo-random number stream.)
+    # We can think of that as a max_streams by max_runs array of bit
+    # generators. Each row (the generators for a single run) is created by
+    # jumping from the first generator in the row (stream 1). The first
+    # bit generator for run 1 is the base bit generator; for subsequent runs,
+    # we must do max_streams jumps per run.
+    # Note:
+    # We could use NumPy's spawn() instead; see
+    # https://numpy.org/doc/stable/reference/random/parallel.html#id8
+    # for a discussion of methods for generating multiple independent
+    # streams. Our choice of the jumped() technique is arbitrary
+    ns = max_streams()    
+    runjumps = (run_number - 1) * ns
+    run_bit_generator = _BASE_BIT_GENERATOR.jumped(runjumps)
     
     # Create the list of generators, one for each possible stream
-    # in the run.
-    sdelta = _STREAM_DELTA
-    ns = max_streams()    
-    _rng = [np.random.Generator(bit_generator.jumped(i * sdelta)) for i in range(ns)]
+    _rng = [np.random.Generator(run_bit_generator.jumped(i)) for i in range(ns)]
 
 @apidoc
 class SimDistribution(object):
