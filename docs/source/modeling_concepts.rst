@@ -137,6 +137,20 @@ looesly specified resource (by specifying a resource class).
 :meth:`acquire_from` is typically used to request resource(s) from a 
 resource pool. 
 
+All resources have a *capacity*, which may be any positive integer; 
+resource capacity generally defaults to one. A resource with capacity greater
+than one may be used to model multiple instances/copies of the resource;
+the first :ref:`bank <bank-1-tutorial-label>` demo model, for example, 
+specifies the number of tellers
+via the capacity of the Teller resource. Capacity might also be used to
+model space or slots in a resource such as an oven.
+
+When a process makes a request request it also specifies the number of
+resources it would like to acquire. In this case, each unit of capacity
+reflects one resource. If the process requests a specific resource object
+via :meth:`acquire`, the number requested must not be greater than the
+capacity of that resource.
+
 Since resources are capacity constrained, they may not be available at the
 time that the process attempts to acquire them; when that is the case,
 the process :meth:`acquire` or :meth:`acquire_from` call will block until
@@ -146,8 +160,22 @@ That assignment is performed by a resource assignment agent.
 Every resource has a resource assignment agent, which functions as the
 resource's gatekeeper, assigning it to the correct process when it is/becomes
 available. A resource can act as it's own agent, as with 
-:class:`SimSimpleResource`. A single agent can also manage assignments for
-multiple resources, as with :class:`SimResourcePool`. 
+:class:`~simprovise.modeling.SimSimpleResource`. 
+A single agent can also manage assignments for
+multiple resources, as with :class:`~simprovise.modeling.SimResourcePool`. 
+
+The :class:`SimSimpleResource` assignment agent assigns the resource (or
+units of the resource if it is multiple capacity) by priority. 
+Priority may be specified via a priority function; it is FIFO by default.
+If the highest priority outstanding request cannot be currently assigned,
+no lower priority requests will be processed. (This means that if the
+highest priority request is for two resources and the current remaining
+capacity of the resource is one, that remaining capacity will not be
+assigned to a lower priority request.)
+
+The base resource pool assignment algorithm is more complex, and 
+described below.
+
 If the resource assignment algorithms implemented by these classes to
 not reflect the required behavior of modeling project, the modeler
 may implement customized assignment logic by subclassing an assignment
@@ -157,9 +185,56 @@ agent class.
 Resource Pools
 --------------
 
+A *resource pool* is a resource assignment agent that manages a set
+of resources. A pool may contain a heterogeneous collection of resources,
+or they may all be resources of the same type. Resource pools give 
+processes the flexibility to request a *type* of resource rather 
+than a specific resource object via the :meth:`acquire_from` method.
+The type is specified as a (Python) class, which must be 
+:class:`~simprovise.modeling.SimResource` or (more typically) a subclass.
+
+The base implementation of a resource pool is
+:class:`~simprovise.modeling.SimResource`.
+That class implements a resource assignment algorithm that maximizes the
+number of resources assigned while ensuring that higher priority requests
+are never blocked or delayed by assignments to a lower priority request.
+In practice, this means that a lower priority request is fulfilled/assigned
+only if all of the resources assigned could not be used for the outstanding
+higher priority request.
+See the class documentation for a more complete description.
+
+Modelers can override this default algorithm by implementing their own
+:class:`SimResourcePool` subclass, as illustrated by the 
+:ref:`third bank <bank-3-tutorial-label>` demo model.
+
 .. _process-concept-label:
 Processes
 =========
+
+A *Process* is the task or collection of tasks performed by or on behalf
+of an :ref:`entity <entity-concept-label>` during a simulation. In the 
+bank demo models, a process consists of:
+
+* Moving the entity (customer) into a queue
+* Waiting for a teller (actually, acquiring a teller resource)
+* Moving to the teller window
+* Executing the customer transaction (waiting for the time
+  required for the transaction, then releasing the teller resource)
+* Leaving the bank (by moving to an :ref:`entity sink <entity-sink-concept-label>`)
+
+Processes almost always run over some non-zero period of simulated time.
+As illustrated above, they generally consist of some combination of:
+
+* Moves from one :ref:`location <location-concept-label>` to another
+* Acquisition (and later release) of :ref:`resource(s) <resource-concept-label>`
+* Waiting for a specified period of simulated time.
+
+All of these actions are implemented via code in the :meth:`run` of
+a :class:`~simprovise.modeling.simprocess` subclass. 
+(The base class :meth:`run` does nothing.)
+Every Simprovise model will define at least one such subclass to implement 
+process behavior for the
+:ref:`entities <entity-concept-label>` in the model.
 
 .. _counter-concept-label:
 Counters
@@ -173,9 +248,40 @@ Simulated Time
 Pseudo-Random Value Generation
 ==============================
 
+In the vast majority of cases, variable or stochastic behavior is modeled
+by sampling from one or more random probability distributions, each of
+which start with values drawn from a psuedo-random number stream.
+
+
+
 .. _random-number-streams-concept-label:
 Random Number Streams
----------------------
+---------------------e
+
+A pseudo-random number stream is a stream of numeric values generated by a
+single psuedo-random number generator instance. The generator is 
+peusdo-random in the sense that it is actually deterministic; given the same
+initial state, a psuedo-random generator will output the same values (in the
+same order) every time. For a well-constructed generator, these values will
+however appear random.
+
+In order to avoid correlation, some modelers may choose to use more than
+one distinct pseudo-random stream. When analyzing the impact of changes to
+a model, they may, for example, want to use separate stream(s) in the variable 
+parts of the model.
+
+Simprovise supports this ny allowing the modeler to use any number of streams
+desired, where each stream has a numeric identifier. (By default, each
+model may use up to 200 streams, numbered 1-200, but that maximum can
+be configured to another amount by the modeler.)
+
+The Simprovise simulation replication infrastructure also ensures that
+each replication uses a different set of psuedo-random streams. If a model
+uses streams 1 through 100 and the modeler does a 20 replication analysis 
+(i.e., re-runs the simulation 20 times using the Simprovise replicator), 
+each of those 20 runs will use a
+separate distinct set of 100 pseudo-random number streams - e.g., stream 47 will 
+be a completely different stream for each of those 20 runs.
 
 .. _random-number-distribution-concept-label:
 Sampling from Random Distributions
