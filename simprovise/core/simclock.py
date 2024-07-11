@@ -19,7 +19,9 @@ from simprovise.core.apidoc import apidoc, apidocskip
 class SimClock(object):
     """
     SimClock defines a set of static methods that access and/or update
-    the global simulation clock.
+    the global simulation clock. The methods that update or modify the
+    clock's state should be called only by the simulation infrastructure,
+    *NOT* modeling code.
     """
     # _currentTime is the current simulated clock time
     _currentTime = SimTime(0, tu.SECONDS)

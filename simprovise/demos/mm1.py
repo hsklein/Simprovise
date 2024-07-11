@@ -54,6 +54,7 @@ if __name__ == '__main__':
     with Simulation.execute(warmupLength, batchLength, 5,
                             outputpath=None, overwrite=False) as simResult:
         simResult.print_summary()
+        #simResult.save_database_as('c:\simulator\proto\mm1.simoutput')
 
     #print("Running replications...")
     #Simulation.replicate(__file__, warmupLength, batchLength, 1, 1, 1)

@@ -46,10 +46,12 @@ specified more along the lines of "move to the entity sink." Every model
 requires at least one entity sink.
 
 .. _agent-concept-label:
+
 Agents
 ======
 
 .. _transient-object-concept-label:
+
 Transient Objects
 =================
 
@@ -58,6 +60,7 @@ Transient Objects
 
 
 .. _entity-concept-label:
+
 Entities
 --------
 
@@ -74,10 +77,12 @@ moving the entity to an :ref:`entity sink <entity-sink-concept-label>`, where
 both the entity and process objects leave the simulation.
 
 .. _static-object-concept-label:
+
 Static Objects
 ==============
 
 .. _location-concept-label:
+
 Locations
 ---------
 
@@ -91,6 +96,7 @@ In our bank example, teller windows and the customer queue can be represented
 as locations.
 
 .. _entity-source-concept-label:
+
 Entity Sources
 --------------
 
@@ -109,6 +115,7 @@ Generators. These generators typically specify:
 * A distribution defining the rate at which entities are created
 
 .. _entity-sink-concept-label:
+
 Entity Sinks
 ------------
 
@@ -117,6 +124,7 @@ Every process :meth:run method should end by moving the entity to an entity
 sink.
 
 .. _resource-concept-label:
+
 Resources
 =========
 
@@ -156,7 +164,7 @@ time that the process attempts to acquire them; when that is the case,
 the process :meth:`acquire` or :meth:`acquire_from` call will block until
 the requested resource becomes available and is assigned to the process.
 
-That assignment is performed by a resource assignment agent. 
+That assignment is performed by a *resource assignment agent*. 
 Every resource has a resource assignment agent, which functions as the
 resource's gatekeeper, assigning it to the correct process when it is/becomes
 available. A resource can act as it's own agent, as with 
@@ -182,6 +190,7 @@ may implement customized assignment logic by subclassing an assignment
 agent class.
 
 .. _resource-pool--concept-label:
+
 Resource Pools
 --------------
 
@@ -208,6 +217,7 @@ Modelers can override this default algorithm by implementing their own
 :ref:`third bank <bank-3-tutorial-label>` demo model.
 
 .. _process-concept-label:
+
 Processes
 =========
 
@@ -237,14 +247,17 @@ process behavior for the
 :ref:`entities <entity-concept-label>` in the model.
 
 .. _counter-concept-label:
+
 Counters
 ========
 
 .. _simulated-time-concept-label:
+
 Simulated Time
 ==============
 
 .. _random-number-generation-concept-label:
+
 Pseudo-Random Value Generation
 ==============================
 
@@ -254,6 +267,7 @@ which start with values drawn from a psuedo-random number stream.
 
 
 .. _random-number-streams-concept-label:
+
 Random Number Streams
 ---------------------
 
@@ -286,6 +300,7 @@ of those 20 runs. The maximum number of supported independent replications/runs
 is also configurable; it defaults to 100.
 
 .. _random-numpy-tech-note-label:
+
 Implementation/Technical Note
 *****************************
 
@@ -295,14 +310,14 @@ release. See:
 
 https://numpy.org/doc/stable/reference/random/bit_generators/pcg64dxsm.html
 
-Numpy recommends several techniques for creating multiple streams (via 
+NumPy recommends several techniques for creating multiple streams (via 
 multiple bit generators) that can reasonably be assumed to be sufficiently
 independent of each other; see:
 
 https://numpy.org/doc/stable/reference/random/parallel.html#id8
 
 Simprovise uses the :meth:`jumped` method. It starts with a base generator
-seeded with a large random integer - 339697402671268427564149969060011333618.
+seeded with a large random integer: 339697402671268427564149969060011333618.
 Each independent generator is created by calling :meth:`jump` on that 
 base generator with a unique **jumps** parameter value. 
 
@@ -314,6 +329,7 @@ environment. See the following for details:
 https://numpy.org/doc/stable/reference/random/compatibility.html
 
 .. _random-number-distribution-concept-label:
+
 Sampling from Random Distributions
 ----------------------------------
 
