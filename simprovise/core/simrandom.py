@@ -224,16 +224,14 @@ class SimDistribution(object):
     that produces numbers uniformly distributed between a and b.
 
     In many (if not most) cases, these methods are being used to generate
-    time values (class :class:`~.simtime.SimTime`) - e.g., we need a generator for
-    interarrival times. If any of the arguments passed to 
-    :meth:`number_generator` are :class:`~.simtime.SimTime` instances, the
+    time values (class :class:`~.simtime.SimTime`) - e.g., if we need a
+    generator for interarrival times. If any of the arguments passed to 
+    a SimDistribution method are :class:`~.simtime.SimTime` instances, the
     resulting generator will also return :class:`~.simtime.SimTime` instances
     (in the units of the first SimTime argument). The generator takes care
     of unit conversion - i.e., it is OK to pass SimTime arguments with 
-    ifferent time units. For example, the following returns a generator
-    yielding SimTime values uniformly distributed between 30 and 120 seconds:
-    
-    .. code-block:: python
+    different time units. For example, the following returns a generator
+    yielding SimTime values uniformly distributed between 30 and 120 seconds::
     
        SimDistribution.uniform(SimTime(30, tu.SECONDS),
                                SimTime(2, tu.MINUTES))
@@ -249,15 +247,13 @@ class SimDistribution(object):
       first SimTime parameter. e.g., for the following call, the second
       parameter value will be assumed to be 200 seconds::
     
-      SimDistribution.uniform(SimTime(30, tu.SECONDS), 200)
+          SimDistribution.uniform(SimTime(30, tu.SECONDS), 200)
        
     Finally, note that in a few cases (:meth:`round_robin`, :meth:`choice`)
     the values returned can be non-numeric and non-time. We could, for
     example, define an entity generator (for a
     :class:`~.entitysource.SimEntitySource` object) that instantiates a
-    randomly-selected :class:`~.entity.SimEntity` subclass via:
-
-    .. code-block:: python
+    randomly-selected :class:`~.entity.SimEntity` subclass via::
 
        entity_classes = (MyEntity1, MyEntity2, MyEntity3)
        et_generator = SimDistribution.choice(entity_classes)
@@ -768,25 +764,7 @@ class SimDistribution(object):
     
     # TODO Add  , poisson, power distributions from numpy
     
-    @staticmethod
-    def get_random_generator(streamNum=1):
-        """
-        Returns the pseudo-random number generator for a specified stream,
-        for client code that needs to access that directly (e.g., to use
-        a distribution not supported by :class:`SimDistribution`).
-        
-        :param streamNum: Identifies the random stream to sample from.
-        :type streamNum:  `int` in range [1 - :func:`max_streams`]
-        
-        :return: The requested PRNG
-        :rtype:  :class:`numpy.random.Generator`
-        """
-        # validate the selected random number stream
-        if streamNum <= 0 or streamNum > max_streams():
-            msg = "Requested stream number ({0}) must be in range 1 - {1}"
-            raise SimError(_RAND_PARAMETER_ERROR, msg, streamNum, max_streams())
 
-        return _rng[streamNum-1]
     
     @staticmethod
     def _scalar_args(*args):
