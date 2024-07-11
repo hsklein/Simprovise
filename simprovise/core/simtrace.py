@@ -102,33 +102,6 @@ def trace(func):
          return func
      else:
          return no_op
-    
-#def enable():
-     #"""
-     #Enable tracing
-     #"""
-     #global _trace_enabled
-     #_trace_enabled = True
-    
-#def disable():
-     #"""
-     #Disable tracing
-     #"""
-     #global _trace_enabled
-     #_trace_enabled = False
-    
-#def set_tracetype(tracetype):
-     #"""
-     #"""
-     #global _trace_type
-     #assert isinstance(tracetype, TraceType), "non-TraceType passed to set_tracetype()"
-     #_trace_type = tracetype
-    
-#def set_trace_stdout():
-     #"""
-     #"""
-     #global _trace_file
-     #_trace_file = sys.stdout
      
     
 def initialize(modelscript_filename=None):
@@ -435,22 +408,4 @@ def _write_trace_event_to_csv(evt):
           
  
 #if __name__ == '__main__':
-     #from simprovise.modeling import (SimEntity, SimEntitySource, SimProcess,
-                                  #SimLocation, SimSimpleResource)
-     #import inspect
-     
-     #source = SimEntitySource("MockSource")
-     #process = SimProcess()
-     #entity = SimEntity(source, process)
-     #loc = SimLocation("TestLocation")
-     #rsrc1 = SimSimpleResource("TestResource1", loc)
-     #rsrc2 = SimSimpleResource("TestResource2", loc)
-     #_set_fmt_widths()
-     
-     #initialize()
-     #add_trace_column(loc, 'current_population', 'Location Population')
-     #add_trace_column(loc, 'entries')
-     #trace_event(entity, Action.MOVE_TO, [loc])
-     #trace_event(entity, Action.ACQUIRED, (rsrc1, rsrc2))
-     #trace_event(entity, Action.ACQUIRED, (rsrc1, rsrc1))
-     #finalize()
+

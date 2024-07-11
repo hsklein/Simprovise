@@ -39,7 +39,7 @@ class SimResourceAssignment(object):
     """
     Encapsulates a set of zero or more resources assigned to a process
     via :meth:`~.process.SimProcess.acquire` or
-    :meth:`~.process.SimProcess.acquire_from
+    :meth:`~.process.SimProcess.acquire_from`
     
     Can be used as a context manager in order to ensure the assignment
     is released; e.g. with a :meth:`~.transaction.SimTransaction.run`::
@@ -229,10 +229,10 @@ class SimAssignResourcesEvent(SimEvent):
 @apidoc
 class ResourceAssignmentAgentMixin(object):
     """
-    A mix-in class that provides a SimAgent (which may or may not be a resource)
-    with basic resource assignment functionality - the ability to handle
-    resource request and release messages. The mixin defines handler functions
-    for both of those message types.
+    A mix-in class that provides a :class:`~.agent.SimAgent` (which may or may
+    not be a resource) with basic resource assignment functionality - the
+    ability to handle resource-related messages, such as request and release.
+    The mixin defines handler functions for all of those message types.
 
     By default, this mix-in fulfills requests on a first-in/first-out basis.
     That behavior may be overridden by registering a request priority function
@@ -1323,13 +1323,14 @@ class SimResourcePool(SimResourceAssignmentAgent):
 class SimResourceRequest(SimMessage):
     """
     A subclass of the SimMessage namedtuple that:
-    a) Defines properties returning the basic SimMessage data fields, but 
-       withproperty names reflecting this specific message type
-    b) Defines properties extracting data from the message's msgData field
-    c) Adds methods for making/processing resource assignments
-       (including sending resource assignment response messages),
-       primarily for the benefit of model-specific ResourceAssignmentAgent
-       subclasses.
+    
+    * Defines properties returning the basic SimMessage data fields, but 
+      with property names reflecting this specific message type.
+    * Defines properties extracting data from the message's msgData field.
+    * Adds methods for making/processing resource assignments
+      (including sending resource assignment response messages),
+      primarily for the benefit of model-specific ResourceAssignmentAgent
+      subclasses.
        
     SimProcess should pass this class when sending resource request
     (SimMsgType RSRC_REQUEST) messages, so that the handling assignment
@@ -1422,8 +1423,8 @@ class SimResourceRequest(SimMessage):
     @property
     def nrequested(self):
         """
-        Returns the number :class:`SimResource`s requested, which typically
-        defaults to one.
+        Returns the number of :class:`resources <SimResource>` requested,
+        which typically defaults to one.
         
         :return: The number of resources requested
         :rtype:  `int`        

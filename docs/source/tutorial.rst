@@ -266,6 +266,8 @@ the default maximum is generally 100. The generated summary report::
     Bank.CustomerQueue                   Entries           1020.80           1020.80           1020.80           1020.80           1020.80        
     Bank.CustomerQueue                   Time                 1.65 minutes      0.00 minutes      0.35 minutes      2.60 minutes     11.65 minutes
 
+
+.. _bank-1-event-tracing-tutorial-label:
 Event Tracing
 -------------
 
@@ -332,9 +334,10 @@ Some of the default tabular output from our bank model is shown below::
        11.19 Customer 9      Acquiring Bank.TellerCounter.Teller                                
 
 It is also possible to add data to this table within model code via 
-calls to `simtrace.add_trace_column()`, where each call specifies an object
-and property value to add to each trace row; e.g the following code will
-show the number of available tellers at the time of each event::
+calls to :function:`~simprovise.core.simtrace.add_trace_column`, where each 
+call specifies an object and property value to add to each trace row; 
+e.g the following code will show the number of available tellers at the time 
+of each event::
 
     simtrace.add_trace_column(bank.teller, 'available', 'Tellers: available')
 

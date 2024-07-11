@@ -12,6 +12,7 @@ from simprovise.core import SimError
 from simprovise.core.simlogging import SimLogging
 from simprovise.core.utility import SimUtility
 from simprovise.core.simelement import SimElement
+from simprovise.core.apidoc import apidocskip
 
 logger = SimLogging.get_logger(__name__)
 
@@ -22,11 +23,23 @@ _SCRIPT_MODULE_NAME = "SimMain"
    
 class SimModel(object):
     """
-    SimModel manages access to a simulation model's simulation elements. There is
-    only one model at a time, so the class is also a singleton.
+    SimModel manages access to a simulation model's simulation elements
+    (subclasses of class :class:`SimElement`). There is only one model at a
+    time, so the class is also a singleton.
+    
+    SimModel's primary role is to provide objects outside of the Simprovise
+    core package with access to the current model's simulation objects and
+    their data. For example, the ``database`` package uses SimModel to access
+    any or all of the :class:`.datacollector.Dataset` objects in the model and
+    assign them a database-specific :class:`.datacollector.DataSink` object.
     
     The simulation elements are maintained in a dictionary keyed by element ID.
-    SimModel includes methods to register and access elements and their datasets.
+    SimModel includes methods to register and access elements and their
+    datasets.
+    
+    SimModel also provides a method (:meth:`SimModel.load_model_from_script`)
+    that loads and imports a model (Python) script; this method is typically
+    called when the model script is not the ``__main__`` program.
     """
     _theModel = None    # singleton instance
     
@@ -43,9 +56,9 @@ class SimModel(object):
     @staticmethod
     def load_model_from_script(scriptpath):
         """
-        Loads a passed model script by importing it, returning the SimModel.model()
-        singleton in the imported namespace. Since it is imported, the main program in
-        the script does not execute.
+        Loads a passed model script by importing it, returning the
+        SimModel.model() singleton in the imported namespace. Since it is
+        imported, the main program in the script does not execute.
         
         :param scriptpath: The filesystem path of Python script defining
                            the main model.
@@ -118,6 +131,7 @@ class SimModel(object):
             raise SimError(_ERROR_NAME, msg, statObj.element_id)
         self._staticObjects[statObj.element_id] = statObj
         
+    @apidocskip
     def clear_registry_partial(self):
         """
         Clear all of the registered agents and staticObjects.

@@ -25,18 +25,22 @@ class Dataset(object):
     """
     Encapsulates a set of measurements (of a specific value) to be collected
     by the simulation for a single simulation element
-    (:class:`~.element.SimElement`).  Includes the element (the simulation
-    object - resource, location, entity process, etc) - being measured,
-    the type of data being collected (e.g. Queue size), and the DataSink
-    object that these measurement values should be directed into.  Also
-    defines methods that tell the element to start or stop collecting data.
+    (:class:`~.element.SimElement`).  Includes the
+    :class:`~.simelement.SimElement` (the simulation object - resource,
+    location, entity process, etc) - being measured, the type of data being
+    collected (e.g. Queue size), the :class:`DataSink` object that these
+    measurement values should be directed into, and the
+    :class:`SimDataCollector` that acts as the collection interface to
+    the outside world.
+    
+    Also defines methods that tell the element to start or stop collecting data.
 
     Note:
 
-        Core Datasets are instantiated by :class:`SimDataCollector` and should
+        Datasets are instantiated by :class:`SimDataCollector` and should
         not be created directly by (or even accessed) client modeling code.
 
-    See :class:`SimDataCollector` for a more complete description of
+    See also class :class:`SimDataCollector` for a more complete description of
     interaction between data collectors, datasets and datasinks.
     
     :param element:        The data collection element for which data are to
@@ -206,7 +210,7 @@ class SimDataCollector(metaclass=ABCMeta):
     - :class:`Dataset` objects encapsulate output metadata, for use
       primarily by the output data collection subsystem.
 
-    - :class"`~.datasink.Datasink` is an abstract class defining the interface
+    - :class:`~.datasink.Datasink` is an abstract class defining the interface
       to the output data collection subsystem; concrete subclasses implement
       that interface, which is used by data collectors - i.e., simulation
       data are sent from modeling elements to data collectors, which then
@@ -298,7 +302,7 @@ class SimDataCollector(metaclass=ABCMeta):
 @apidoc
 class SimUnweightedDataCollector(SimDataCollector):
     """
-    A :class`SimDataCollector` that collects unweighted (non-time-weighted)
+    A :class:`SimDataCollector` that collects unweighted (non-time-weighted)
     data. Process time is a typical example of unweighted data.
 
     :param element:         The data collection element object for which
@@ -325,7 +329,7 @@ class SimUnweightedDataCollector(SimDataCollector):
 @apidoc
 class SimTimeWeightedDataCollector(SimDataCollector):
     """
-    A :class`SimDataCollector` that collects time-weighted (time series)
+    A :class:`SimDataCollector` that collects time-weighted (time series)
     data, such as location population, resource utilization or
     work-in-process.
 

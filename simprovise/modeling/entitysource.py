@@ -79,12 +79,12 @@ class SimEntitySource(SimLocation):
         Initializes a stream of entities to be generated via the following
         specification:
 
-        - The class (:class:`SimEntity` or SimEntity-derived) of the
+        * The class (:class:`SimEntity` or SimEntity-derived) of the
           entities to be generated
-        - The class (SimProcess-derived) of the generated entity's process
-        - An interarrival generator-creating function defined in
+        * The class (SimProcess-derived) of the generated entity's process
+        * An interarrival generator-creating function defined in
           :class:`SimDistribution`
-        - The parameters (specified as positional and/or keyword arguments) of
+        * The parameters (specified as positional and/or keyword arguments) of
           the interarrival function.
 
         Sample Usage::
@@ -93,9 +93,9 @@ class SimEntitySource(SimLocation):
             source.addEntityGenerator(SimEntity, MyProcess, generator, rnStream=18)
 
         This method requires the entity class initializer to take the same
-        two arguments as :class:`.SimEntity` (entitySource and process), and the
-        process class initializer to take no arguments at all. If either of
-        those conditions do not hold, use :meth:`addGeneratorPair` instead.
+        two arguments as :class:`.entity.SimEntity` (entitySource and process),
+        and the process class initializer to take no arguments at all. If either 
+        of those conditions do not hold, use :meth:`add_generator_pair` instead.
 
         Note that a entity source can be associated with multiple generators,
         so this method can be called any number of times on the same source
@@ -112,11 +112,11 @@ class SimEntitySource(SimLocation):
         :type processClass:      `class`
        
         :param interarrivalFunc: One of the members of
-                                 :class:`~.random.SimDistribution`
+                                 :class:`~simprovise.core.random.SimDistribution`
         :type interarrivalFunc:  `func`
                
-        :param *iaArgs:          Positional arguments to interarrivalFunc
-        :param **iaKwargs:       Keyword arguments to interarrivalFunc
+        :param \*iaArgs:         Positional arguments to interarrivalFunc
+        :param \**iaKwargs:      Keyword arguments to interarrivalFunc
          
         """
         # Create a generator object from the interarrival function and parameters
@@ -147,10 +147,11 @@ class SimEntitySource(SimLocation):
         (b) we wish to generate several classes of entity and/or process using a
             single interarrival distribution.
 
-        addGeneratorPair() creates stream of entities via two passed generators:
+        addGeneratorPair() creates a stream of entities via two passed
+        generators:
 
         1. An entity generator, each iteration of which yields a new entity
-           (and its SimProcess)
+           (and its :class:`~.process.SimProcess`)
         2. An interarrival time generator, each iteration of which yields the
            time (:class:`~.simtime.SimTime`) until the next work item is generated
 

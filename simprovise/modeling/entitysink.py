@@ -20,7 +20,7 @@ class SimEntitySink(SimStaticObject):
     """
     Defines an entity sink - where :class:`~.entity.SimEntity` objects go to die.
     Every :meth:`~.process.SimProcess.run` implementation should end with
-    the equivalent of:
+    the equivalent of::
 
         entity.move_to(sink)
 

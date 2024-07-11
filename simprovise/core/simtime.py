@@ -17,7 +17,12 @@ import simprovise.core.configuration as simconfig
 
 logger = SimLogging.get_logger(__name__)
 
+@apidoc
 class Unit(IntEnum):
+    """
+    An enumeration representing valid :class:`SimTime` time units:
+    hours, minutes and seconds.
+    """
     SECONDS = 0
     MINUTES = 1
     HOURS = 2
@@ -39,9 +44,10 @@ _ERROR_NAME = "SimTime Error"
 
 #print("base_timeunit:", _base_unit.__repr__())
 
+@apidoc
 def base_unit():   
     """
-    Return the base time unit for the model (a Unit enum value)
+    Return the base time unit for the model (:class:`Unit`)
     or None if simulated time for the model is dimensionless.
     
     This unit will be used for all database datasinks, and all simulated
@@ -49,7 +55,7 @@ def base_unit():
     written/stored by the output datasinks.
     
     :return: The base time unit or None if dimensionless
-    :rtype:  simttime.SECONDS, tu.MINUTES, tu.HOURS or None
+    :rtype:  Unit.SECONDS, Unit.MINUTES, Unit.HOURS or None
     """
     return _base_unit
 
@@ -92,17 +98,16 @@ class SimTime(object):
     scalar is implicitly assumed to be in the units of the added-to
     SimTime)
 
-    :param value: A numeric time length or another SimTime object
-    :type value:  Numeric scalar or :class:`~.simtime.SimTime`
+    :param value: A numeric time length or another :class:`SimTime` object.
+    :type value:  Numeric scalar or :class:`SimTime`
     
-    :param units: Time unit (tu.SECONDS, tu.MINUTES or
-                  tu.HOURS) or None. If value is a
+    :param units: Time unit (:class:`Unit`) or `None`. If value is a
                   :class:`~.simtime.SimTime`, this is ignored.
-                  If :func:`base_unit` is None (dimensionless), this
-                  must be None. If the base_unit is set,
-                  SECONDS/MINUTES/HOURS may be specified; with None
+                  If :func:`base_unit` is `None` (dimensionless), this
+                  must be `None`. If the base_unit is set,
+                  SECONDS/MINUTES/HOURS may be specified; with `None`
                   it will default to the base_unit
-    :type units:  int (range 0-2) or None
+    :type units:  `int` (range 0-2, from :class:`Unit` enum values) or `None`
                 
     """
     __slots__ = ('_value', '_units')

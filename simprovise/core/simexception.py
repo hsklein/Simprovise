@@ -15,14 +15,14 @@ class SimException(Exception):
     Base simulation exception class, with message formatting,
     derived from the built-in Exception class.
     
-    :param name:  Exception name
-    :type name:   `str`
+    :param name:   Exception name
+    :type name:    `str`
     
-    :param desc:  Exception description string
-    :type desc:   str`
+    :param desc:   Exception description string
+    :type desc:   `str`
     
-    :param *args: Argument values to be substituted into the
-                  description string.
+    :param \*args: Argument values to be substituted into the
+                   description string.
 
     """
     def __init__(self, name, desc='', *args):

@@ -462,7 +462,7 @@ class SimProcess(SimTransaction):
                        default time unit (as defined by :func:`simtime.base_unit`.
                        Scalar values are not recommended unless the base unit
                        is dimensionless (None)
-        :type amount:  :class:`~.simtime.SimTime`, `int` or `float`
+        :type amount:  :class:`~simprovise.core.simtime.SimTime`, `int` or `float`
         
         :param extend_through_downtime: If True, extend the wait for any downtime
                                         that occurs for resources this process has

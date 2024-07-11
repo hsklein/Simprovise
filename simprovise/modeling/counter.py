@@ -46,13 +46,19 @@ class SimCounter(object):
 
     In most cases, the modeler would like to collect counter values during
     the simulation as part of their output analysis. In order to do that, the
-    counter must be assigned to a data collection element object (e.g. resource
-    or location) and be associated with a dataset for that element. If
-    both `element` and `name` are specified via initializer, that dataset
-    will be created (and counter data collected) automatically.
+    counter must be assigned to a data collection element object (e.g. resource,
+    location, process class or entity class) and be associated with a dataset
+    for that element. If both `element` and `name` are specified via
+    initializer, that dataset will be created (and counter data collected)
+    automatically.
 
-    :param element:   The data collection element object which owns the counter
-    :type element:    :class:`~.simelement.SimElement`
+    :param element:   The data collection element object which owns the counter.
+                      :class:`Process <~.process.SimProcessElement>` and
+                      :class:`entity <~.entity.SimEntityElement>` elements
+                      may be specified by the process or entity class.
+    :type element:    :class:`~.simelement.SimElement` or
+                      :class:`~.process.SimProcess` or
+                      :class:`~.entity.SimEntity` `class`
     
     :param name:      The name of the dataset containing counter values.
                       Dataset names must be unique within the element.
