@@ -1,3 +1,4 @@
+========================
 Simprovise API Reference
 ========================
 
@@ -6,5 +7,6 @@ Simprovise API Reference
 
    simprovise
    simprovise.core
+   simprovise.modeling
    simprovise.database
    simprovise.runcontrol

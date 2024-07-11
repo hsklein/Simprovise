@@ -21,12 +21,12 @@ class SimElement(object):
     """
     SimElement is the base class for objects that are elements in the 
     simulation model. These elements include static simulation objects -
-    :class:`Locations <.location.SimLocation>`,
-    :class:`Resources <.resource.SimResource>`,
-    :class:`Entity Sources <.entitysource.SimEntitySource>` and
-    :class:`Entity Sinks <.entitysink.SimEntitySink>` (and their subclasses),
-    as well as :class:`SimProcessElements <.process.SimProcessElement>` and
-    :class:`SimEntityElements <.entity.SimEntityElement>`, which are static
+    :class:`Locations <.modeling.location.SimLocation>`,
+    :class:`Resources <.modeling.resource.SimResource>`,
+    :class:`Entity Sources <.modeling.entitysource.SimEntitySource>` and
+    :class:`Entity Sinks <.modeling.entitysink.SimEntitySink>` (and their subclasses),
+    as well as :class:`SimProcessElements <.modeling.process.SimProcessElement>` and
+    :class:`SimEntityElements <.modeling.entity.SimEntityElement>`, which are static
     proxies for transient process and entity objects.
     
     SimElements exist for the lifetime of the simulation, and are 
@@ -136,6 +136,10 @@ class SimElement(object):
         """
         Add the passed dataset to the list of datasets for this element (if
         it's not already there). If it is there, this is a no-op.
+        
+        :meth:`register_dataset` is called bySimprovise-defined
+        :class:`SimElement` subclasses; client (model-specific) code
+        generally should not need to call this method.
         
         :param dataset: The dataset (data stream specification)
                         to add to the SimElement
