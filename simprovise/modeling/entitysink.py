@@ -31,7 +31,7 @@ class SimEntitySink(SimStaticObject):
     needed, since entities check in, but they don't check out.)
     
     SimEntitySinks take no parent location parameter; they are always assigned
-    to the :class:`~.locagtion.SimRootLocation`. This restriction ensures
+    to the :class:`~.location.SimRootLocation`. This restriction ensures
     entity location exit processing is always performed on the entity's last
     location before being destroyed.
         

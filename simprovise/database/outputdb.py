@@ -23,6 +23,7 @@ from simprovise.core.simevent import SimEvent
 from simprovise.core.simlogging import SimLogging
 from simprovise.core.simtime import SimTime
 from simprovise.core.simclock import SimClock
+from simprovise.core.datasink import DataSink
 from simprovise.core import SimError, simrandom, simtime, simelement
 
 from simprovise.modeling import (SimResource, SimLocation, SimEntitySource,
@@ -53,34 +54,36 @@ class SimElementType(object):
     entity = 6
 
 
-class SimDbDatasink(object):
+class SimDbDatasink(DataSink):
     """
-    An implementation of the datasink interface implicitly defined by
-    :class:`~simprovise.core.datacollector.NullDataSink` that writes
-    non-time-weighted dataset values to the SQLite output database
-    implemented by this module.  Defines a number of additional
-    methods (on top of those defined by NullDataSink) that are
-    specific to the SQLite implementation.
-
-    TODO Perhaps also take the dataset as a parameter, which would facilitate
-    summary datasinks (that record summary statistics only by grabbing
-    min/max/mean from the datacollector) The problem with that approach is
-    that it more or less requires the data collector to be reset for each
-    interval, which may not be desirable. The alternative is for summary
-    sinks to create their own collectors.
+    A subclass of abstract class :class:`simprovise.core.datasink.DataSink`
+    which implements the DataSink interface that writes non time-weighted
+    output to the standard Simprovise (SQLite3) database implemented by
+    this module.
     
-    :param database: output database to write data to
+    :class:`SimDbDatasink` defines a number of additional methods (on top of
+    those defined by DataSink) that are specific to the SQLite implementation
+    and generally for internal/private use.
+
+    :param database: Output database to write data to.
     :type database:  :class:`SimOutputDatabase`
     
-    :param dataset:  The dataset associated with this datasink
+    :param dataset:  The dataset associated with this datasink.
     :type dataset:   :class:`simprovise.core.datacollector.Dataset`
     
-    :param runNumber: The simulation run number associated
-                      with this datasink
+    :param runNumber: The simulation run number associated with this datasink.
     :type runNumber:  `int` > 0
     
     """
-    __slots__ = ('__dbConnection', '__datasetID', '__run', '__batch', '__valuesAreSimTime')
+    #TODO Perhaps also take the dataset as a parameter, which would facilitate
+    #summary datasinks (that record summary statistics only by grabbing
+    #min/max/mean from the datacollector) The problem with that approach is
+    #that it more or less requires the data collector to be reset for each
+    #interval, which may not be desirable. The alternative is for summary
+    #sinks to create their own collectors.
+    
+    __slots__ = ('__dbConnection', '__datasetID', '__run', '__batch',
+                 '__valuesAreSimTime')
     commitRate = 1
 
     @staticmethod
@@ -184,8 +187,23 @@ class SimDbDatasink(object):
 
 class SimDbTimeSeriesDatasink(SimDbDatasink):
     """
-    A datasink implementation for time-weighted datasets, derived from
-    SimDbDatasink.
+    A :class:`SimDbDatasink` subclass for time-weighted datasets.
+    
+    :param database:     Output database to write the data to.
+    :type database:      :class:`SimOutputDatabase`
+    
+    :param dataset:      The dataset associated with this datasink.
+    :type dataset:       :class:`simprovise.core.datacollector.Dataset`
+    
+    :param runNumber:    The simulation run number associated with this
+                         datasink.
+    :type runNumber:     `int` > 0
+    
+    :param initialValue: The initial dataset value. (Time-weighted datasets
+                         *always* have a current value; this is the initial
+                         current value.)
+    :type initialValue:  numeric value (`int` or `float`) 
+    
     """
     __slots__ = ('__lastrowid', '__lastTimestamp', '__lastValue')
     def __init__(self, database, dataset, runNumber, initialValue=0):
