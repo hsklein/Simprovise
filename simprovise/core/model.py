@@ -27,15 +27,20 @@ class SimModel(object):
     (subclasses of class :class:`SimElement`). There is only one model at a
     time, so the class is also a singleton.
     
-    SimModel's primary role is to provide objects outside of the Simprovise
-    core package with access to the current model's simulation objects and
-    their data. For example, the ``database`` package uses SimModel to access
-    any or all of the :class:`.datacollector.Dataset` objects in the model and
-    assign them a database-specific :class:`.datacollector.DataSink` object.
-    
     The simulation elements are maintained in a dictionary keyed by element ID.
     SimModel includes methods to register and access elements and their
     datasets.
+    
+    SimModel's primary role is to provide objects outside of the Simprovise
+    core package with access to the current model's simulation objects and
+    their data.
+    
+    For example, the ``database`` package uses SimModel to access any or
+    all of the :class:`.datacollector.Dataset` objects in the model and
+    assign them a database-specific :class:`.datacollector.DataSink` object.
+    Modeling code can access static objects
+    (e.g. :class:`resources<simprovise.modeling.resource.SimResource>`)
+    defined in other modules via :meth:`get_static_object`.
     
     SimModel also provides a method (:meth:`SimModel.load_model_from_script`)
     that loads and imports a model (Python) script; this method is typically

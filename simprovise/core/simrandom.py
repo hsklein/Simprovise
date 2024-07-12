@@ -213,20 +213,18 @@ class SimDistribution(object):
     methods used to generate values from both deterministic and pseudo-random
     distributions.
 
-    There are two methods (:meth:`~function` and :meth:`.function_names`) provided
-    for the benefit of a UI. :meth:`function_names` provides a sequence of
-    distribution functions by name (e.g., for populating a list box), while
-    :meth:`function` maps those names back to a function object.
-
-    The other public static methods are functions that (when parameterized
-    with their passed arguments) return generators that yield samples from a
-    specified distribution. uniform(a,b), for example, returns a generation
-    that produces numbers uniformly distributed between a and b.
+    These methods (when parameterized with their passed arguments) return
+    generators that yield samples from a specified distribution.
+    ``uniform(a, b, streamNum=5)``, for example, returns a generator that
+    produces numbers uniformly distributed between ``a`` and ``b`` based
+    on sampling from random number stream ``5``. All of the methods for
+    pseudo-random probability distributions take a ``streamNum`` parameter,
+    which defaults to ``1``.
 
     In many (if not most) cases, these methods are being used to generate
     time values (class :class:`~.simtime.SimTime`) - e.g., if we need a
     generator for interarrival times. If any of the arguments passed to 
-    a SimDistribution method are :class:`~.simtime.SimTime` instances, the
+    a ``SimDistribution`` method are :class:`~.simtime.SimTime` instances, the
     resulting generator will also return :class:`~.simtime.SimTime` instances
     (in the units of the first SimTime argument). The generator takes care
     of unit conversion - i.e., it is OK to pass SimTime arguments with 
@@ -238,13 +236,13 @@ class SimDistribution(object):
 
     Additional notes on the use of :class:`~.simtime.SimTime` parameters:
     
-    - When provided multiple SimTime parameters, the generated values will
+    - When provided multiple ``SimTime`` parameters, the generated values will
       have the units of the first SimTime provided - e.g. the example above
-      will generate SimTime values in SECONDS.
+      will generate ``SimTime`` values in ``SECONDS``.
       
     - If there is at least one SimTime parameter value, any scalar parameter
       values will be assumed to be SimTime values with the same units as the
-      first SimTime parameter. e.g., for the following call, the second
+      first ``SimTime`` parameter. e.g., for the following call, the second
       parameter value will be assumed to be 200 seconds::
     
           SimDistribution.uniform(SimTime(30, tu.SECONDS), 200)
@@ -260,18 +258,28 @@ class SimDistribution(object):
  
     """
     functionDict = {}
-
+    
+    # These two methods (:meth:`~function` and :meth:`.function_names`) are
+    # provided for the benefit of a UI. :meth:`function_names` provides a 
+    # sequence of distribution functions by name (e.g., for populating a 
+    # list box), while :meth:`function` maps those names back to a function 
+    # object.
+    
+    @apidocskip
     @staticmethod
     def function_names():
         """
-        Returns a sequence of the available (defined) distribution function names
+        Returns a sequence of the available (defined) distribution function
+        names
         """
         return SimDistribution.functionDict.keys()
 
+    @apidocskip
     @staticmethod
     def function(functionName):
         """
-        Returns the SimDistribution distribution function mapped to the passed name
+        Returns the SimDistribution distribution function mapped to the passed
+        name
         """
         try:
             # Because the function is actually wrapped via the staticmethod
@@ -305,8 +313,8 @@ class SimDistribution(object):
 
             SimDistribution.round_robin((2,4,6))
 
-        :param choices: A sequence of values to be returned, one at a time,
-                        by the function/generator.
+        :param choices: A sequence of values to be cycled through and returned,
+                        one at a time, by the generator.
         :type choices:  Sequence
         
         """
@@ -377,10 +385,12 @@ class SimDistribution(object):
                                     SimTime(1.5, tu.MINUTES),
                                     streamNum=12)
                                             
-        :param low:      The low bound of the desired uniformly distributed sample. 
+        :param low:      The low bound of the desired uniformly distributed
+                         sample. 
         :type low:       Either numeric or a :class:`~.simtime.SimTime`
                         
-        :param high:     The high bound of the desired uniformly distributed sample. 
+        :param high:     The high bound of the desired uniformly distributed
+                         sample. 
         :type high:      Either numeric or a :class:`~.simtime.SimTime`
 
         :param streamNum: Identifies the random stream to sample from.
@@ -546,8 +556,8 @@ class SimDistribution(object):
         :param mean:     The mean of the underlying normal distribution.
         :type mean:      Either numeric or a :class:`~.simtime.SimTime`
                         
-        :param sigma:    The standard deviation of the underlying normal distribution.
-                         Must be greater than zero.
+        :param sigma:    The standard deviation of the underlying normal
+                         distribution. Must be greater than zero.
         :type sigma:     Either numeric or a :class:`~.simtime.SimTime` 
 
         :param streamNum: Identifies the random stream to sample from.
@@ -613,14 +623,15 @@ class SimDistribution(object):
     def gamma(alpha, beta, *, streamNum=1):
         """
         Returns a generator that yields pseudo-random values from the gamma
-        distribution with the specified alpha (shape) and beta (scale) parameters.
+        distribution with the specified alpha (shape) and beta (scale)
+        parameters.
 
-        :param alpha:    Shape parameter of the of the desired gamma distribution.
-                         Must be non-negative.
+        :param alpha:    Shape parameter of the of the desired gamma
+                         distribution. Must be non-negative.
         :type alpha:     Either numeric or a :class:`~.simtime.SimTime`
                        
-        :param beta:     Scale parameter of the of the desired gamma distribution.
-                         Must be non-negative.
+        :param beta:     Scale parameter of the of the desired gamma
+                         distribution. Must be non-negative.
         :type beta:      Either numeric or a :class:`~.simtime.SimTime`
 
         :param streamNum: Identifies the random stream to sample from.
@@ -722,8 +733,8 @@ class SimDistribution(object):
     def binomial(n, rho, *, streamNum=1):
         """
         Returns a generator that yields pseudo-random values from the binomial
-        distribution with the specified n (number of trials) and rho (probability of
-        success of a single trial) parameter. 
+        distribution with the specified n (number of trials) and rho
+        (probability of success of a single trial) parameter. 
 
         :param n:       The number of trials, >= 0
         :type n:       `int`
@@ -764,8 +775,6 @@ class SimDistribution(object):
     
     # TODO Add  , poisson, power distributions from numpy
     
-
-    
     @staticmethod
     def _scalar_args(*args):
         """
@@ -803,8 +812,8 @@ class SimDistribution(object):
         First validates the passed random stream number.
         
         Then creates and returns a generator wrapping the passed SimDistribution
-        parameterized function. If the passed timeUnit parameter is not None, the
-        generated values will be SimTime objects of the specified time unit.
+        parameterized function. If the passed timeUnit parameter is not None, 
+        the generated values will be SimTime objects of the specified time unit.
         Otherwise, the generated values will be scalars (or whatever type
         is output from the passed function).
         

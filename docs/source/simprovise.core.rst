@@ -115,7 +115,7 @@ The maximum number of random number streams per model and the maximum
 number of supported independent replications can be set via 
 :doc:`configuration file. <configuration>` Those maximums can be 
 accessed (but not reset) via functions. The
-:func:~`simprovise.core.simrandom.get_random_generator` also allows
+:func:`~simprovise.core.simrandom.get_random_generator` also allows
 code to directly access the generator for a specific stream in the 
 current run, in case the modeler needs it.
 
@@ -148,9 +148,10 @@ Simulation Elements
 -------------------
 
 .. autoclass:: simprovise.core.simelement.SimElement
-    :members: element_id, datasets, register_dataset
+    :members: element_id, datasets
 
 .. autoclass:: simprovise.core.simelement.SimClassElement
+    :members: element_id
 
 Datasets and DataCollectors (module datacollector)
 --------------------------------------------------

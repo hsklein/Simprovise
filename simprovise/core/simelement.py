@@ -176,10 +176,10 @@ class SimElement(object):
 
 class SimClassElement(SimElement):   
     """
-    Base class for elements representing transient simulation objects
+    Base class for elements representing transient simulation objects;
     it is the base class for :class:`~.process.SimProcessElement`
     and :class:`~.entity.SimEntityElement`. While not formally abstract,
-    itis not meant to be instantiated directly.
+    it is not meant to be instantiated directly.
     
     :param simclass: The :class:`~.process.SimProcess` or
                      :class:`~.entity.SimEntity` class or subclass for
@@ -199,6 +199,9 @@ class SimClassElement(SimElement):
     @property
     def element_id(self):
         """
+        For class elements, the ``element_id`` is the fully-qualified name
+        of the (entity or process) class for which the element is a proxy.
+        
         :return: The fully qualified class name (including package)
         :rtype:  `str`
         """
@@ -256,5 +259,6 @@ class SimClassElement(SimElement):
                 # The class has an attribute named 'final_initialize that's
                 # not callable. Not a great idea, but we'll just eat the
                 # resulting exception with a warning
-                logger.warn("Class %s has a non-callable final_initialize member", cls)
+                logger.warn("Class %s has a non-callable final_initialize member",
+                            cls)
  

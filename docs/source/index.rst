@@ -10,10 +10,10 @@ intuitive API for developing simulation models; it also provides APIs and tools
 for model execution and output analysis.
 
 .. note::
-	Simprovise is under active development.
+	The current release is 0.2.0a. Any and all feedback is welcome at
 
 .. toctree::
-   :maxdepth: 4
+   :maxdepth: 3
    :caption: Contents:
 
    introduction
