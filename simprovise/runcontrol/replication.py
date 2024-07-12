@@ -57,6 +57,36 @@ def execute_replication(modelPath, dbpath, runNumber, warmupLength,
     Designed as a task to be executed by a multiprocessing Pool.  Returns
     the replication run number, the path of the temporary database populated
     by the replication, and any exception that was raised (or None)
+    
+    :param modelPath:    The model Python script path to be executed.
+    :type modelPath:     ``str``
+    
+    :param dbPath:       The path to an existing output database to be
+                         populated by this run. If ``None`` a new output
+                         database will be created.
+    :type dbPath:        ``str`` or ``None``    
+    
+    :param runNumber:    The simulation run number, in range
+                         [1 - :func:`~simprovise.core.simrandom.max_run_number`]
+    :type runNumber:     `int`    
+    
+    :param warmupLength: The warmup time for the simulation (before data
+                         collection begins)
+    :type warmupLength:  :class:`~simprovise.core.simtime.SimTime`
+    
+    :param batchLength:  The time length for each batch after the warmup
+    :type batchLength:   :class:`~simprovise.core.simtime.SimTime`
+    
+    :param nBatches:     The number of batches to execute
+    :type nBatches:      `int`    
+    
+    :param queue:        The ``multiprocessing.Queue`` used to send status
+                         messages to the :class:`SimReplicator` via a
+                         :class:`~.messagequeue.SimMessageQueue` which wraps
+                         it. May be ``None``, in which case not messages will
+                         be sent
+    :type queue:         :class:`multiprocessing.Queue` or ``None``   
+    
     """
     tbstring = None
     try:
@@ -82,24 +112,54 @@ class SimReplication(QObject):
     Encapsulates a single replication - i.e., a single run of the simulation
     model as defined by the passed model and run control parameters.
 
-    The initializer may also be passed a database path, which should be an output
-    database that is fully initialized - i.e., has it's dataset table
+    The initializer may also be passed a database path, which should be an 
+    output database that is fully initialized - i.e., has it's dataset table
     populated - but does not contain any datasetvalues.  By doing this, we
     ensure that every replication in a set has the same dataset table data -
     and therefore the same dataset integer IDs for a given dataset
     (element name/dataset name)  If we create the database from scratch,
-    dataset integer IDs can vary from replication replication, meaning that
+    dataset integer IDs could vary from replication replication, meaning that
     the datasetvalue row data could not be simply copied from one replication
     database to another.
 
-    The database path may be None; that should only be used if we are doing
-    a single stand-alone run - e.g., using SimReplication to execute a model
+    The database path may be ``None``; that should only be used if we are doing
+    a single stand-alone run - e.g., using ``SimReplication`` to execute a model
     in-process. When the database path is none, we do create a new database
-    and initialize it during initialization;
+    and initialize it during initialization.
+
+    :param model:        The :class:`~simprovise.core.model.SimModel`
+                         to be executed.
+    :type model:         :class:`~simprovise.core.model.SimModel`
     
-    TODO: Don't think this needs to be a QObject, since it doesn't emit or
-    connect to any Qt Signals
+    :param runNumber:    The simulation run number, in range
+                         [1 - :func:`~simprovise.core.simrandom.max_run_number`]
+    :type runNumber:     `int`    
+    
+    :param warmupLength: The warmup time for the simulation (before data
+                         collection begins)
+    :type warmupLength:  :class:`~simprovise.core.simtime.SimTime`
+    
+    :param batchLength:  The time length for each batch after the warmup
+    :type batchLength:   :class:`~simprovise.core.simtime.SimTime`
+    
+    :param nBatches:     The number of batches to execute
+    :type nBatches:      `int`    
+    
+    :param dbPath:       The path to an existing output database to be
+                         populated by this run. If ``None`` a new output
+                         database will be created.
+    :type dbPath:        ``str`` or ``None``    
+    
+    :param queue:        The ``multiprocessing.Queue`` used to send status
+                         messages to the :class:`SimReplicator` via a
+                         :class:`~.messagequeue.SimMessageQueue` which wraps
+                         it. May be ``None``, in which case not messages will
+                         be sent
+    :type queue:         :class:`multiprocessing.Queue` or ``None``   
+
     """
+    #TODO: Don't think this needs to be a QObject, since it doesn't emit or
+    #connect to any Qt Signals
     def __init__(self, model, runNumber, warmupLength,
                  batchLength, nBatches, dbPath=None, queue=None):
         super().__init__()
@@ -130,6 +190,10 @@ class SimReplication(QObject):
 
     @property
     def dbPath(self):
+        """
+        :return: The output database path for this :class:`SimReplication`
+        :rtype:  `str`
+        """
         return self.__dbPath
 
     def execute(self):
@@ -168,7 +232,8 @@ class SimReplication(QObject):
                
             # Do output database initialization
             if self.__dbPath:
-                self.__databaseManager.open_existing_database(self.__model, self.__dbPath)
+                self.__databaseManager.open_existing_database(self.__model,
+                                                              self.__dbPath)
             else:
                 self.__databaseManager.create_output_database(self.__model)
                 self.__dbPath = self.__databaseManager.current_database_path
@@ -194,7 +259,8 @@ class SimReplication(QObject):
             self._send_status_message(SimMessageQueue.STATUS_STARTED)
             nEvents = eventProcessor.process_events(self.__totalRunLength)
             print("Run", self.__runControlParameters.run_number,
-                  "execution complete:", nEvents, "events processed. Process Time:",
+                  "execution complete:", nEvents,
+                  "events processed. Process Time:",
                   time.time()-startTime)
             self.__databaseManager.close_output_database(delete=False)
         except Exception as e:
@@ -228,26 +294,30 @@ class SimReplication(QObject):
 
 class SimReplicator(QObject):
     """
-    The SimReplicator manages/executes a set of SimReplications.
+    The ``SimReplicator`` manages/executes a set of
+    :class:`SimReplications <SimReplication>`. When PySide is installed, it
+    inherits from QObject and emits Qt signals. When PySide is not installed,
+    the signal emit is a no-op. (See `Qt Issues` below)
 
-    The SimReplicator is initialized with a model and run control parameters.
-    The primary public method is executeReplications(), which takes replication
-    parameters as an arugment and executes the replications as tasks on a
-    multiprocessing pool allowing tasks to execute in parallel (in separate
-    processes).  The replication parameters specifies the maximum number of
-    processes to run concurrently.
+    The ``SimReplicator`` is initialized with a model and run control parameters.
+    The primary public method is :meth:`execute_replications`, which takes
+    replication parameters as an argument and executes the replications as
+    tasks on amultiprocessing pool allowing tasks to execute in parallel
+    (in separate processes).  The replication parameters specifies the maximum
+    number of processes to run concurrently.
 
-    executeReplications() also takes an optional asynch parameter.  When True,
-    the method returns immediately, with a background thread emitting a
-    ReplicationsComplete signal once all tasks have finished.  If False,
-    executeReplications() will block until all replication tasks complete (at
-    which point it will emit the ReplicationsComplete signal as well.)  When
-    executed asynchronously, a ReplicationFinished signal is emitted after
+    :meth:`execute_replications` also takes an optional ``asynch`` parameter.
+    When True, the method returns immediately, with a background thread emitting 
+    a ReplicationsComplete Qt signal once all tasks have finished.  If False,
+    :meth:`execute_replications` will block until all replication tasks complete
+    (at which point it will emit the ReplicationsComplete signal as well.)  When
+    executed asynchronously, a ReplicationFinished Qt signal is emitted after
     each replication.
 
-    If executeReplications() is called with asynch=True, the client may cancel
-    in-progress and remaining tasks via a cancel() call, which invokes the
-    pool's terminate() method and emits a ReplicationsCancelled signal.
+    If :meth:`execute_replications` is called with ``asynch``=``True``, the
+    client may cancel in-progress and remaining tasks via a :meth:`cancel`
+    call, which invokes the pool's ``terminate()`` method and emits a
+    ``ReplicationsCancelled`` Qt signal.
 
     All replication output is written to a temporary output database, created
     by the replicator.  The path to that database is available via property.
@@ -255,13 +325,14 @@ class SimReplicator(QObject):
     temporary file by either moving it to a permanent location or deleting it.
 
     Finally, there are a number of properties which either:
-    - indicate the status of the replication execution
-    - If completed, indicate the number of tasks/number of failed tasks
-    - provide the path of the output database created by the replicator.
+    
+    - Indicate the status of the replication execution.
+    - If completed, indicate the number of tasks/number of failed tasks.
+    - Provide the path of the output database created by the replicator.
 
     In order to minimize database contention between replications executing
     in parallel, each replication writes to its own (temporary) output
-    database.  An "empty" database(with Element and Dataset tables populated,
+    database.  An "empty" database (with Element and Dataset tables populated,
     but no dataset values) is created by the replicator, with a copy being
     sent to each replication.  This ensures that each replication uses
     an identical dataset table.  When the first (successful) replication
@@ -269,25 +340,27 @@ class SimReplicator(QObject):
     complete, their dataset values are merged into the master.
 
     Concurrency/Thread Safety
+    -------------------------
 
-    Replications have a process to themselves when executing, so there shouold
+    Replications have a process to themselves when executing, so there should
     be no safety issues there.  The results of each replication (a simple run
     number, database path and exception tuple) are processed by a callback
     function that runs on a separate thread in the main process.  Every callback
     runs on the same thread, so the database merge calls should never occur
-    in parallel.  If executeReplications() is invoked with asynch=True, there
-    is a third thread, which joins the pool.  Changes to the __status member
-    variable should be threadsafe in a Python context, and the result
+    in parallel.  If :meth:`execute_replications` is invoked with asynch=True, 
+    there is a third thread, which joins the pool.  Changes to the __status
+    member variable should be threadsafe in a Python context, and the result
     accessors should prevent the results (or output database) from being
     accessed until after the pool has finished processing and both of these
     background threads are done.  When running in a Qt environment (see below),
     this third thread emits a ReplicationsComplete Qt signal when the pool is
-    joined.  If the signal is connected to a QObject created on the main thread,
-    the slot function will be executed on the main thread (per Qt behavior).
+    joined.  If the signal is connected to a ``QObject`` created on the main
+    thread, the slot function will be executed on the main thread (per Qt
+    behavior).
 
     Also... in many respects a cleaner design would involve passing an
     external SimDatabaseManager instance into the replicator, which would open
-    and take ownership of the output database.  The problem is that sqlite3
+    and take ownership of the output database.  The problem is that ``sqlite3``
     connection objects can operate only in the thread in which they are created.
     If a database object (and it's connection) is created in the callback
     thread, it cannot be used to access the database in the main thread.  So
@@ -296,27 +369,31 @@ class SimReplicator(QObject):
     a database manager in the main thread.
     
     Qt Issues
+    ---------
     
-    The SimReplicator (in conjunction with its SimMessageQueue) is designed to
-    be used by a PySide Qt GUI application (and can also be used outside of one).
-    It facilitates Qt application that can stay responsive to user input while
-    it's SimReplicator executes replications asynchronously, and receives/reports 
+    The ``SimReplicator`` (in conjunction with its
+    :class:`~messagequeue.SimMessageQueue`) is designed to be used by a PySide
+    Qt GUI application (and can also be used outside of one). It facilitates
+    a Qt application that can stay responsive to user input while it's
+    ``SimReplicator`` executes replications asynchronously, and receives/reports 
     on status updates during the execution. The basic flow:
     
-     1. The SimReplicator creates a SimMessageQueue during initialization.
+     1. The ``SimReplicator`` creates a :class:`~messagequeue.SimMessageQueue`
+        during initialization.
     
-     2. The SimReplicator passes the SimMessageQueue's multiprocessing
-        queue to each replication process, which executes a SimReplication.
-        the replication processes are launched via a multiprocessing pool.
-        Each SimReplication object creates A SimMessageQueueSender, which
+     2. The ``SimReplicator`` passes the ``SimMessageQueue``'s multiprocessing
+        queue to each replication process, which executes a
+        :class:`SimReplication`. The replication processes are launched via a
+        multiprocessing pool. Each ``SimReplication`` object creates a
+        :class:`.messagequeue.SimMessageQueueSender`, which
         puts status update messages into the queue. In this scenario, 
-        :meth:`execute_replications` should be called with parameter asynch
-        set to True; in that case, execute_replications() returns after
+        :meth:`execute_replications` should be called with parameter ``asynch``
+        set to ``True``; in that case, ``execute_replications()`` returns after
         creating a separate thread to wait on completion of all of the
         replication processes, at which point a Qt Signal is emitted.
                 
-     3. The SimReplicator's SimMessageQueue creates a separate thread and
-        listens for messages from the SimReplication senders on that
+     3. The SimReplicator's ``SimMessageQueue`` creates a separate thread 
+        and listens for messages from the SimReplication senders on that
         thread. It responds to messages by emitting Qt Signals, which can
         then be  connected to and processed by the Qt GUI application running
         on the main thread. Essentially the listener just converts recieved
@@ -326,8 +403,23 @@ class SimReplicator(QObject):
     When operating outside of a Qt GUI (e.g. a command line application),
     the SimReplicator would typically execute replications synchronously.
     PySide is not required for that type of application, and if it is
-    not installed, mock versions of Qt classes QObject and Signal are used
-    in their place. In that case all Signal-related calls are no-ops.
+    not installed, mock versions of Qt classes ``QObject`` and ``Signal`` are 
+    used in their place. In that case all Signal-related calls are no-ops.
+    
+    :param model:        The :class:`~simprovise.core.model.SimModel`
+                         to be executed.
+    :type model:         :class:`~simprovise.core.model.SimModel`
+    
+    :param warmupLength: The warmup time for the simulation (before data
+                         collection begins)
+    :type warmupLength:  :class:`~simprovise.core.simtime.SimTime`
+    
+    :param batchLength:  The time length for each batch after the warmup
+    :type batchLength:   :class:`~simprovise.core.simtime.SimTime`
+    
+    :param nBatches:     The number of batches to execute
+    :type nBatches:      `int`    
+    
     """
     ReplicationsComplete = Signal()
     ReplicationsCancelled = Signal()

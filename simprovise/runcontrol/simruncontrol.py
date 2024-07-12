@@ -41,9 +41,24 @@ class SimRunControlParameters(object):
     """
     Manages simulation run control parameters - run number, warmup time, batch
     length, and the number of batches - used to define a single simulation run.
-    (SimReplicationParameters manages parameters related to a set of replication
-    runs.  These data are kept in separate classes because each replicated run
-    requires its own SimRunControlParameters.)
+    (:class:`SimReplicationParameters` manages parameters related to a set
+    of replication runs. These data are kept in separate classes because each
+    replication/run requires its own ``SimRunControlParameters``.)
+    
+    :param runNumber:    The simulation run number, in range
+                         [1 - :func:`~simprovise.core.simrandom.max_run_number`]
+    :type runNumber:     `int`
+    
+    :param warmupLength: The warmup time for the simulation (before data
+                         collection begins)
+    :type warmupLength:  :class:`~simprovise.core.simtime.SimTime`
+    
+    :param batchLength:  The time length for each batch after the warmup
+    :type batchLength:   :class:`~simprovise.core.simtime.SimTime`
+    
+    :param nBatches:     The number of batches to execute
+    :type nBatches:      `int`
+        
     """
     def __init__(self, runNumber, warmupLength, batchLength, nBatches):
         """
@@ -63,8 +78,8 @@ class SimRunControlParameters(object):
     @property
     def batch_length(self):
         """
-        The length (in SimTime) of each simulation batch after the warmup completes.
-        Defaults to infinite
+        The length (in SimTime) of each simulation batch after the warmup
+        completes.
         """
         return self.__batchLength
 
@@ -196,10 +211,39 @@ class SimReplicationParameters(object):
 
 class SimRunControlScheduler(QObject):
     """
+    A ``SimRunControlScheduler`` is created by each
+    :class:`~.replication.SimReplication` to perform beginning and end-of
+    batch processing (which typically involves resetting some data collection
+    and writing initial/ending values for time-weighted datasets).
+    
+    This is done by scheduling :class:`WarmupEvent` and :class:`BatchComplete`
+    events for the end of each warmup/batch; these events then invoke
+    :meth:`warmup_complete` and :meth:`batch_complete` respectively.
+    
+    ``SimRunControlScheduler`` also schedules :class:`SimProgressEvent`
+    events solely to report progress to a potential GUI application, subject to
+    the note below.
+    
+    .. note::
+    
+      This code is from a time when the GUI operated in the same process
+      as the simulation event processor. A redesign is in order if the
+      simulation and GUI are to operate in separate processes. 
+      
+      This code is called by the event processor and emits Qt signals directly,
+      which won't work if the GUI is not in the same process as the event
+      processor. A message queue (or something equivalent) would be required
+      to act as an intermediary (as it does for replications occurring
+      in their own process.)
+      
+      The data collection end-of-warmup/batch code works just fine, it's
+      just the Qt signals that are problematic.
+        
     """
     RunControlMessage = Signal(str)
 
-    def __init__(self, model, runControlParameters, progressIntervalPct=None, *, msgQueue=None):
+    def __init__(self, model, runControlParameters, progressIntervalPct=None,
+                 *, msgQueue=None):
         super().__init__()
         assert not progressIntervalPct or (0 < progressIntervalPct and progressIntervalPct < 100), "Invalid progressInterval percentage"
         self.__model = model
@@ -354,6 +398,7 @@ class SimProgressEvent(SimEvent):
     how many progress events will be fired over the course of a simulation
     run. (e.g., if interval percentage is 5, than an event will be fired
     every 5% of the scheduled simulation run, or 20 total.)
+      
     """
     @staticmethod
     def interval_sim_time(runControlScheduler, intervalPct):

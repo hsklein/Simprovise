@@ -19,6 +19,7 @@ except ImportError:
 
 from simprovise.core import SimError
 from simprovise.core.simlogging import SimLogging
+from simprovise.core.apidoc import apidocskip
 
 logger = SimLogging.get_logger(__name__)
 
@@ -35,15 +36,17 @@ class SimMessageQueue(QObject):
     The big picture: SimMessageQueue is designed on behalf of a (PySide) Qt
     GUI application that runs simulation replication(s) and would like to
     stay responsive while those replication(s) execute and receive/report on
-    status updates during the execution. See :class:`SimReplicator` for
-    details.
+    status updates during the execution. When PySide is not present, this
+    class essentially does nothing. See :class:`~.replication.SimReplicator`
+    for details.
         
     SimMessageQueue has three public properties/methods:
-    - start_listening().  Starts a separate thread that pulls items off of the
-      queue and emits message signals.
-    - stop_listening().  Tells the listener thread to exit
-    - queue (property).  The multiprocessing Queue object that can be
-      passed to replication processes (which will put messages on it.)
+    
+      - :meth:`start_listening`.  Starts a separate thread that pulls items off 
+        of the queue and emits message signals.
+      - :meth:`stop_listening.`  Tells the listener thread to exit.
+      - :meth:`queue`.  The ``multiprocessing.Queue`` object that can be
+        passed to replication processes (which will put messages on it.)
 
     Note again that the message signals are emitted from the listener thread, 
     not the main thread.  Typically the client will rely on Qt to execute the
@@ -51,10 +54,10 @@ class SimMessageQueue(QObject):
     in turn requires that a Qt event loop be running.
 
     Finally, note that if we are running in an environment without PySide/Qt,
-    the QObject and Signal classes are replaced by mocks that do nothing -
-    so in that scenario, the message queue itself does essentially nothing.
-    (When Qt is involved, both SimMessageQueue and SimReplicator need to
-    inherit from QObject.)
+    the ``QObject`` and ``Signal`` classes are replaced by mocks that do nothing
+    - so in that scenario, the message queue itself does essentially nothing.
+    (When Qt is involved, both ``SimMessageQueue`` and ``SimReplicator`` need to
+    inherit from ``QObject``.)
     """
     STATUS_STARTED = "Started"
     STATUS_COMPLETED = "Completed"
@@ -82,7 +85,7 @@ class SimMessageQueue(QObject):
     @property
     def queue(self):
         """
-        Return the underlying multiprocessing Queue
+        Return the underlying ``multiprocessing.Queue``
         """
         return self.__queue
 
@@ -90,7 +93,7 @@ class SimMessageQueue(QObject):
         """
         Start listening for messages on the queue from a new thread.
         Emit a signal for each message received.  Exit after receiving
-        a sentinal value of None.
+        a sentinal value of ``None``.
         """
         def listen():
             msg = self.__queue.get()
@@ -118,7 +121,7 @@ class SimMessageQueue(QObject):
 
     def stop_listening(self):
         """
-        Tell the listener to exit by putting a sentinal None value in the
+        Tell the listener to exit by putting a sentinal ``None`` value in the
         queue.  Then join the thread, which should exit.
         """
         assert self.__listenerThread, "listener thread not set"
@@ -129,16 +132,18 @@ class SimMessageQueue(QObject):
 
 class SimMessageQueueSender(object):
     """
-    Wraps a multiprocessing Queue (created by a SimMessageQueue), providing
-    methods to send the types of messages that SimMessageQueue expects
+    Wraps a multiprocessing Queue (created by a :class:`SimMessageQueue`),
+    providing methods to send the types of messages that SimMessageQueue expects
     to receive.
 
     The standard use case:
-    1.  Main UI (or equivalent process) creates a SimMessageQueue
-    2.  Main UI passes the SimMessageQueue.queue to child process(es)
-        (initiated via multiprocessing Pool or Process)
-    3.  Each child process creates a SimMessageQueueSender with that queue,
-        and uses it to send messages back to the main UI.
+    
+      1.  Main UI (or equivalent process) creates a ``SimMessageQueue``
+      2.  Main UI passes the py:property:`SimMessageQueue.queue` to child
+          process(es) (initiated via multiprocessing ``Pool`` or ``Process``)
+      3.  Each child process creates a ``SimMessageQueueSender`` with that 
+          queue, and uses it to send messages back to the main UI.
+        
     """
     def __init__(self, run, queue):
         """
@@ -151,6 +156,7 @@ class SimMessageQueueSender(object):
 
     def send_status_message(self, status):
         """
+        Put a status message into the queue.
         """
         msgs = (SimMessageQueue.STATUS_CANCELLED,
                 SimMessageQueue.STATUS_COMPLETED,
@@ -161,13 +167,14 @@ class SimMessageQueueSender(object):
 
     def send_progress_message(self, pctComplete):
         """
+        Put a progress message into the queue.
         """
         assert 0 <= pctComplete and pctComplete <= 100, "Invalid progress value"
         self.queue.put((self.run, _PROGRESS_MSG_TYPE, pctComplete))
 
 
 
-
+@apidocskip
 def sendMsgsTest(run, queue):
     """
     This test function cannot be defined in the if __name__ == '__main__'
