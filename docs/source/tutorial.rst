@@ -3,6 +3,7 @@ Tutorial
 =====================
 
 .. _bank-1-tutorial-label:
+
 Bank Model: Round 1
 ===================
 
@@ -142,6 +143,7 @@ we can finally tell the entity source how to generate entities and processes::
 
     source.add_entity_generator(Customer, BankTransaction, interarrivaltime_generator)
 
+.. _bank-1-tutorial-single-execution-label:
 
 Executing the Model
 -------------------
@@ -175,7 +177,8 @@ locations, resources and entities during a simulation run, writes those data
 to a temporary output database, and returns a `SimResult` object that can
 generate a tabular report from that database. Via the use of a context manager,
 the database is deleted once the SimResult object goes out of scope. In this
-case, we generated a summary report, the left-hand side of which is shown below::
+case, we generated a summary report, the left-hand side of which is shown 
+below::
 
     Run 1 execution complete: 60431 events processed. Process Time: 2.66143536567688
     simprovise.simulation INFO:	348	Simulation result created for output DB C:\Users\hklei\AppData\Local\Temp\tmpb7ul4icf.simoutput isTemporary: True
@@ -209,22 +212,26 @@ case, we generated a summary report, the left-hand side of which is shown below:
 A few notes/observations:
 
 * The Teller utilization averages 75%, which is what we would expect (4 tellers, 
-  mean one customer arrival per minute, mean 3 minutes service time per teller visit)
-* The various location Entries represent the number of entities (customers) entering
-  per 1,000 minute batch. The mean value of 997 tracks with one arrival per minute
-* The most relevant measures are the mean queue time and mean queue population (length)
+  mean one customer arrival per minute, mean 3 minutes service time per teller 
+  visit)
+* The various location Entries represent the number of entities (customers) 
+  entering per 1,000 minute batch. The mean value of 997 tracks with one 
+  arrival per minute
+* The most relevant measures are the mean queue time and mean queue population 
+  (length)
 * The output report has several data display options and can also be saved in
   CSV format; see :doc:`output_database` for details.
-* While we typically delete the raw output database after generating report(s), it can
-  be saved for further analysis
+* While we typically delete the raw output database after generating report(s), 
+  it can be saved for further analysis
 
+.. _bank-1-tutorial-multiple-replications-label:
 
 Running Multiple Replications
 -----------------------------
 
-Simprovise also supports running multiple replications of a simulation model, with each 
-replication automatically using a different set of random number streams. To do so,
-use `Simulation.replicate()`::
+Simprovise also supports running multiple replications of a simulation model, 
+with each replication automatically using a different set of random number 
+streams. To do so, use ``Simulation.replicate()``::
 
     if __name__ == '__main__':
         warmupLength = SimTime(100, tu.MINUTES)
@@ -236,9 +243,10 @@ use `Simulation.replicate()`::
                                   fromRun=1, toRun=nruns) as simResult:
             simResult.print_summary()
 
-In this case, we are doing ten replications. The maximum number of replications (really, 
-the maximum `toRun` value) is configurable via .ini configuration files (See :doc:`configuration`); 
-the default maximum is generally 100. The generated summary report::
+In this case, we are doing ten replications. The maximum number of replications 
+(really, the maximum `toRun` value) is configurable via .ini configuration 
+files (See :doc:`configuration`); the default maximum is generally 100. The 
+generated summary report::
 
     ----------------------------------------------------------------------------------------------------------------------------------------------
                                                                Results: 10 Replications                                                           
@@ -268,15 +276,16 @@ the default maximum is generally 100. The generated summary report::
 
 
 .. _bank-1-event-tracing-tutorial-label:
+
 Event Tracing
 -------------
 
-Simprovise also provides a event tracing feature, generating a report of the key simulation
-events - entity move_to()s, entity acquisition and release of resources, and resource down
-time (more on that below).
+Simprovise also provides a event tracing feature, generating a report of the 
+key simulation events - entity move_to()s, entity acquisition and release of 
+resources, and resource down time (more on that below).
 
-Tracing can be turned on or off via settings in the [SimTrace] configuration file section.
-These settings also provide the ability to:
+Tracing can be turned on or off via settings in the [SimTrace] configuration 
+file section. These settings also provide the ability to:
 
 * Limit the number of events traced
 * Specify either output as either a CSV file or formatted text
@@ -373,13 +382,14 @@ The output now looks like this::
 
 
 .. _bank-2-tutorial-label:
+
 Bank Model Round 2: Adding A Merchant Teller
 =============================================
 
 Our second model, bank2.py, will expand on :ref:`bank1 <bank-1-tutorial-label>` 
-by dividing our customers into two types: merchant customers and regular customers,
-with separate queues for each. We will also include two corresponding types of 
-tellers.
+by dividing our customers into two types: merchant customers and regular 
+customers, with separate queues for each. We will also include two 
+corresponding types of tellers.
 
 In this model merchant customers enter the ban and join the merchant queue.
 When they reach the front of the line, they are assigned to the next 
@@ -638,6 +648,7 @@ Simulation Results/Analysis
 
 
 .. _bank-3-tutorial-label:
+
 Bank Model Round 3: Adding Assignment Flexibility
 =================================================
 
@@ -792,6 +803,7 @@ using an Element ID. (The bank and sink are top-level objects; the bank's
 teller counter location could be accessed via element ID 'Bank.TellerCounter')
 
 .. _bank-4-tutorial-label:
+
 Bank Model Round 4: Abandoning the Queue and Adding Custom Data Collection
 ==========================================================================
 
@@ -800,6 +812,7 @@ customers; if the queue is taking to long, they will bail out of the line
 and leave the bank.
 
 .. _bank-5-tutorial-label:
+
 Bank Model Round 5: Adding Breaks and Custom Down Time Algorithms
 =================================================================
 

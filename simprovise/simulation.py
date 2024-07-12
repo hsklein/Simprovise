@@ -68,7 +68,7 @@ class Simulation(object):
         This method is designed to be called directly from the __main__ 
         scope of a model script, e.g.:
 
-           with Simulation.execute(warmupLength, batchLength) as simResult:
+           with Simulation.execute(warmuplen, batchlen, nbatches) as simResult:
                # Do something with the simulation result
                
         The output database resulting from the simulation run may optionally
