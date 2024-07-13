@@ -32,6 +32,7 @@ from simprovise.core.simtime import SimTime
 from simprovise.core.datacollector import SimDataCollector
 from simprovise.core.simclock import SimClock
 from simprovise.core import SimError, simrandom
+from simprovise.core.apidoc import apidocskip
 
 logger = SimLogging.get_logger(__name__)
 
@@ -226,18 +227,35 @@ class SimRunControlScheduler(QObject):
     
     .. note::
     
-      This code is from a time when the GUI operated in the same process
-      as the simulation event processor. A redesign is in order if the
+      This code is from a time when a GUI operated in the same process
+      as the simulation execution itself. Some redesign is in order if the
       simulation and GUI are to operate in separate processes. 
       
-      This code is called by the event processor and emits Qt signals directly,
-      which won't work if the GUI is not in the same process as the event
-      processor. A message queue (or something equivalent) would be required
-      to act as an intermediary (as it does for replications occurring
-      in their own process.)
+      This code is operates in the simulation process and emits Qt
+      ``RunControlMessage`` signals directly, which won't work if the GUI is
+      not in the same process. Progress messages are sent through a
+      message queue; the run control messages would have to be as well.
       
       The data collection end-of-warmup/batch code works just fine, it's
       just the Qt signals that are problematic.
+      
+    :param model:                The :class:`~simprovise.core.model.SimModel`
+                                 to be executed.
+    :type model:                 :class:`~simprovise.core.model.SimModel`
+    
+    :param runControlParameters: The run control parameters object
+    :type runControlParameters:  :class:`runControlParameters`    
+    
+    :param progressIntervalPct:  The interval, as a percentage of total
+                                 simulation run length, between progress
+                                 update messages.
+    :type progressIntervalPct:   ``int`` in range [1-100]  
+    
+    :param msgQueue:             The SimMessageQueue on which to place
+                                 progress update messages. (if ``None``, no
+                                 progress messages will be sent)
+    :type msgQueue:              :class:`~.messagequeue.SimMessageQueue` or ``None`` 
+
         
     """
     RunControlMessage = Signal(str)
@@ -253,42 +271,93 @@ class SimRunControlScheduler(QObject):
 
     @property
     def model(self):
+        """
+        :return: The model being executed, from input run control parameters
+        :rtype:  :class:`~simprovise.core.model.SimModel`
+        
+        """
         return self.__model
 
     @property
     def warmup_length(self):
+        """
+        :return: The simulation warmup length, from input run control parameters
+        :rtype:  :class:`~simprovise.core.simtime.SimTime`
+        
+        """
         return self.__runControlParameters.warmup_length
 
     @property
     def batch_length(self):
+        """
+        :return: The simulation batch length, from input run control parameters
+        :rtype:  :class:`~simprovise.core.simtime.SimTime`
+        
+        """
         return self.__runControlParameters.batch_length
 
     @property
     def nbatches(self):
+        """
+        :return: The number of batches to run in the simulation, from input
+                 run control parameters
+        :rtype:  ``int`` > 0
+        
+        """
         return self.__runControlParameters.nbatches
 
     @property
     def run_number(self):
+        """
+        :return: The run number of the simulation, from input run control
+                 parameters
+        :rtype:  ``int`` > 0
+        
+        """
         return self.__runControlParameters.run_number
 
     @property
     def run_length(self):
+        """
+        :return: The total simulation run length, calculated from input run
+                 control parameters
+        :rtype:  :class:`~simprovise.core.simtime.SimTime`
+        
+        """
         return self.warmup_length + (self.batch_length * self.nbatches)
 
+    # TODO - confirm that this is an internal method, and rename accordingly
+    @apidocskip
     def initialize_batch(self, batchNumber):
         """
+        Initializes all of the model datasets for a batch.
+        
+        :param batchNumber: The batch to initialize.
+        :type batchNumber:  ``int`` > 0 and <= :meth:`nbatches`
+        
         """
         for dset in self.model.datasets:
             dset.initialize_batch(batchNumber)
 
+    # TODO - confirm that this is an internal method, and rename accordingly
+    @apidocskip
     def finalize_batch(self, batchNumber):
         """
+        Finalizes all of the model datasets for a batch when the simulation
+        of that batch is complete.
+        
+        :param batchNumber: The batch to finalize.
+        :type batchNumber:  ``int`` > 0 and <= :meth:`nbatches`
+        
         """
         for dset in self.model.datasets:
             dset.finalize_batch(batchNumber)
 
     def warmup_complete(self):
         """
+        Perform processing - finalization of batch 0 (the warmup)
+        and initialization of batch 1 - at the end of the simulation
+        warmup period.
         """
         logger.info("Warmup complete at %s", SimClock.now())
         SimDataCollector.reset_all()
@@ -303,6 +372,15 @@ class SimRunControlScheduler(QObject):
         self.RunControlMessage.emit(formattedMsg)
 
     def batch_complete(self, batchNumber):
+        """
+        Perform processing - finalization of one batch ``batchNumber``,
+        and initialization of the next batch 1 - at the end of batch
+        ``batchNumber``.
+        
+        :param batchNumber: The number of the just-completed batch
+        :type batchNumber:  ``int`` > 0 and <= :meth:`nbatches`
+
+        """
         logger.info("Batch %d complete at %s", batchNumber, SimClock.now())
         self.finalize_batch(batchNumber)
         if batchNumber < self.nbatches:
@@ -317,6 +395,10 @@ class SimRunControlScheduler(QObject):
 
     def progress(self, progressPct):
         """
+        Send a progress message by putting it into the message queue, if any.
+        
+        :param progressPct: The percent-complete of the simulation run
+        :type progressPct:  ``int`` in range [1-100]
         """
         self._send_progress_message(progressPct)
 
@@ -326,8 +408,9 @@ class SimRunControlScheduler(QObject):
 
     def schedule_run_control_events(self):
         """
-        Schedule warmup and batchComplete events, which reset statistics and output a
-        messag to the status bar. (Also outputs a "Starting simulation" message
+        Schedule warmup and batchComplete events, which reset statistics and
+        output a message to the status bar via Qt signal (see note above).
+        (Also outputs a "Starting simulation" message.)
         """
         if self.warmup_length > 0:
             warmupCompleteEvent = WarmupCompleteEvent(self)

@@ -24,20 +24,27 @@ The ``runcontrol`` package consists of three modules:
   - Scheduling :class:`SimEvents <~simprovise.core.simevent.SimEvent>`
     that trigger end-of-warmup and end-of-batch processing.
 
-.. note::
+.. warning::
 
     The Qt interfaces were built for a Simprovise prototype that included a GUI.
     That GUI has been stripped from the current release as part of an effort
     to separate base/core functionality from other tools (such as a GUI).
     To what extent the Qt support in these classes will work for a future GUI 
-    application is to be determined. The messages are processed through
-    a :class:`~simprovise.runcontrol.messagequeue.SimMessageQueue` are likely
-    to work (or be close to working) with a
-    :class:`~simprovise.runcontrol.replication.SimReplicator` as long as it
-    is running in the same process as a GUI. 
+    application is to be determined. Most messages are processed through
+    a :class:`~simprovise.runcontrol.messagequeue.SimMessageQueue` and are 
+    likely to work (or be close to working) with a
+    :class:`~simprovise.runcontrol.replication.SimReplicator` as long as 
+    that replicator is running in the same process as a GUI. 
+    
+    The :class:`~simprovise.runcontrol.simruncontrol.SimRunControlScheduler`,
+    on the other hand, does emit a Qt Signal (``RunControlMessage``) directly
+    (it also puts messages into the ``SimMessageQueue``). Those signals worked
+    for the prototype where the simulation and the GUI operated in the same
+    process; that is unlikely to be the case in the future. So those signals
+    will have to replaced.
 
-    *TLDR*: The Qt objects in this package are currently replaced by no-op 
-    mock objects. They may or may not work (using "real"Qt objects) for
+    **TLDR**: The Qt objects in this package are currently replaced by no-op 
+    mock objects. They probably will not all work (using "real"Qt objects) for
     future Qt-based applications built on top of Simprovise without 
     modification.
 
