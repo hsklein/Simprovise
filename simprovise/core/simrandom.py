@@ -211,10 +211,13 @@ class SimDistribution(object):
     """
     The SimDistribution class is a namespace defining a number of static
     methods used to generate values from both deterministic and pseudo-random
-    distributions.
+    distributions. In the case of pseudo-random distributions, these methods
+    are essentially wrappers for a 
+    `NumPy distribution <https://numpy.org/doc/1.18/reference/random/generator.html#distributions>`_
+    of the same name.
 
-    These methods (when parameterized with their passed arguments) return
-    generators that yield samples from a specified distribution.
+    All of these methods (when parameterized with their passed arguments) 
+    return generators that yield samples from a specified distribution.
     ``uniform(a, b, streamNum=5)``, for example, returns a generator that
     produces numbers uniformly distributed between ``a`` and ``b`` based
     on sampling from random number stream ``5``. All of the methods for
@@ -519,7 +522,44 @@ class SimDistribution(object):
             msg = "Invalid (non-numeric) weibull distribution parameter(s): a ({0})"
             raise SimError(_RAND_PARAMETER_ERROR, msg, a)        
         
-        f =  lambda: _rng[streamNum-1].weibull(*scalarArgs)
+        f = lambda: _rng[streamNum-1].weibull(*scalarArgs)
+        return SimDistribution._random_generator(f, streamNum, timeUnit)
+    functionDict["weibull"] = weibull
+
+    @staticmethod
+    def wald(mean, scale, *, streamNum=1):
+        """
+        Returns a generator that returns pseudo-random values from a wald
+        (inverse gaussian) distribution with specified mean and
+        scale parameters. 
+                        
+        :param mean:      Distribution mean, must be > 0
+        :type mean:       Either numeric or a :class:`~.simtime.SimTime`
+                        
+        :param scale:     Distribution scale parameter, must be > 0
+        :type scale:      Either numeric or a :class:`~.simtime.SimTime`
+
+        :param streamNum: Identifies the random stream to sample from.
+        :type streamNum:  `int` in range [1 - :func:`max_streams`]
+
+        """
+        scalarArgs, timeUnit = SimDistribution._scalar_args(mean, scale)
+        try:
+            mean = float(scalarArgs[0])
+            scale = float(scalarArgs[1])
+        except ValueError:
+            msg = "Invalid wald distribution parameters: mean ({0}) or scale ({1}) is non-numeric"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, mean)
+        
+        if mean <= 0:
+            msg = "Invalid wald distribution mean parameter: ({0}); must be > 0"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, mean, scale)
+        
+        if scale <= 0:
+            msg = "Invalid wald distribution scale parameter: ({0}); must be > 0"
+            raise SimError(_RAND_PARAMETER_ERROR, msg, scale)
+                   
+        f = lambda: _rng[streamNum-1].wald(mean, scale)
         return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["weibull"] = weibull
 
@@ -543,7 +583,7 @@ class SimDistribution(object):
             msg = "Invalid (non-numeric) pareto distribution parameter(s): a ({0})"
             raise SimError(_RAND_PARAMETER_ERROR, msg, alpha)        
 
-        f =  lambda: _rng[streamNum-1].pareto(*scalarArgs)
+        f = lambda: _rng[streamNum-1].pareto(*scalarArgs)
         return SimDistribution._random_generator(f, streamNum, timeUnit)
     functionDict["pareto"] = pareto
 
@@ -851,8 +891,8 @@ if __name__ == '__main__':
     for n in SimDistribution.function_names():
         print(n)
 
-    f = SimDistribution.function('exponential')
-    gen = f(10)
+    fn = SimDistribution.function('exponential')
+    gen = fn(10)
     total = 0
     cpustart = time.process_time()
     for i in range(100000):
@@ -945,6 +985,12 @@ if __name__ == '__main__':
     for i in range(1000):
         total += next(gen)
     print("SimDistribution number_generator weibull, actual mean:", total / 1000)
+
+    gen = SimDistribution.wald(5.0, 2.0)
+    total = 0
+    for i in range(1000):
+        total += next(gen)
+    print("SimDistribution number_generator wald, actual mean:", total / 1000)
 
     gen = SimDistribution.pareto(1.0)
     total = 0

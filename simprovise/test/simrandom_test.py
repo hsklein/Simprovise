@@ -207,6 +207,12 @@ class SimDistributionSmokeTests(SimDistributionTestsBase):
         mean = self._run_gen(gen)
         self.assertAlmostEqual(mean, 5 * 0.4, delta=0.05)
         
+    def testwald(self):
+        "Test: SimDistribution.wald generator"
+        gen = SimDistribution.wald(5.0, 0.5)
+        mean = self._run_gen(gen)
+        self.assertAlmostEqual(mean, 5.0, delta=0.05)
+        
     
 class SimDistributionSimTimeTests(SimDistributionTestsBase):
     "SimDistribution Tests with SimTime parameters"
@@ -241,6 +247,19 @@ class SimDistributionSimTimeTests(SimDistributionTestsBase):
                                       SimTime(1, tu.MINUTES))
         mean = self._run_gen(gen)
         self.assertAlmostEqual(mean.value, 35, delta=0.15)
+        
+    def testWald1(self):
+        "Test: SimDistribution.wald with SimTime, scalar parameters"
+        gen = SimDistribution.wald(SimTime(1.0, tu.MINUTES), 0.5)
+        mean = self._run_gen(gen)
+        self.assertAlmostEqual(mean.value, 1, delta=0.1)
+        
+    def testWald2(self):
+        "Test: SimDistribution.wald with SimTime, SimTime parameters"
+        gen = SimDistribution.wald(SimTime(1.0, tu.MINUTES),
+                                   SimTime(30, tu.SECONDS))
+        mean = self._run_gen(gen)
+        self.assertAlmostEqual(mean.value, 1, delta=0.1)
         
         
     
@@ -409,6 +428,22 @@ class SimDistributionInvalidParameterTests(SimDistributionTestsBase):
     def testbinomial6(self):
         "Test: SimDistribution.binomial with rho > 1 raises"       
         self.assertRaises(SimError, SimDistribution.binomial, 2, 1.1)
+        
+    def testwald1(self):
+        "Test: SimDistribution.wald with non-numeric mean parameter raises"       
+        self.assertRaises(SimError, SimDistribution.wald, 'abc', 0.5)
+        
+    def testwald2(self):
+        "Test: SimDistribution.wald with non-numeric scale parameter raises"       
+        self.assertRaises(SimError, SimDistribution.wald, 2.0, 'abc')
+        
+    def testwald3(self):
+        "Test: SimDistribution.wald with non-positive mean parameter raises"       
+        self.assertRaises(SimError, SimDistribution.wald, 0.0, 1.5)
+        
+    def testwald3(self):
+        "Test: SimDistribution.wald with non-positive scale parameter raises"       
+        self.assertRaises(SimError, SimDistribution.wald, 2.0, -0.5)
        
         
 def makeTestSuite():
