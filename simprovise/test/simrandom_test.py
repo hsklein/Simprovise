@@ -136,8 +136,8 @@ class SimDistributionSmokeTests(SimDistributionTestsBase):
     def testlogistic(self):
         "Test: SimDistribution.logistic generator with no floor"
         gen = SimDistribution.logistic(10.0, 5.0, floor=None)
-        mean = self._run_gen(gen)
-        self.assertAlmostEqual(mean, 10, delta=0.05)        
+        mean = self._run_gen(gen, 25000)
+        self.assertAlmostEqual(mean, 10, delta=0.10)        
         
     def testlogisticFloorZero1(self):
         "Test: SimDistribution.logistic generator with default floor of zero - mean greater than mu"

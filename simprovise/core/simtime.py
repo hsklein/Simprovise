@@ -59,32 +59,6 @@ def base_unit():
     """
     return _base_unit
 
-def set_base_unit(unit):
-    """
-    Set the base unit for the model (Unit.SECONDS, MINUTES, HOURS) or None if
-    simulated time for the model is dimensionless.
-    
-    TODO base_unit should probably be set table via environment variable
-    and/or configuration file upon first call to base_unit()
-    Even better, if a model is configured to be dimensionless, the
-    SimTime constructor should be a function that returns the input, or
-    something like importing decimal.Decimal as SimTime
-    
-    
-    Regardless, changing the base_unit in code must be done carefully.
-    Changing from a dimensioned base time unit (seconds, minutes or
-    hours) to a dimensionless setting is particularly fraught, since we
-    cannot convert a SimTime object from one to the other.
-    
-    :param unit: simttime.SECONDS, tu.MINUTES, tu.HOURS or None
-    :type unit:  int (range 0-2)
-    """
-    global _base_unit
-    if unit in Unit or unit is None:
-        _base_unit = unit
-    else:
-        msg = "Invalid unit {0} passed to set_base_unit - must be SECONDS, MINUTES, HOURS or None"
-        raise SimError(_ERROR_NAME, msg, unit)
 
 @apidoc
 class SimTime(object):
