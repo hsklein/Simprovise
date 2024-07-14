@@ -288,10 +288,10 @@ class SimDistributionInvalidParameterTests(SimDistributionTestsBase):
         self.assertRaises(SimError, SimDistribution.triangular, 7, 14, 10)
         
     def testtriangular6(self):
+        "Test: SimDistribution.triangular with high < mode SimTime raises"       
         low = SimTime(10, tu.SECONDS)
         mode = SimTime(1, tu.MINUTES)
         high = SimTime(50, tu.SECONDS)
-        "Test: SimDistribution.triangular with high < mode SimTime raises"       
         self.assertRaises(SimError, SimDistribution.triangular, low, mode, high)
         
     def testnormal1(self):
