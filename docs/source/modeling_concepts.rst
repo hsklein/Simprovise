@@ -348,6 +348,7 @@ module:
 * :meth:`~simprovise.core.simrandom.SimDistribution.triangular`
 * :meth:`~simprovise.core.simrandom.SimDistribution.uniform`
 * :meth:`~simprovise.core.simrandom.SimDistribution.weibull`
+* :meth:`~simprovise.core.simrandom.SimDistribution.wald`
 
 These methods all take distribution parameters and an optional 
 :ref:`random stream number <random-number-streams-concept-label>` as 
