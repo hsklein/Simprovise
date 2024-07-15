@@ -446,6 +446,7 @@ class SimTransaction(object):
         assert response, "Null response returned from waitForResponse()" + str(self._greenlet)
         return response
 
+    @apidocskip
     def wait_for(self, amount):
         """
         Wait (pause transaction execution) for a fixed amount of simulated time.

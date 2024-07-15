@@ -190,6 +190,7 @@ Transactions and Processes
 ==========================
 
 .. autoclass:: simprovise.modeling.transaction.SimTransaction
+    :members: 
 
 .. autoclass:: simprovise.modeling.process.SimProcess
     :members:

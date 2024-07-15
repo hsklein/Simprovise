@@ -343,7 +343,7 @@ Some of the default tabular output from our bank model is shown below::
        11.19 Customer 9      Acquiring Bank.TellerCounter.Teller                                
 
 It is also possible to add data to this table within model code via 
-calls to :function:`~simprovise.core.simtrace.add_trace_column`, where each 
+calls to :func:`~simprovise.core.simtrace.add_trace_column`, where each 
 call specifies an object and property value to add to each trace row; 
 e.g the following code will show the number of available tellers at the time 
 of each event::
@@ -409,7 +409,7 @@ The behavior described above is conceptually modeled as follows:
   We create one instance of each of these classes, with capacities equal to
   the number of merchant and regular tellers working at the bank.
 * We assign both teller instances to a 
-  :ref:`resource pool <resource-pool--concept-label>`, which manages customer
+  :ref:`resource pool <resource-pool-concept-label>`, which manages customer
   assignment to both types of tellers
 * We add a priority function to the resource pool. This function takes one
   argument - the resource request object - and returns a priority. The resource
@@ -468,7 +468,7 @@ concise::
 
 Then we expand the class definition of our Bank location to include
 both types of tellers and two queues. As noted above, this model also introduces
-the concept of a :ref:`resource pool <resource-pool--concept-label>`. 
+the concept of a :ref:`resource pool <resource-pool-concept-label>`. 
 The bank now has a resource pool that includes all of the tellers, both
 merchant and regular. The code for our bank transaction processes 
 (below) will demonstrate how the use of a pool can help us::

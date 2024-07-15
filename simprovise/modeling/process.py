@@ -453,7 +453,8 @@ class SimProcess(SimTransaction):
              
     def wait_for(self, amount, *, extend_through_downtime=False):
         """
-        Wait (pause transaction execution) for a fixed amount of simulated time.
+        Wait (pause process execution) for a basically fixed amount of
+        simulated time.
         
         :param amount: Length of wait. Can be specified as a
                        :class:`~.simtime.SimTime` or a scalar numeric (int or
@@ -471,8 +472,8 @@ class SimProcess(SimTransaction):
                                         If False (the default) just wait the
                                         specified time amount, and require the
                                         caller to handle any
-                                        :class:`~.resource.SimResourceDownException`s
-                                        that are raised.
+                                        :class:`~.resource.SimResourceDownException` 
+                                        exceptions that are raised.
         :type extend_through_downtime:  `bool`
 
         """

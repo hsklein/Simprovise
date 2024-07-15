@@ -25,12 +25,14 @@ contain resources, entity sources and entity sinks (as described below).
 In our bank example, teller windows and the customer queue can be represented
 as locations.
 
-A 'Process' represents the activity or task(s) that need to be accomplished by (or on
-behalf of) an entity. Every entity is associated with its own process object. The
-process typically reads as a set of instructions. In the case of our bank example,
-that would look something like "enter the customer queue, wait for a teller, go
-to the teller window, ask the teller to perform a transaction, wait for the
-teller to complete the transaction, and then leave the bank."
+A 'Process' represents the activity or task(s) that need to be accomplished by
+(or on behalf of) an entity. Every entity is associated with its own process 
+object. The process typically reads as a set of instructions. In the case of 
+our bank example, that would look something like "enter the customer queue, 
+wait for a teller, go to the teller window, ask the teller to perform a 
+transaction, wait for the teller to complete the transaction, and then leave 
+the bank." Processes are the Simprovise objects that can "block" for
+simulated time, e.g. during waits.
 
 'Resources' are the physical or logical objects needed to perform a process.
 They are typically a system constraint. In our example, tellers are resources - the
@@ -48,19 +50,70 @@ sink. In our bank model, the "leave the bank" portion of the process would be
 specified more along the lines of "move to the entity sink." Every model
 requires at least one entity sink.
 
+`Counters` are, as the name implies, objects that can be incremented and
+decremented. A counter may have a finite `capacity`, in which case it can\
+serve as a modeling construct - when a counter is at capacity and is
+incremented by a `Process`, that `increment` call will block until the
+counter capacity is available.
+()Counter values can serve as measurements taken for simulation 
+output.)
+
+A central feature of the simulator is a `simulation clock` which advances
+over `simulated time`. Under the covers, various components of the simulation
+model generate *events* scheduled for a specific simulated time; the 
+simulator's event processor works by reading the next scheduled event,
+advancing the *simulation clock* to the event's scheduled *simulated time*
+and then processing/executing the event. Many attributes of a model are
+specified in simulated time via class 
+:class:`~simprovise.core.simtime.SimTime`.
+
+Variable and stochastic events in a simulated system are typically modeled
+by sampling from a probability distribution tied to a *pseudo-random
+number stream*. The Simprovise infrastructure provides the modeler with 
+access to  a set of multiple independent random streams while also providing 
+separate independent sets for each simulation run when doing analysis 
+through multiple independent *replications*.
+
 .. _agent-concept-label:
 
 Agents
 ======
+
+Several key components of Simprovise act as **agents**. Agents work
+with each other by exchanging *messages*:
+
+* Messages may be *synchronous* or *asynchronous*. In the case of synchronous
+  messaging, the sender will wait for a response from the receiver. In
+  the case of asynchronous messaging, the sender will continue running/
+  processing after sending, and handle the response (if any) when it 
+  arrives.
+
+* The receiver of a message does not have to act on it (process the
+  message) right away; if the message is not immediately processed, it is
+  placed into a queue; the receiver will examine and attempt to process
+  messages in the queue later, typically when triggered by other simulation 
+  events.
+  
+For example, an *entity* (which is also an agent) acquires a *resource*
+by sending a message to the resource's *assignment agent* and then waiting 
+for a response.
+
+It is important to note that much if not all of this message passing
+activity happens behind the scenes; in many cases the Simprovise model 
+builder does not have to even be aware of it. 
+In some cases, however, modeling behavior is best implemented by 
+creating a subclass of a Simprovise agent with specialized code for
+some of the agent's actions, e.g. processing it's message queue.
 
 .. _transient-object-concept-label:
 
 Transient Objects
 =================
 
-'Transient Objects' are model objects that exist for only part of a simulation run.
-
-
+**Transient Objects** are model objects that exist for only part of a 
+simulation run. :ref:`entity-concept-label` (and their
+associated :ref:`*processes* <process-concept-label>`) are the 
+primary transient object type in Simprovise.
 
 .. _entity-concept-label:
 
@@ -84,6 +137,15 @@ both the entity and process objects leave the simulation.
 Static Objects
 ==============
 
+**Static objects** are objects that are created at the start of a simulation
+and exist for the entire simulation. In Simprovise, static objects include:
+
+* :ref:`location-concept-label`
+* :ref:`entity-source-concept-label`
+* :ref:`entity-sink-concept-label`
+* :ref:`resource-concept-label`
+* :ref:`resource-pool-concept-label`
+
 .. _location-concept-label:
 
 Locations
@@ -93,7 +155,8 @@ Locations
 nested - i.e., locations can contain other sublocations. Locations can also
 contain resources, entity sources and entity sinks.
 
-Moveable objects - primarily entities - can move between locations.
+Moveable objects - primarily 
+:ref:`entities <entity-concept-label>` - can move between locations.
 
 In our bank example, teller windows and the customer queue can be represented
 as locations.
@@ -104,18 +167,22 @@ Entity Sources
 --------------
 
 **Entity Sources** are location objects that create new entities and place them in
-the simulation. New entities are always paired with a process object (also 
+the simulation. New entities are always paired with a 
+:ref:`*process object* <process-concept-label>` (also 
 created by the entity source). Once an entity is created and initialized,
 the paired process is started, which will send the entity on it's way.
 The typical :meth:`run` of a process will begin by immediately moving the
 entity to another location.
 
-Entity Sources create entities and processes via one or more Entity
-Generators. These generators typically specify:
+Entity Sources create entities and processes via one or more 
+*Entity Generators*. These generators typically specify:
 
 * The class of the entity objects to create
 * The class of paired process objects to create
 * A distribution defining the rate at which entities are created
+
+(See :meth:`~simprovise.modeling.entitysource.SimEntitySource.add_entity_generator`
+for details and an example.)
 
 .. _entity-sink-concept-label:
 
@@ -123,13 +190,14 @@ Entity Sinks
 ------------
 
 **Entity Sinks** are locations objects where entities go to exit the simulation.
-Every process :meth:run method should end by moving the entity to an entity
-sink.
+Every process
+:meth:`~simprovise.modeling.transaction.SimTransaction.run` 
+method should end by moving the entity to an entity sink.
 
 .. _resource-concept-label:
 
 Resources
-=========
+---------
 
 **Resources** are capacity-constrained objects required to complete some or 
 all parts of a process. In our bank demo/tutorial, tellers are resources.
@@ -192,7 +260,7 @@ not reflect the required behavior of modeling project, the modeler
 may implement customized assignment logic by subclassing an assignment
 agent class.
 
-.. _resource-pool--concept-label:
+.. _resource-pool-concept-label:
 
 Resource Pools
 --------------
