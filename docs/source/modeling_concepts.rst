@@ -9,8 +9,11 @@ construct and represent a model in Simprovise. These building blocks include:
 * :ref:`location-concept-label`
 * :ref:`process-concept-label`
 * :ref:`resource-concept-label`
-* Entity :ref:`entity-source-concept-label`
-* Entity :ref:`entity-sink-concept-label`
+* :ref:`entity-source-concept-label`
+* :ref:`entity-sink-concept-label`
+* :ref:`counter-concept-label`
+* :ref:`simulated-time-concept-label`
+* :ref:`random-number-generation-concept-label`
 
 'Entities' are transitory objects typically representing units of work in a
 simulation model. In a simple model simulating a bank lobby, customers would
@@ -358,10 +361,13 @@ distribution.
 Model builders may use the
 `rest <https://numpy.org/doc/1.18/reference/random/generator.html#distributions>`_
 of NumPy's distributions directly, if so desired, using
-:func:`~simprovise.core.simrandom.get_get_random_generator`.
-
+:func:`~simprovise.core.simrandom.get_random_generator`.
 That 
 `NumPy documentation <https://numpy.org/doc/1.18/reference/random/generator.html#distributions>`_
 also includes a thorough background discussion of those distributions.
 
+:func:`~simprovise.core.simrandom.get_random_generator`
+is also compatible with distributions from the
+`SciPy stats module <https://docs.scipy.org/doc/scipy/reference/stats.html>`_
+as well.
 

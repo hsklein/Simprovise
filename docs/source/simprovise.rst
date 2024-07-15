@@ -21,10 +21,16 @@ See also:
 
 .. simprovise-simulation-label:
 
+Simulation Execution
+====================
+
 .. autoclass:: simprovise.simulation.Simulation
     :members:
-
+    
 .. simprovise-simresult-label:
+
+Simulation Output Reporting
+===========================
 
 .. autoclass:: simprovise.simulation.SimulationResult
     :members:

@@ -191,7 +191,7 @@ def get_random_generator(streamNum=1):
     """
     Returns the pseudo-random number generator for a specified stream,
     for client code that needs to access that directly (e.g., to use
-    a distribution not supported by :class:`SimDistribution`).
+    a distribution not directly supported by :class:`SimDistribution`).
     
     :param streamNum: Identifies the random stream to sample from.
     :type streamNum:  `int` in range [1 - :func:`max_streams`]
