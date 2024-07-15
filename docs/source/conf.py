@@ -43,8 +43,8 @@ html_sidebars = {
     ]
 }
 html_theme_options = {
-    'fixed_sidebar': 'true',
-    'page_width': 'auto'
+#    'fixed_sidebar': 'true', 
+#    'page_width': 'auto'
 }
 
 def setup(app):
