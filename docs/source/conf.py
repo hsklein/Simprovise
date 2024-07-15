@@ -12,7 +12,7 @@ sys.path.insert(0, '../../simprovise')
 project = 'Simprovise'
 copyright = '2024, Howard Klein'
 author = 'Howard Klein'
-release = '0.1'
+release = '0.2.0a'
 
 # -- General configuration ---------------------------------------------------
 # https://www.sphinx-doc.org/en/master/usage/configuration.html#general-configuration
