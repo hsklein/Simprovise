@@ -3,8 +3,9 @@
    You can adapt this file completely to your liking, but it should at least
    contain the root `toctree` directive.
 
-Welcome to Simprovise!
-======================
+=====================
+Simprovise
+=====================
 **Simprovise** is a Python library for discrete event simulation. It offers an
 intuitive API for developing simulation models; it also provides APIs and tools 
 for model execution and output analysis.
