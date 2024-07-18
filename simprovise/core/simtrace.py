@@ -76,7 +76,7 @@ if _trace_enabled:
 # the trace file to that. Otherwise, it will get set/opened by initialize()
 _trace_file = None
 if simconfig.get_trace_destination() == 'stdout':
-    trace_file = sys.stdout
+    _trace_file = sys.stdout
 if _trace_enabled:
     logger.info("Trace output destination: %s", simconfig.get_trace_destination())
      
