@@ -94,9 +94,11 @@ class BaseInterruptEvent(SimEvent):
     In order to (hopefully) avoid simulated race conditions, we set
     event priority as follows:
     Resume (and other normal flow-of-control) events - priority 1
-    Non-timeout-interrupt events - priority 2 
-    Resource Acquire Timeout events - priority 3
-    Assign Resources - priority 4
+    Non-timeout-interrupt events - priority 3 
+    Resource Acquire Timeout events - priority 4
+    Assign Resources - priority 5
+    
+    (holding priority 2 open just-in-case)
     
     These priorities should ensure that:
     - resource releases and acquire requests, both normal and resulting
