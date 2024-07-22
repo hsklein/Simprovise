@@ -822,3 +822,196 @@ schedule is relatively easy; the more challenging problem: how to handle
 customers that the teller is serving when they are supposed to go on break.
 We will implement several approaches (some more realistic than others)
 that demonstrate different Simprovise capabilities in this area.
+
+.. _bank-5-step-a-tutorial-label:
+
+Round 5, Step (a): Refactoring Bank Model 3
+-------------------------------------------
+
+We're going to base this model on the :ref:`third <bank-3-tutorial-label>`
+bank tutorial model, skipping the abandonment feature implemented in `bank4`.
+In this first step, we'll refactor ``bank3.py`` in order to:
+
+* Reduce duplicated code
+* Demonstrate the creation of model-specific modules
+* Split the multi-capacity RegularTeller resource into separate resources
+  (each of capacity 1), which will be needed to implement downtime in
+  subsequent model versions in this tutorial. The model with separate teller
+  resources should behave exactly like it's multi-capacity sibling.
+
+We'll start this iteration by creating `bank5.py`, which will be a module
+defining most of the classes used by our model that we are already
+familiar with:
+
+* ``Customer``, ``RegularCustomer`` and ``MerchantCustomer``
+* ``Teller``, ``RegularTeller`` and ``MerchantTeller``
+* ``TellerPool``
+* ``Bank``
+* ``BankTransaction``
+
+All of the ``Customer`` and ``Teller`` classes, as well as ``TellerPool``, are 
+copied verbatim from ``bank3.py``.
+
+The ``Bank`` class is modified, however::
+
+              
+    class Bank(SimLocation):
+        """
+        A SimLocation that encapsulates all of the objects (resources,
+        queues and locations) that comprise a bank.
+        """
+        __slots__ = ('teller_counter', 'regular_teller', 'merchant_teller',
+                     'teller_pool', 'regular_queue', 'merchant_queue')
+        
+        def __init__(self, name="Bank", nRegularTellers=4, nMerchantTellers=1):
+            super().__init__(name)
+            self.teller_counter = SimLocation("TellerCounter", self)
+            
+            self.regular_tellers = self._make_tellers(RegularTeller,
+                                                      nRegularTellers)
+            self.merchant_tellers = self._make_tellers(MerchantTeller,
+                                                       nMerchantTellers)
+                     
+            self.teller_pool = TellerPool(*self.regular_tellers, 
+                                             *self.merchant_tellers)
+            
+            self.regular_queue = SimQueue("RegularQueue", self)
+            self.merchant_queue = SimQueue("MerchantQueue", self)
+            
+        def _make_tellers(self, tellerClass, ntellers):
+            """
+            Create *n* teller resource objects of a passed class, where *n*
+            is passed as parameter ``ntellers``.
+                """
+            id_range = range(1, ntellers+1)
+            tellerid = tellerClass.__name__ + '{0}'
+            location = self.teller_counter
+            return [tellerClass(tellerid.format(i), location) for i in id_range]
+    
+        @property
+        def available_regular_tellers(self):
+            """
+            A property that returns the number of available regular tellers.
+            Used as a simtrace column (which must be a property)
+            """
+            return self.teller_pool.available(RegularTeller)
+        
+        @property
+        def available_merchant_tellers(self):
+            """
+            A property that returns the number of available merchant tellers.
+            Used as a simtrace column (which must be a property of a simulation
+            element)
+            """
+            return self.teller_pool.available(MerchantTeller)
+
+We are now creating individual regular and merchant tellers, each with 
+capacity 1, via metho :meth:`_make_tellers`, which returns them as a list.
+(The lists are assigned to Bank instance attributes ``regular_tellers`` and
+``merchant_tellers``, respectively.)
+
+We've also added a couple of properties, primarily for the purpose of
+enabling simtrace columns equivalent to the ``available`` property used in prior
+versions of the model. (simtrace columns can reference only element properties,
+not functions.)
+
+Finally, we've re-factored :class:`BankTransaction` to capture the code
+basically common to both of its subclasses::
+
+    class BankTransaction(SimProcess):
+        """
+        Base class for simulated bank transaction classes
+        """
+        @classmethod
+        def get_service_time(cls):
+            """
+            Return the next sample from the BankTransaction subclass
+            service time distribution
+            """
+            return next(cls.servicetime_generator)
+        
+        def __init__(self, queue):
+            super().__init__()
+            self.queue = queue
+            
+        def run(self):
+            bank = SimModel.model().get_static_object("Bank")
+            sink = SimModel.model().get_static_object("Sink")
+            service_time = self.get_service_time()
+            customer = self.entity
+            customer.move_to(self.queue)
+            with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
+                teller = teller_assignment.resource
+                customer.move_to(bank.teller_counter)
+                self.wait_for(service_time)
+            customer.move_to(sink)        
+
+The specific queue to enter after customer creation is specified via
+class initializer (and as we will see, provided by the subclass). The
+service times are provided by a class attribute (``servicetime_generator``)
+defined for each subclass.
+
+The main model script is ``bank5a.py``; it imports ``bank5`` and defines the  
+rest of the model. The changes from bank3 are the BankTransaction subclasses 
+and the "available" simtrace column definitions::
+
+    class RegularTransaction(BankTransaction):
+        """
+        Represents a "regular" transaction by a "regular" (non-merchant)
+        customer.
+        """
+        mean_interarrival_time = SimTime(1, tu.MINUTES)
+        mean_service_time = SimTime(2, tu.MINUTES) 
+        servicetime_generator = SimDistribution.exponential(mean_service_time)
+        
+        def __init__(self):
+            super().__init__(bank.regular_queue)
+        
+    
+    class MerchantTransaction(BankTransaction):
+        """
+        Represents a merchant transaction (by a merchant customer)
+        """
+        mean_interarrival_time = SimTime(4, tu.MINUTES)
+        mean_service_time = SimTime(3, tu.MINUTES)
+        servicetime_generator = SimDistribution.exponential(mean_service_time)
+    
+        def __init__(self):
+            super().__init__(bank.merchant_queue)
+    
+    
+    simtrace.add_trace_column(bank, 'available_regular_tellers',
+                              'RegularTellers: available')
+    simtrace.add_trace_column(bank, 'available_merchant_tellers',
+                              'MerchantTellers: available')
+
+
+
+.. _bank-5-step-b-tutorial-label:
+
+Round 5, Step (b): Add a Simple Teller Break Schedule
+-----------------------------------------------------
+
+For the next iteration, we will add two scheduled fifteen minute breaks for 
+each of the two regular tellers, using classes
+:class:`~simprovise.modeling.downtime.DowntimeSchedule` and
+:class:`~simprovise.modeling.downtime.SimScheduledDowntimeAgent`.
+
+The workday will be defined as nine hours long. The first regular teller
+will get breaks starting two hours and six hours into that day; the 
+second teller will be scheduled for breaks immediately thereafter (2:15
+and 6:15 into the day).
+
+
+
+.. _bank-5-step-c-tutorial-label:
+
+Round 5, Step (c): Finish the Job Before Going on Break
+-------------------------------------------------------
+
+
+
+.. _bank-5-step-d-tutorial-label:
+
+Round 5, Step (c): But Don't Wait Too Long Before Going on Break
+----------------------------------------------------------------

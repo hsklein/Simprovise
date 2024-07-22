@@ -59,21 +59,19 @@ class Teller(SimSimpleResource):
     """
     Base class for teller resources
     """
+    def __str__(self):
+        return self.element_name
 
 class RegularTeller(Teller):
     """
     A teller primarily for regular customers
     """
-    def __str__(self):
-        return "RegularTeller"
 
 class MerchantTeller(Teller):
     """
     A teller primarily for merchant customers
     """
-    def __str__(self):
-        return "MerchantTeller"
-    
+     
 class Bank(SimLocation):
     """
     A simLocation that encapsulates all of the objects (resources,

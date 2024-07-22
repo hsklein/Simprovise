@@ -1,27 +1,31 @@
 #===============================================================================
-# MODULE bank3
+# MODULE bank5a
 #
 # Copyright (C) 2024 Howard Klein - All Rights Reserved
 #
-# Defines the third iteration of the bank demo/tutorial model. This model
-# modifies the teller assignment logic my allowing tellers of either type
-# (merchant or regular) to serve customers of the other type if their "own"
-# queue is empty.
+# The first step in the fifth iteration of the bank demo/tutorial model. 
+# This model will again start from bank3, and eventually add various
+# forms of downtime behavior.
 #
-# This is implemented by creating a model-specific subclass of SimResourcePool
-# with a specialized process_queued_requests() method implementation. This 
-# method is called by the simulation whenever it is time to (at least attempt)
-# to assign resource(s) (tellers, in this case) to entities (customers).
+# This initial step is functionally the same as bank3. The changes:
+#
+# - The BankTransaction classes have been refactored to consolidate code
+#   from the two subclass run() methods into the base class
+#
+# - In preparation for introducing down time, the individual tellers are
+#   now separate resources - e.g., we use three RegularTeller objects instead
+#   of one with capacity 3. (We will need separate resources to take down
+#   individual tellers; taking down a RegularTeller with capacity 3
+#   makes all three down and unavailable)
+#
 #===============================================================================
-import sys
-from simprovise.core import simtime, simtrace
+from simprovise.core import simtrace
 from simprovise.core.simtime import SimTime, Unit as tu
 from simprovise.core.simrandom import SimDistribution
-from simprovise.core.model import SimModel
 
 from simprovise.modeling import (SimEntity, SimEntitySource, SimEntitySink,
-                                 SimProcess, SimLocation,
-                                 SimResourcePool, SimSimpleResource, SimQueue)
+                                 SimProcess, SimLocation, SimResourcePool,
+                                 SimSimpleResource, SimQueue)
 
 from simprovise.simulation import Simulation
 
@@ -57,7 +61,7 @@ class MerchantTeller(Teller):
     A teller primarily for merchant customers
     """
     
-class TellerPool(SimResourcePool):
+class SimTellerPool(SimResourcePool):
     """
     A specialization of SimResourcePool that implements round 3 of
     teller assignment logic: merchant and regular tellers each
@@ -68,6 +72,7 @@ class TellerPool(SimResourcePool):
     merchant queue, then assign that merchant customer to the
     available regular teller.
     """
+               
     def _queued_regular_requests(self):
         """
         Convenience method that returns all queued resource
@@ -140,25 +145,72 @@ class Bank(SimLocation):
     def __init__(self, name="Bank", nRegularTellers=4, nMerchantTellers=1):
         super().__init__(name)
         self.teller_counter = SimLocation("TellerCounter", self)
-        self.regular_teller = RegularTeller("RegularTeller",
-                                            self.teller_counter,
-                                            capacity = nRegularTellers)
         
-        self.merchant_teller = MerchantTeller("MerchantTeller",
-                                              self.teller_counter,
-                                              capacity = nMerchantTellers)
-        
-        self.teller_pool = TellerPool(self.regular_teller, 
-                                         self.merchant_teller)
+        self.regular_tellers = self._make_tellers(RegularTeller,
+                                                  nRegularTellers)
+        self.merchant_tellers = self._make_tellers(MerchantTeller,
+                                                   nMerchantTellers)
+                 
+        self.teller_pool = SimTellerPool(*self.regular_tellers, 
+                                         *self.merchant_tellers)
         
         self.regular_queue = SimQueue("RegularQueue", self)
         self.merchant_queue = SimQueue("MerchantQueue", self)
+        
+    def _make_tellers(self, tellerClass, ntellers):
+        """
+        """
+        id_range = range(1, ntellers+1)
+        tellerid = tellerClass.__name__ + '{0}'
+        location = self.teller_counter
+        return [tellerClass(tellerid.format(i), location) for i in id_range]
+
+    @property
+    def available_regular_tellers(self):
+        """
+        A property that returns the number of available regular tellers.
+        Used as a simtrace column (which must be a property)
+        """
+        return self.teller_pool.available(RegularTeller)
+    
+    @property
+    def available_merchant_tellers(self):
+        """
+        A property that returns the number of available merchant tellers.
+        Used as a simtrace column (which must be a property of a simulation
+        element)
+        """
+        return self.teller_pool.available(MerchantTeller)
 
 
 class BankTransaction(SimProcess):
     """
     Base class for simulated bank transaction classes
-    """        
+    """
+    @classmethod
+    def get_service_time(cls):
+        """
+        Return the next sample from the BankTransaction subclass
+        service time distribution
+        """
+        return next(cls.servicetime_generator)
+    
+    def __init__(self, queue):
+        super().__init__()
+        self.queue = queue
+        
+    def run(self):
+        #bank = SimModel.model().get_static_object("Bank")
+        #sink = SimModel.model().get_static_object("Sink")
+        service_time = self.get_service_time()
+        customer = self.entity
+        customer.move_to(self.queue)
+        with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
+            teller = teller_assignment.resource
+            customer.move_to(bank.teller_counter)
+            self.wait_for(service_time)
+        customer.move_to(sink)        
+        
 
 class RegularTransaction(BankTransaction):
     """
@@ -167,19 +219,11 @@ class RegularTransaction(BankTransaction):
     """
     mean_interarrival_time = SimTime(1, tu.MINUTES)
     mean_service_time = SimTime(2, tu.MINUTES) 
-    st_generator = SimDistribution.exponential(mean_service_time)
-
-    def run(self):
-        bank = SimModel.model().get_static_object("Bank")
-        sink = SimModel.model().get_static_object("Sink")
-        service_time = next(RegularTransaction.st_generator)
-        customer = self.entity
-        customer.move_to(bank.regular_queue)
-        with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
-            teller = teller_assignment.resource
-            customer.move_to(bank.teller_counter)
-            self.wait_for(service_time)
-        customer.move_to(sink)
+    servicetime_generator = SimDistribution.exponential(mean_service_time)
+    
+    def __init__(self):
+        super().__init__(bank.regular_queue)
+    
 
 class MerchantTransaction(BankTransaction):
     """
@@ -187,19 +231,11 @@ class MerchantTransaction(BankTransaction):
     """
     mean_interarrival_time = SimTime(4, tu.MINUTES)
     mean_service_time = SimTime(3, tu.MINUTES)
-    st_generator = SimDistribution.exponential(mean_service_time)
+    servicetime_generator = SimDistribution.exponential(mean_service_time)
 
-    def run(self):
-        bank = SimModel.model().get_static_object("Bank")
-        sink = SimModel.model().get_static_object("Sink")
-        service_time = next(MerchantTransaction.st_generator)
-        customer = self.entity
-        customer.move_to(bank.merchant_queue)
-        with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
-            teller = teller_assignment.resource
-            customer.move_to(bank.teller_counter)
-            self.wait_for(service_time)
-        customer.move_to(sink)
+    def __init__(self):
+        super().__init__(bank.merchant_queue)
+
 
 # The bank model consists of a (customer) source, a (customer) sink, and
 # a bank.
@@ -215,10 +251,16 @@ source.add_entity_generator(RegularCustomer, RegularTransaction, dist_reg)
 source.add_entity_generator(MerchantCustomer, MerchantTransaction, dist_merch)
 
 # Set up trace output columns
-simtrace.add_trace_column(bank.regular_queue, 'current_population', 'Regular Queue')
-simtrace.add_trace_column(bank.merchant_queue, 'current_population', 'Merchant Queue')
-simtrace.add_trace_column(bank.regular_teller, 'available', 'RegularTellers: available')
-simtrace.add_trace_column(bank.merchant_teller, 'available', 'MerchantTellers: available')
+simtrace.add_trace_column(bank.regular_queue, 'current_population',
+                          'Regular Queue')
+simtrace.add_trace_column(bank.merchant_queue, 'current_population',
+                          'Merchant Queue')
+
+# Use our teller pool properties for these
+simtrace.add_trace_column(bank, 'available_regular_tellers',
+                          'RegularTellers: available')
+simtrace.add_trace_column(bank, 'available_merchant_tellers',
+                          'MerchantTellers: available')
 
 
 if __name__ == '__main__':

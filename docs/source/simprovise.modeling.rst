@@ -155,15 +155,52 @@ Classes
     
 .. _resource-module-exceptions-label:
 
+The `downtime` Module
+=====================
+
+The downtime module defines classes that implement resource down time.
+They are designed to be extended by model developers to create customized
+down time behavior via subclassing.
+
+Down time is implemented through the use of 
+:class:`downtime agents. <simprovise.modeling.downtime.SimDowntimeAgent>`
+A downtime agent implements behavior to take down a bring up a single
+:class:`resource. <simprovise.modeling.resource.SimResource>`
+Down time agents can generally be mixed and matched with any resource.
+it is also possible to assign multiple down time agents to a single
+resource - e.g., one to implement scheduled down time, another unscheduled
+failures.
+
+
+Classes
+-------
+
+.. autoclass:: simprovise.modeling.downtime.SimDowntimeAgent
+    :members:
+    :show-inheritance:
+
+.. autoclass:: simprovise.modeling.downtime.SimResourceFailureAgent
+    :members:
+    :show-inheritance:
+
+.. autoclass:: simprovise.modeling.downtime.SimScheduledDowntimeAgent
+    :members:
+    :show-inheritance:
+
+.. autoclass:: simprovise.modeling.downtime.DowntimeSchedule
+    :members:
+    :show-inheritance:
+
+
 Exceptions
 ----------
 
   
-.. autoexception:: simprovise.modeling.resource.SimResourceDownException
+.. autoexception:: simprovise.modeling.downtime.SimResourceDownException
     :members:
     :show-inheritance:
   
-.. autoexception:: simprovise.modeling.resource.SimResourceUpException
+.. autoexception:: simprovise.modeling.downtime.SimResourceUpException
     :members:
     :show-inheritance:
  
