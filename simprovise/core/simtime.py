@@ -169,7 +169,10 @@ class SimTime(object):
         """
         Returns a new SimTime instance of the specified time units
         """
-        if tounits in Unit:
+        if tounits is None:
+            assert base_unit() == None, "cannot convert to dimensionless SimTime unless base unit is dimensionless"
+            return self.make_copy()
+        elif tounits in Unit:
             conversionFactor = 60**(self._units - tounits)
             return SimTime(self._value * conversionFactor, tounits)
         else:

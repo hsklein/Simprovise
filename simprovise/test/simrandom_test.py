@@ -5,7 +5,7 @@
 #
 # Unit tests for the simrandom module (and SimDistribution class)
 #===============================================================================
-from simprovise.core import simrandom, SimError
+from simprovise.core import simrandom, simtime, SimError
 from simprovise.core.simrandom import SimDistribution
 from simprovise.core.simlogging import SimLogging
 from simprovise.core.simtime import SimTime, Unit as tu
@@ -258,6 +258,64 @@ class SimDistributionSimTimeTests(SimDistributionTestsBase):
         "Test: SimDistribution.wald with SimTime, SimTime parameters"
         gen = SimDistribution.wald(SimTime(1.0, tu.MINUTES),
                                    SimTime(30, tu.SECONDS))
+        mean = self._run_gen(gen)
+        self.assertAlmostEqual(mean.value, 1, delta=0.1)
+        
+    
+class SimDistributionSimTimeTests2(SimDistributionTestsBase):
+    "SimDistribution Tests with Dimensionless SimTime parameters"
+    
+    @classmethod
+    def setUpClass(cls):
+        cls.saved_base_unit = simtime._base_unit
+        simtime._base_unit = None
+        
+    @classmethod
+    def tearDownClass(cls):
+        simtime._base_unit = cls.saved_base_unit
+        
+        
+    def testTriangular1(self):
+        "Test: SimDistribution.triangular with SimTime, scalar, scalar parameters"
+        gen = SimDistribution.triangular(SimTime(10.0), 20.0, 60.0)
+        mean = self._run_gen(gen)
+        self.assertAlmostEqual(mean.value, 30, delta=0.15)
+        
+    def testTriangular2(self):
+        "Test: SimDistribution.triangular with scalar, scalar, SimTime parameters"
+        gen = SimDistribution.triangular(10, 20, SimTime(60))
+        mean = self._run_gen(gen)
+        self.assertAlmostEqual(mean.value, 30, delta=0.15)
+        
+    def testTriangular3(self):
+        "Test: SimDistribution.triangular with mixed SimTime time unit parameters"
+        gen = SimDistribution.triangular(10, SimTime(20), SimTime(60))
+        mean = self._run_gen(gen)
+        self.assertAlmostEqual(mean.value, 30, delta=0.15)        
+        
+    def testUniform1(self):
+        "Test: SimDistribution.uniform with SimTime, scalar parameters"
+        gen = SimDistribution.uniform(SimTime(10.0), 30.0)
+        mean = self._run_gen(gen)
+        self.assertAlmostEqual(mean.value, 20, delta=0.15)
+        
+    def testUniform2(self):
+        "Test: SimDistribution.uniform with SimTime, SimTime parameters"
+        gen = SimDistribution.uniform(SimTime(10.0),
+                                      SimTime(60))
+        mean = self._run_gen(gen)
+        self.assertAlmostEqual(mean.value, 35, delta=0.15)
+        
+    def testWald1(self):
+        "Test: SimDistribution.wald with SimTime, scalar parameters"
+        gen = SimDistribution.wald(SimTime(1.0), 0.5)
+        mean = self._run_gen(gen)
+        self.assertAlmostEqual(mean.value, 1, delta=0.1)
+        
+    def testWald2(self):
+        "Test: SimDistribution.wald with SimTime, SimTime parameters"
+        gen = SimDistribution.wald(SimTime(1.0),
+                                   SimTime(0.5))
         mean = self._run_gen(gen)
         self.assertAlmostEqual(mean.value, 1, delta=0.1)
         

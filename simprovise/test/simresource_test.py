@@ -8,6 +8,7 @@
 import unittest
 from simprovise.core.simclock import SimClock
 from simprovise.core import simevent, simtime, SimError
+from simprovise.core.simtime import SimTime
 from simprovise.core.datacollector import SimDataCollector
 from simprovise.core.simexception import SimTimeOutException
 from simprovise.modeling import *
@@ -354,7 +355,7 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         "Test:  Resource 1 has inUse property value of one after a single acquire() call"
         self.process = TestProcessSRP(self.rsrc1, 1)
         self.process.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         self.assertEqual(self.rsrc1.in_use, 1)
         
     def testAvailable1a(self):
@@ -365,7 +366,7 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         "Test:  Resource 1 has available property value of zero after a single acquire() call"
         self.process = TestProcessSRP(self.rsrc1, 1)
         self.process.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         self.assertEqual(self.rsrc1.available, 0)
         
     def testDown1(self):
@@ -386,14 +387,14 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         self.process1.start()
         self.process2 = TestProcessSRP(self.rsrc2, 1)
         self.process2.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         self.assertEqual(self.rsrc2.in_use, 2)
         
     def testInUse2c(self):
         "Test:  Resource 2 has inUse property value of two after an acquire(2) call"
         self.process = TestProcessSRP(self.rsrc2, 2)
         self.process.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         self.assertEqual(self.rsrc2.in_use, 2)
 
     def testAvailable2a(self):
@@ -404,14 +405,14 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         "Test:  Resource 2 has available property value of one after an acquire call"
         self.process = TestProcessSRP(self.rsrc2, 1)
         self.process.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         self.assertTrue(self.rsrc2.available, 1)
 
     def testAvailable2c(self):
         "Test:  Resource 2 has available property value of zero after acquire(2) call"
         self.process = TestProcessSRP(self.rsrc2, 2)
         self.process.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         self.assertEqual(self.rsrc2.available, 0)
         
     def testDown2(self):
@@ -424,7 +425,7 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         self.process1.start()
         self.process2 = TestProcessSRP(self.rsrc2, 1)
         self.process2.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         assignment1 = self.process1.assignment
         assignment2 = self.process2.assignment
         assignments = set(self.rsrc2.current_assignments())
@@ -436,7 +437,7 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         self.process1.start()
         self.process2 = TestProcessSRP(self.rsrc2, 1)
         self.process2.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         txns = set(self.rsrc2.current_transactions())
         self.assertEqual(txns, set((self.process1, self.process2)))
    
@@ -452,7 +453,7 @@ class SimpleResourceBasicAcquireTests(RATestCaseBase):
         self.process1.start()
         self.process2 = TestProcessSRP(self.rsrc2, 2)
         self.process2.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         
     def testAssignment1(self):
         "Test: acquire() returns a resource assignment with correct process"
@@ -609,7 +610,7 @@ class SimpleResourceBasicReleaseTests(RATestCaseBase):
         "Test: acquire(1) followed by release(2) raises an error"
         self.process1 = TestProcessBasicRelease(self.rsrc2, 1)
         self.process1.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         ra = self.process1.assignment
         self.assertRaises(SimError, lambda:  self.process1.release(ra, 2))
         
@@ -624,7 +625,7 @@ class SimpleResourceBasicReleaseTests(RATestCaseBase):
         "Test: acquire(1) followed by release(2) raises an error"
         self.process1 = TestProcessBasicRelease(self.rsrc2, 1)
         self.process1.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         ra = self.process1.assignment
         self.assertRaises(SimError, lambda:  self.process1.release(ra, (self.rsrc2, self.rsrc2)))
         
@@ -632,7 +633,7 @@ class SimpleResourceBasicReleaseTests(RATestCaseBase):
         "Test: acquire(1) followed by release() on wrong resource raises an error"
         self.process1 = TestProcessBasicRelease(self.rsrc2, 1)
         self.process1.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         ra = self.process1.assignment
         self.assertRaises(SimError, lambda:  self.process1.release(ra, self.rsrc1))
 
@@ -673,12 +674,12 @@ class SimpleResourceAcquireQueueingTests(RATestCaseBase):
              
     def testAccquire1(self):
         "Test: first acquire() on resource with capacity 1 does not result in a wait"
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         self.assertFalse(self.process1.waiting)
         
     def testAccquire2(self):
         "Test: second acquire() on resource with capacity 1 does result in a wait"
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         self.assertTrue(self.process2.waiting)
         
     def testAccquire3(self):
@@ -823,7 +824,7 @@ class BasicResourcePoolTests(RATestCaseBase):
             
         self.process1.runfunc = runfunc
         self.process1.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(self.process1.assignment.resource, self.rsrc1)
              
     def testacquire2(self):
@@ -836,7 +837,7 @@ class BasicResourcePoolTests(RATestCaseBase):
             
         self.process1.runfunc = runfunc
         self.process1.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         expected = (self.rsrc3, self.rsrc3)
         self.assertEqual(self.process1.assignment.resources, expected)
              
@@ -849,7 +850,7 @@ class BasicResourcePoolTests(RATestCaseBase):
             
         self.process1.runfunc = runfunc
         self.process1.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(len(self.process1.assignment.resources), 7)
              
     def testacquire4(self):
@@ -861,7 +862,7 @@ class BasicResourcePoolTests(RATestCaseBase):
             
         self.process1.runfunc = runfunc
         self.process1.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         expected = (self.rsrc3, )
         self.assertEqual(self.process1.assignment.resources, expected)
              
@@ -875,7 +876,7 @@ class BasicResourcePoolTests(RATestCaseBase):
             
         self.process1.runfunc = runfunc
         self.process1.start()
-        self.eventProcessor.process_events(0)
+        self.eventProcessor.process_events(SimTime(0))
         expected = (self.rsrc1, )
         self.assertEqual(self.process1.assignment.resources, expected)
 
@@ -889,7 +890,7 @@ class BasicResourcePoolTests(RATestCaseBase):
             
         self.process1.runfunc = runfunc
         self.process1.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(self.pool.available(), 2)
              
     def testavailable3(self):
@@ -902,7 +903,7 @@ class BasicResourcePoolTests(RATestCaseBase):
             
         self.process1.runfunc = runfunc
         self.process1.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(self.pool.available(TestResource), 0)
              
     def testavailableresources32(self):
@@ -915,7 +916,7 @@ class BasicResourcePoolTests(RATestCaseBase):
             
         self.process1.runfunc = runfunc
         self.process1.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(self.pool.available_resources(), [self.rsrc4])
              
     def testcurrentAssignments32(self):
@@ -934,7 +935,7 @@ class BasicResourcePoolTests(RATestCaseBase):
         self.process2.runfunc = runfunc2
         self.process1.start()
         self.process2.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         ra1 = self.process1.assignment
         ra2 = self.process2.assignment
         self.assertEqual(set(self.pool.current_assignments()), set([ra1, ra2]))
@@ -955,7 +956,7 @@ class BasicResourcePoolTests(RATestCaseBase):
         self.process2.runfunc = runfunc2
         self.process1.start()
         self.process2.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         ra1 = self.process1.assignment
         ra2 = self.process2.assignment
         expected = (self.process1, self.process2)
@@ -974,7 +975,7 @@ class BasicResourcePoolTests(RATestCaseBase):
             
         self.process1.runfunc = runfunc
         self.process1.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertTrue(isinstance(self.process1.exception, SimError))
              
     def testacquiremorethanpoolsize2(self):
@@ -990,7 +991,7 @@ class BasicResourcePoolTests(RATestCaseBase):
             
         self.process1.runfunc = runfunc
         self.process1.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertTrue(isinstance(self.process1.exception, SimError))
 
 
@@ -1024,7 +1025,7 @@ class BasicResourcePoolReleaseTests(RATestCaseBase):
         self.process2.runfunc = runfunc2
         self.process1.start()
         self.process2.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.ra1 = self.process1.assignment
         self.ra2 = self.process2.assignment        
                            
@@ -1149,7 +1150,7 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         self.process3.start()
         self.process4.start()
         self.process5.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(TestProcess1.pids(), [1,2,3])
              
     def testacquireFIFOnorelease2(self):
@@ -1168,7 +1169,7 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         self.process3.start()
         self.process4.start()
         self.process5.start()
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(TestProcess1.pids(), [1,2,3, 4])
              
     def testacquireFIFOrelease1(self):
@@ -1261,7 +1262,7 @@ class ResourcePoolQueueingTests(RATestCaseBase):
             self.process[i].runfunc = runfuncs[i]
             self.process[i].start()
             
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(TestProcess1.pids(), [1,2,3,5])
              
     def testacquirePriorityrelease1(self):
@@ -1356,7 +1357,7 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         for i in range(5):           
             self.process[i].start()
             
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(TestProcess1.pids(), [1,2,3])
  
     def testacquireResourceSubclass1(self):
@@ -1372,7 +1373,7 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         for i in range(5):           
             self.process[i].start()
             
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(TestProcess1.pids(), [1,2,3])
  
     def testacquireResourceSubclass2(self):
@@ -1396,7 +1397,7 @@ class ResourcePoolQueueingTests(RATestCaseBase):
         
         self.process5.start()
                         
-        self.eventProcessor.process_events(0)        
+        self.eventProcessor.process_events(SimTime(0))        
         self.assertEqual(TestProcess1.pids(), [1,2,5])
 
     

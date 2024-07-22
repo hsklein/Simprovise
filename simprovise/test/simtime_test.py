@@ -18,6 +18,14 @@ class SimTimeTests(unittest.TestCase):
         self.ti_3600secs = simtime.SimTime(3600, tu.SECONDS)
         self.ti_2mins = simtime.SimTime(2, tu.MINUTES)
         self.ti_1hr = simtime.SimTime(1, tu.HOURS)
+        
+    @classmethod
+    def set_base_unit(cls, unit):
+        """
+        Normally the base unit is set only by config file, but we can make
+        an exception for testing :-)
+        """
+        simtime._base_unit = unit
 
     def testAssign1(self):
         "Test: Assignment of invalid 3 for units raises SimException error"
@@ -228,11 +236,11 @@ class SimMinuteBaseTimeTests(SimTimeTests):
     @classmethod
     def setUpClass(cls):
         cls.baseunit = simtime.base_unit()
-        simtime.set_base_unit(tu.MINUTES)
+        cls.set_base_unit(tu.MINUTES)
        
     @classmethod
     def tearDownClass(cls):
-        simtime.set_base_unit(cls.baseunit)
+        cls.set_base_unit(cls.baseunit)
                 
     def testDefaultUnit(self):
         "Test: That default unit is base unit"
@@ -246,11 +254,11 @@ class SimHourBaseTimeTests(SimTimeTests):
     @classmethod
     def setUpClass(cls):
         cls.baseunit = simtime.base_unit()
-        simtime.set_base_unit(tu.HOURS)
+        cls.set_base_unit(tu.HOURS)
        
     @classmethod
     def tearDownClass(cls):
-        simtime.set_base_unit(cls.baseunit)
+        cls.set_base_unit(cls.baseunit)
         
     def testDefaultUnit(self):
         "Test: That default unit is base unit"
@@ -263,13 +271,13 @@ class SimDimensionlessBaseTimeTests(unittest.TestCase):
     """
     def setUp(self):
         self.savedbaseunit = simtime.base_unit()
-        simtime.set_base_unit(tu.MINUTES)
+        SimTimeTests.set_base_unit(tu.MINUTES)
         self._ti_3mins = SimTime(3)
-        simtime.set_base_unit(None)
+        SimTimeTests.set_base_unit(None)
         self._ti_3_none = SimTime(3)        
         
     def tearDown(self):
-        simtime.set_base_unit(self.savedbaseunit)
+        SimTimeTests.set_base_unit(self.savedbaseunit)
         
     def testDimensionlessEquals(self):
         "Equality Test: That default unit is None"

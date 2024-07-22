@@ -24,16 +24,17 @@ class SimClock(object):
     *NOT* modeling code.
     """
     # _currentTime is the current simulated clock time
-    _currentTime = SimTime(0, tu.SECONDS)
+    _currentTime = SimTime(0)
+    _clockTimeUnit = None
 
     @staticmethod
     @apidocskip
     def initialize():
         """
-        (Re)set the simulated clock to zero.
-        TODO allow time unit to be specified.
+        (Re)set the simulated clock to zero. Use the base unit.
         """
-        SimClock._currentTime = SimTime(0, tu.SECONDS)
+        SimClock._currentTime = SimTime(0)
+        SimClock._clockTimeUnit = simtime.base_unit()
 
     @staticmethod
     def now():
@@ -60,7 +61,7 @@ class SimClock(object):
         if newTime >= SimClock._currentTime:
             # ensure that we keep currentTime's units - otherwise we could just copy
             # newTime
-            SimClock._currentTime = simtime.SimTime(0, tu.SECONDS) + newTime
+            SimClock._currentTime = newTime.to_units(SimClock._clockTimeUnit)
         else:
             errMsg = "Attempt to advance clock from {0} to {1}"
             raise SimError('InvalidClockAdvance', errMsg, SimClock._currentTime, newTime)

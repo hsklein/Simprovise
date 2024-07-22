@@ -41,6 +41,10 @@ logger = SimLogging.get_logger(__name__)
 _ERROR_NAME = "Sim Output Database Error"
 _ENTRIES_DATASET_NAME = simelement.ENTRIES_DATASET_NAME
 
+# In the output database, the None/Dimensionless time unit is -1, since
+# the table key cannot be null
+_DB_NONE_TIMEUNIT_VALUE = -1
+
 class SimElementType(object):
     """
     Essentially an enumeration of element types, with the types corresponding
@@ -475,6 +479,18 @@ DbDataset = namedtuple('DbDataset',
                        ['element_id', 'name', 'valuetype', 'istimeweighted',
                         'timeunit', 'elementtype'])
 
+def dbDatasetRowFactory(cursor, row):
+    """
+    A row factory for datasets, that converts the dimensionless time unit
+    from -1 (the output database value) back to None (the SimTime value)
+    """
+    dbtimeunit = row[4]
+    if dbtimeunit == _DB_NONE_TIMEUNIT_VALUE:
+        rowlist = list(row)
+        rowlist[4] = None
+        row = tuple(rowlist)
+    return DbDataset(*row)
+
 class SimOutputDatabase(object):
     """
     Base class for an object that encapsulates a simulation output database
@@ -564,13 +580,10 @@ class SimOutputDatabase(object):
                   inner join element on dataset.element = element.id
                   inner join elementtype on element.type = elementtype.id
         """
-
-        def datasetTupleFactory(cursor, row): # pylint: disable=unused-argument
-            return DbDataset(*row)
-
         savedRowFactory = self.connection.row_factory
         try:
-            self.connection.row_factory = datasetTupleFactory
+            #self.connection.row_factory = datasetTupleFactory
+            self.connection.row_factory = dbDatasetRowFactory
             result = self.runQuery(sqlstr)
             return result
         finally:
@@ -589,13 +602,9 @@ class SimOutputDatabase(object):
                   inner join elementtype on element.type = elementtype.id
                   where dataset.element = ?
         """
-
-        def datasetTupleFactory(cursor, row): # pylint: disable=unused-argument
-            return DbDataset(*row)
-
         savedRowFactory = self.connection.row_factory
         try:
-            self.connection.row_factory = datasetTupleFactory
+            self.connection.row_factory = dbDatasetRowFactory
             result = self.runQuery(sqlstr, element_id)
             return result
         finally:
@@ -911,10 +920,17 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         dsetID = self._max_id('dataset') + 1
         assert dsetID == 1, "dataset table not empty before _load_datasets() call"
         
+        # The time unit should be the same for every dataset - the base unit
+        # In the output database, dimensionless time is -1 rather than Non/null
+        dbtimeunit = simtime.base_unit()
+        if dbtimeunit is None:
+            dbtimeunit = _DB_NONE_TIMEUNIT_VALUE
+        
         for dset in self.__model.datasets:
+            assert dset.timeunit == simtime.base_unit(), "unexpected dataset time unit"
             valueType = dset.valuetype.__name__
             dsetParms = (dsetID, dset.element_id, dset.name, valueType,
-                         dset.is_time_weighted, dset.timeunit)
+                         dset.is_time_weighted, dbtimeunit)
             datasetValues.append(dsetParms)
             dsetID += 1
 

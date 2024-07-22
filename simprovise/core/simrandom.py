@@ -366,7 +366,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
            
         """
-        scalarArgs, timeUnit = SimDistribution._scalar_args(mean)
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(mean)
         try:
             m = float(scalarArgs[0])
         except ValueError:
@@ -374,7 +374,7 @@ class SimDistribution(object):
             raise SimError(_RAND_PARAMETER_ERROR, msg, mean)
         
         f =  lambda: _rng[streamNum-1].exponential(*scalarArgs)
-        return SimDistribution._random_generator(f, streamNum, timeUnit)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     
     functionDict["exponential"] = exponential
 
@@ -400,7 +400,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """        
-        scalarArgs, timeUnit = SimDistribution._scalar_args(low, high)
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(low, high)
         low2, high2 = scalarArgs
         try:
             x = float(low2)
@@ -414,7 +414,7 @@ class SimDistribution(object):
             raise SimError(_RAND_PARAMETER_ERROR, msg, low, high)
         
         f =  lambda: _rng[streamNum-1].uniform(*scalarArgs)
-        return SimDistribution._random_generator(f, streamNum, timeUnit)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     functionDict["uniform"] = uniform
 
     @staticmethod
@@ -436,7 +436,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
        """       
-        scalarArgs, timeUnit = SimDistribution._scalar_args(low, mode, high)
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(low, mode, high)
         low2, mode2, high2 = scalarArgs
         
         try:
@@ -452,7 +452,7 @@ class SimDistribution(object):
             raise SimError(_RAND_PARAMETER_ERROR, msg, low, mode, high)
         
         f =  lambda: _rng[streamNum-1].triangular(*scalarArgs)
-        return SimDistribution._random_generator(f, streamNum, timeUnit)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     functionDict["triangular"] = triangular
 
     @staticmethod
@@ -483,7 +483,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]      
 
         """
-        scalarArgs, timeUnit = SimDistribution._scalar_args(mu, sigma, floor)
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(mu, sigma, floor)
         mu, sigma, floor = scalarArgs
         try:
             x = float(mu)
@@ -499,7 +499,7 @@ class SimDistribution(object):
         else:
             f = lambda: max(_rng[streamNum-1].normal(mu, sigma), floor)
         
-        return SimDistribution._random_generator(f, streamNum, timeUnit)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     functionDict["normal"] = normal
 
     @staticmethod
@@ -515,7 +515,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        scalarArgs, timeUnit = SimDistribution._scalar_args(a)       
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(a)       
         try:
             x = float(scalarArgs[0])
         except ValueError:
@@ -523,7 +523,7 @@ class SimDistribution(object):
             raise SimError(_RAND_PARAMETER_ERROR, msg, a)        
         
         f = lambda: _rng[streamNum-1].weibull(*scalarArgs)
-        return SimDistribution._random_generator(f, streamNum, timeUnit)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     functionDict["weibull"] = weibull
 
     @staticmethod
@@ -543,7 +543,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        scalarArgs, timeUnit = SimDistribution._scalar_args(mean, scale)
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(mean, scale)
         try:
             mean = float(scalarArgs[0])
             scale = float(scalarArgs[1])
@@ -560,7 +560,7 @@ class SimDistribution(object):
             raise SimError(_RAND_PARAMETER_ERROR, msg, scale)
                    
         f = lambda: _rng[streamNum-1].wald(mean, scale)
-        return SimDistribution._random_generator(f, streamNum, timeUnit)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     functionDict["weibull"] = weibull
 
     @staticmethod
@@ -576,7 +576,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        scalarArgs, timeUnit = SimDistribution._scalar_args(alpha)       
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(alpha)       
         try:
             x = float(scalarArgs[0])
         except ValueError:
@@ -584,7 +584,7 @@ class SimDistribution(object):
             raise SimError(_RAND_PARAMETER_ERROR, msg, alpha)        
 
         f = lambda: _rng[streamNum-1].pareto(*scalarArgs)
-        return SimDistribution._random_generator(f, streamNum, timeUnit)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     functionDict["pareto"] = pareto
 
     @staticmethod
@@ -604,7 +604,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        scalarArgs, timeUnit = SimDistribution._scalar_args(mean, sigma)       
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(mean, sigma)       
         try:
             x, y = scalarArgs
             x = float(x)
@@ -618,7 +618,7 @@ class SimDistribution(object):
             raise SimError(_RAND_PARAMETER_ERROR, msg, sigma)
         
         f =  lambda: _rng[streamNum-1].lognormal(*scalarArgs)
-        return SimDistribution._random_generator(f, streamNum, timeUnit)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     functionDict["lognormal"] = lognormal
 
     @staticmethod
@@ -639,7 +639,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
         
         """
-        scalarArgs, timeUnit = SimDistribution._scalar_args(alpha, beta)       
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(alpha, beta)       
         try:
             x, y = scalarArgs
             x = float(x)
@@ -656,7 +656,7 @@ class SimDistribution(object):
             raise SimError(_RAND_PARAMETER_ERROR, msg, beta)
         
         f =  lambda: _rng[streamNum-1].beta(*scalarArgs)
-        return SimDistribution._random_generator(f, streamNum, timeUnit)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     functionDict["beta"] = beta
 
     @staticmethod
@@ -678,7 +678,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        scalarArgs, timeUnit = SimDistribution._scalar_args(alpha, beta)       
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(alpha, beta)       
         try:
             x, y = scalarArgs
             x = float(x)
@@ -695,7 +695,7 @@ class SimDistribution(object):
             raise SimError(_RAND_PARAMETER_ERROR, msg, beta)
 
         f =  lambda: _rng[streamNum-1].gamma(*scalarArgs)
-        return SimDistribution._random_generator(f, streamNum, timeUnit)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     functionDict["gamma"] = gamma
 
     @staticmethod
@@ -750,7 +750,7 @@ class SimDistribution(object):
         :type streamNum:  `int` in range [1 - :func:`max_streams`]
 
         """
-        scalarArgs, timeUnit = SimDistribution._scalar_args(loc, scale, floor)
+        scalarArgs, isSimTime, timeUnit = SimDistribution._scalar_args(loc, scale, floor)
         loc, scale, floor = scalarArgs
         try:
             x = float(loc)
@@ -766,7 +766,7 @@ class SimDistribution(object):
         else:
             f = lambda: max(_rng[streamNum-1].logistic(loc, scale), floor)
         
-        return SimDistribution._random_generator(f, streamNum)
+        return SimDistribution._random_generator(f, streamNum, isSimTime, timeUnit)
     functionDict["logistic"] = logistic    
 
     @staticmethod
@@ -822,8 +822,10 @@ class SimDistribution(object):
         values into scalar values using the time unit of  the first SimTime
         argument encountered.
         
-        Returns the updated/converted list of arguments and the time unit used
-        (or None if no SimTime values were found)
+        Returns the updated/converted list of arguments, a bool indicating
+        whether any SimValues were found, and and the time unit used
+        (or None if no SimTime values were found, though note that None
+        also represents a dimensionless SimTime)
         
         Called by distribution methods whose parameters may optionally be
         SimTime values. The returned scalar argument list and time unit are
@@ -831,6 +833,7 @@ class SimDistribution(object):
         for a parameterized distribution function.
         """
         timeUnits = None
+        isSimTime = True in [isinstance(a, SimTime) for a in args]
         
         def scalar_arg(a):
             nonlocal timeUnits
@@ -844,15 +847,15 @@ class SimDistribution(object):
                 return a
             
         scalarArgs = [scalar_arg(a) for a in args]
-        return scalarArgs, timeUnits            
+        return scalarArgs, isSimTime, timeUnits        
     
     @staticmethod
-    def _random_generator(f, streamNum=1, timeUnit=None):
+    def _random_generator(f, streamNum=1, isSimTime=False, timeUnit=None):
         """
         First validates the passed random stream number.
         
         Then creates and returns a generator wrapping the passed SimDistribution
-        parameterized function. If the passed timeUnit parameter is not None, 
+        parameterized function. If the passed isSimTime parameter is False, 
         the generated values will be SimTime objects of the specified time unit.
         Otherwise, the generated values will be scalars (or whatever type
         is output from the passed function).
@@ -873,16 +876,16 @@ class SimDistribution(object):
         
         def sim_time_generator():
             while True:
-                 yield SimTime(f(), timeUnit)
+                yield SimTime(f(), timeUnit)
         
         def scalar_generator():
             while True:
-                 yield f()
+                yield f()
                  
-        if timeUnit is None:
-            return scalar_generator()
-        else:
+        if isSimTime:
             return sim_time_generator()
+        else:
+            return scalar_generator()
 
 
 if __name__ == '__main__':
