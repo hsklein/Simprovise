@@ -83,6 +83,10 @@ call to :meth:`~simprovise.modeling.entitysource.add_entity_generator`::
     customer_source.add_entity_generator(Customer, mm1Process,
                                          interarrival_time_generator)
                                          
+This call tells the entity generator to create ``Customer`` entities that run
+the ``mm1Process``, with the time period between customers coming from the
+``interarrival_time_generator``.
+
 That defines the simulation model; all that's left is to execute it, which 
 can be done within the ``__main__`` guard of the script::
 
@@ -102,22 +106,28 @@ result is a summary report doing batch means analysis of the simulation output::
     ----------------------------------------------------------------------------------------------------------------------------------------------------------
     __main__.mm1Process                  In-Process        2020.80      3.65              0.90              2.70              5.40             18.80        
     __main__.mm1Process                  Entries           1010.80   1010.80           1010.80           1010.80           1010.80           1010.80        
-    __main__.mm1Process                  Process-Time      1010.00     36.17 minutes     11.14 minutes     26.98 minutes     51.28 minutes    172.64 minutes
+    __main__.mm1Process                  Process-Time      1010.00     36.17             11.14             26.98             51.28            172.64        
     simprovise.modeling.entity.SimEntity Work-In-Process      1.00      0.00              0.00              0.00              0.00              0.00        
     simprovise.modeling.entity.SimEntity Process-Time         0.00       nan               nan               nan               nan               nan        
     __main__.Customer                    Work-In-Process   2020.80      3.65              0.90              2.70              5.40             18.80        
-    __main__.Customer                    Process-Time      1010.00     36.17 minutes     11.14 minutes     26.98 minutes     51.28 minutes    172.64 minutes
+    __main__.Customer                    Process-Time      1010.00     36.17             11.14             26.98             51.28            172.64        
     Queue                                Population        1811.70      2.86              0.00              1.70              4.40             17.80        
     Queue                                Entries           1009.80   1009.80           1009.80           1009.80           1009.80           1009.80        
-    Queue                                Time              1010.00     28.29 minutes      2.46 minutes     17.89 minutes     42.52 minutes    160.78 minutes
-    Server                               ProcessTime       1010.00      7.89 minutes      2.27 minutes      5.42 minutes     10.94 minutes     60.81 minutes
+    Queue                                Time              1010.00     28.29              2.46             17.89             42.52            160.78        
+    Server                               ProcessTime       1010.00      7.89              2.27              5.42             10.94             60.81        
     Server                               Utilization       1220.10      0.80              0.90              1.00              1.00              1.00        
     Server                               DownTime             1.00      0.00              0.00              0.00              0.00              0.00        
     ServerLocation                       Population        1220.10      0.80              0.90              1.00              1.00              1.00        
     ServerLocation                       Entries           1010.00   1010.00           1010.00           1010.00           1010.00           1010.00        
-    ServerLocation                       Time              1010.00      7.89 minutes      2.27 minutes      5.42 minutes     10.94 minutes     60.81 minutes
+    ServerLocation                       Time              1010.00      7.89              2.27              5.42             10.94             60.81        
     Source                               Population        1010.80      0.00              0.00              0.00              0.00              0.00        
     Source                               Entries           1009.80   1009.80           1009.80           1009.80           1009.80           1009.80        
-    Source                               Time              1009.80      0.00 minutes      0.00 minutes      0.00 minutes      0.00 minutes      0.00 minutes
+    Source                               Time              1009.80      0.00              0.00              0.00              0.00              0.00  
 
+Some key output metrics:
 
+* Mean (Customer) Work-in-Process: 3.65
+* Mean (Customer) Process (Flow) Time: 36.17
+* Mean Queue Time: 28.29
+* Mean Queue Size: 2.86
+* Server Utilization: 80%
