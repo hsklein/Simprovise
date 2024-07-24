@@ -66,23 +66,31 @@ class SimMsgType(object):
     RSRC_REQUEST = "ResourceRequest"
     RSRC_ASSIGNMENT = "ResourceAssignment"
     RSRC_RELEASE = "ResourceRelease"
-    RSRC_TAKEDOWN_REQ = "ResourceTakeDownRequest"
-    RSRC_BRINGUP_REQ = "ResourceBringUpRequest"
+    #RSRC_TAKEDOWN_REQ = "ResourceTakeDownRequest"
+    #RSRC_BRINGUP_REQ = "ResourceBringUpRequest"
     RSRC_DOWN = "ResourceDown"
+    RSRC_GOING_DOWN = "ResourceGoingDown"
     RSRC_UP = "ResourceUp"
-    LOC_REQUEST = "LocationRequest"
-    LOC_ASSIGNMENT = "LocationAssignment"
-    LOC_RELEASE = "LocationRelease"
+    #LOC_REQUEST = "LocationRequest"
+    #LOC_ASSIGNMENT = "LocationAssignment"
+    #LOC_RELEASE = "LocationRelease"
 
 
 @apidoc
 class SimAgent(object):
     """
-    SimAgent provides the basic framework for agent-like behavior. In
+    ``SimAgent`` provides the basic framework for agent-like behavior. In
     particular, it provides the functionality required to send, receive and
     process messages, both synchronously and asynchronously. SimAgents
     (and the instances of classes derived from SimAgent) are the only objects
-    that send messages, and are the only objects allowed to receive  them.
+    that send messages, and are the only objects allowed to receive them.
+    
+    While most messages are sent to a single specified receiver, SimAgent
+    also implements a message subscription service, that allows any agent
+    to subscribe to messages sent by another agent of a specified 
+    message type; those agents (who subscribe via :meth:`add_subscriber`)
+    will receive subscribed-to messages at the same time they are sent
+    to the originally specified receiver.
     
     SimAgent is a base class for almost all of the modeling classes.
     Modeling code should never instantiate A SimAgent directly, and
@@ -122,6 +130,11 @@ class SimAgent(object):
         # nextQueuedMessage()
         self._msgPriorityFunc = {}
         
+        # _subscribers is a dictionary of sets of agents, keyed by message
+        # type. These subscribers are agents wishing receive *every* message
+        # sent by this agent of a given message type.
+        self._subscribers = {}
+        
         # Add this agent to the model-maintained set of agents
         SimModel.model()._register_agent(self)
         
@@ -135,6 +148,45 @@ class SimAgent(object):
         Default is a no-op
         """
         pass
+    
+    def add_subscriber(self, subscriber, msgType):
+        """
+        Add an agent to the set of subscribers to a specified message type.
+        A subscriber will receive (as a monitor/listener) **every** message
+        of the specified type sent by this agent whoe receipient is a
+        different agent.
+        
+        Messages received by subscription are dispatched like regular
+        messages, but are never queued and should not be responded-to.
+        
+        :param subscriber: Agent subscribing
+        :type subscriber:  :class:`SimAgent`
+        
+        :param msgType:    The message type being subscribed to
+        :type msgType:     :class:`SimMsgType`
+        
+        """
+        assert subscriber, "null subscriber passed to add_subscriber()"
+        assert subscriber is not self, "An agent can't subscribe to itself"
+        assert msgType, "null msgType passed to add_subscriber()"
+        assert isinstance(subscriber, SimAgent), "only SimAgents can subscribe"       
+        self._subscribers.setdefault(msgType, set()).add(subscriber)
+        
+    def _notify_subscribers(self, msg):
+        """
+        Send the passed message to all agents subscribing to that message's
+        message type.
+        
+        Called by send_message/send_response
+        """
+        msgType = msg.msgType
+        receiver = msg.receiver
+        
+        if msgType in self._subscribers:           
+            subscribers = self._subscribers[msgType]
+            for subscriber in subscribers:
+                if subscriber is not receiver:
+                    subscriber.receive_subscribed_message(msg)
 
     def send_message(self, toAgent, msgType, msgData, msgClass=None):
         """
@@ -207,6 +259,8 @@ class SimAgent(object):
                        None, msgData)
         with intercept_responses(msg) as responses:
             toAgent.receive_message(msg)
+            
+        self._notify_subscribers(msg)
         return msg, responses
 
     def send_response(self, originatingMsg, msgType, msgData):
@@ -233,6 +287,7 @@ class SimAgent(object):
         responseMsg = SimMessage(_next_msgID(), msgType, SimClock.now(), self,
                                  toAgent, originatingMsg, msgData)
         toAgent.receive_message(responseMsg)
+        self._notify_subscribers(responseMsg)
 
     @apidocskip
     def receive_message(self, msg):
@@ -247,11 +302,10 @@ class SimAgent(object):
         it to the message queue for later processing.
 
         TODO consider a handler chain, with multiple interceptors?
-        
         """
-        assert msg, "Null msg argument to receiveMessage()"
-        assert msg.receiver is self, "msg recipient does not match agent processing receiveMessage()"
-        assert msg.originatingMsg is None or msg.originatingMsg.sender is self, "msg is a response to an agent other than the agent processing receiveMessage()"
+        assert msg, "Null msg argument to receive_message()"
+        assert msg.receiver is self, "msg recipient does not match agent processing receive_message()"
+        assert msg.originatingMsg is None or msg.originatingMsg.sender is self, "msg is a response to an agent other than the agent processing receive_message()"
 
         if self.interceptHandler and self.interceptHandler(msg):
             handled = True
@@ -259,6 +313,19 @@ class SimAgent(object):
             handled = self._dispatch_message(msg)
         if not handled:
             self.msg_queue.append(msg)
+
+    @apidocskip
+    def receive_subscribed_message(self, msg):
+        """
+        Receive a message that this agent has subscribed to (but is not
+        the recipient/receiver of the message).
+        
+        As a subscriber/observer, just dispatch the message to a handler;
+        subscribed messages never get queued.
+        """
+        assert msg, "Null msg argument to receive_subscribed_message()"
+        assert msg.receiver is not self, "msg recipient should NOT match agent processing receive_subscribed_message()"
+        self._dispatch_message(msg)
 
     def _dispatch_message(self, msg):
         """

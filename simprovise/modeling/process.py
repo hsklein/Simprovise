@@ -19,9 +19,9 @@ from simprovise.core.simelement import SimClassElement
 from simprovise.core.model import SimModel
 
 from simprovise.modeling.agent import SimMsgType
-from simprovise.modeling.resource import (SimResourceDownException,
-                                          SimResourceUpException,
-                                          SimResourceRequest)
+from simprovise.modeling.resource import SimResourceRequest
+from simprovise.modeling.downtime import (SimResourceDownException,
+                                          SimResourceUpException)
 from simprovise.modeling import SimEntity, SimCounter
 from simprovise.modeling.transaction import SimTransaction, BaseInterruptEvent
 

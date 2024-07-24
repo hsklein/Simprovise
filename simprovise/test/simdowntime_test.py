@@ -15,10 +15,11 @@ from simprovise.core.simtime import SimTime, Unit as tu
 from simprovise.core.model import SimModel
 from simprovise.modeling.downtime import (SimDowntimeAgent, DowntimeSchedule,
                                           SimResourceFailureAgent,
-                                          SimScheduledDowntimeAgent)
-from simprovise.modeling.resource import SimResourceDownException
+                                          SimScheduledDowntimeAgent,
+                                          SimResourceDownException)
+#from simprovise.modeling.resource import SimResourceDownException
 from simprovise.modeling.agent import SimAgent, SimMsgType
-from simprovise.core.simexception import SimError
+#from simprovise.core.simexception import SimError
 from simprovise.modeling import (SimEntity, SimEntitySource, SimProcess,
                                  SimSimpleResource)
 
@@ -42,82 +43,66 @@ EIGHT_MINS = simtime.SimTime(8, tu.MINUTES)
 NINE_MINS = simtime.SimTime(9, tu.MINUTES)
 TEN_MINS = simtime.SimTime(10, tu.MINUTES)
 FIFTEEN_MINS = simtime.SimTime(15, tu.MINUTES)
+SIXTEEN_MINS = simtime.SimTime(16, tu.MINUTES)
 THIRTY_MINS = simtime.SimTime(30, tu.MINUTES)
+THIRTY_ONE_MINS = simtime.SimTime(31, tu.MINUTES)
 ONE_HR = simtime.SimTime(1, tu.HOURS)
 TWO_HRS = simtime.SimTime(2, tu.HOURS)
 THREE_HRS = simtime.SimTime(3, tu.HOURS)
 FOUR_HRS = simtime.SimTime(4, tu.HOURS)
 SIX_HRS = simtime.SimTime(6, tu.HOURS)
 EIGHT_HRS = simtime.SimTime(8, tu.HOURS)
+NINE_HRS = simtime.SimTime(9, tu.HOURS)
 TEN_HRS = simtime.SimTime(10, tu.HOURS)
+THIRTEEN_HRS = simtime.SimTime(13, tu.HOURS)
+FOURTEEN_HRS = simtime.SimTime(14, tu.HOURS)
 
 class TestDowntimeAgent(SimDowntimeAgent):
-    def __init__(self, *args, **kwargs):
-        super().__init__(*args, **kwargs)
-        self.takedown_rsrc = None
-        self.takedown_tm = None
-        self.takedown_successful = None
-        self.up_rsrc = None
-        self.up_tm = None
+    def __init__(self, resource, setgoingdown=False, goingdowntimeout=None):
+        super().__init__(resource)
+        self.setgoingdown = setgoingdown
+        self.goingdowntimeout = goingdowntimeout
+        self.notified_down = False
+        self.notified_goingdown = False
+        self.notified_up = False
+        self.notified_downtime = None
+        self.notified_uptime = None
+        self.notified_goingdowntime = None
         
-    def _resource_down_impl(self, resource, takedown_successful):
-        self.takedown_rsrc = resource
-        self.takedown_tm = SimClock.now()
-        self.takedown_successful = takedown_successful
+    def start_resource_takedown(self):
+        if not self.setgoingdown:
+            super().start_resource_takedown()
+        else:
+            self._set_resource_going_down(self.goingdowntimeout)
+
+    def _handle_resource_down(self, msg):
+        self.notified_down = True
+        self.notified_downtime = SimClock.now()
+        return super()._handle_resource_down(msg)
         
-    def _resource_up_impl(self, resource):  
-        self.up_rsrc = resource
-        self.up_tm = SimClock.now()
+    def _handle_resource_up(self, msg):
+        self.notified_up = True
+        self.notified_uptime = SimClock.now()
+        return super()._handle_resource_up(msg)
+        
+    def _handle_resource_goingdown(self, msg):
+        self.notified_goingdown = True
+        self.notified_goingdowntime = SimClock.now()
+        return super()._handle_resource_goingdown(msg)
         
 
-class TestResourceTakedownFail(SimSimpleResource):
-    """
-    A resource where takedown requests can fail
-    """
-    takedown_successful = False
-    def _handle_resource_takedown(self, msg):
-        if  TestResourceTakedownFail.takedown_successful:
-            return super()._handle_resource_takedown(msg)
-        else:           
-            msgData = self, False
-            self.send_response(msg, SimMsgType.RSRC_DOWN, msgData)
-            return True    
-
-class TestResourceTakedownNotHandled(SimSimpleResource):
-    """
-    A resource where takedown and bringup requests are not
-    handled initially. complete_takedown() and complete_bringup()
-    allow test code to simulate cases where the resource's
-    assignment agent responds after some period of time to
-    takedown or bringup requests.
-    """
-    handleTakedown = False
-    handleBringup = True
-    
-    def _handle_resource_takedown(self, msg):
-        if TestResourceTakedownNotHandled.handleTakedown:
-            return super()._handle_resource_takedown(msg)
-        else:
-            return False
-    
-    def _handle_resource_bringup(self, msg):
-        if TestResourceTakedownNotHandled.handleBringup:
-            return super()._handle_resource_bringup(msg)
-        else:
-            return False
-    
-    def complete_takedown(self):
-        "Now handle it successfully"
-        msg = self.next_queued_message(SimMsgType.RSRC_TAKEDOWN_REQ)
-        assert msg, "no takedown request message to complete"
-        return super()._handle_resource_takedown(msg)
-    
-    def complete_bringup(self):
-        "Now handle it successfully"
-        assert not TestResourceTakedownNotHandled.handleBringup, "bringups handled immediately"
-        msg = self.next_queued_message(SimMsgType.RSRC_BRINGUP_REQ)
-        assert msg, "no bringup request message to complete"
-        return super()._handle_resource_bringup(msg)
+#class TestResourceTakedownFail(SimSimpleResource):
+    #"""
+    #A resource where takedown requests can fail
+    #"""
+    #takedown_successful = False
+    #def _handle_resource_takedown(self, msg):
+        #if  TestResourceTakedownFail.takedown_successful:
+            #return super()._handle_resource_takedown(msg)
+        #else:           
+            #msgData = self, False
+            #self.send_response(msg, SimMsgType.RSRC_DOWN, msgData)
+            #return True    
         
         
 class BasicDowntimeTests(unittest.TestCase):
@@ -129,20 +114,23 @@ class BasicDowntimeTests(unittest.TestCase):
         SimClock.initialize()
         simevent.initialize()
         self.eventProcessor = simevent.EventProcessor()
-        self.agent1 = TestDowntimeAgent()
-        self.agent2 = TestDowntimeAgent()
-        self.agent3 = TestDowntimeAgent()
         self.rsrc1 = SimSimpleResource("TestResource1")
         self.rsrc2 = SimSimpleResource("TestResource2")
         self.rsrc3 = SimSimpleResource("TestResource3")
-        self.rsrccap2 = SimSimpleResource("TestResourceCap2")
+        self.rsrccap2 = SimSimpleResource("TestResourceCap2", capacity=2)
+        self.agent1 = TestDowntimeAgent(self.rsrc1)
+        self.agent2a = TestDowntimeAgent(self.rsrc2)
+        self.agent2b = TestDowntimeAgent(self.rsrc2)
+        self.agent3a = TestDowntimeAgent(self.rsrc3)
+        self.agent3b = TestDowntimeAgent(self.rsrc3)
+        self.agent4 = TestDowntimeAgent(self.rsrccap2)
         SimClock.advance_to(TWO_MINS)
-        self.agent1.request_resource_takedown(self.rsrc2)
+        self.agent2a.start_resource_takedown()
         self.eventProcessor.process_events()
         SimClock.advance_to(FOUR_MINS)
-        self.agent1.request_resource_takedown(self.rsrc3)
-        self.agent3.request_resource_takedown(self.rsrccap2)
-        self.agent1.request_resource_bringup(self.rsrc2)
+        self.agent3a.start_resource_takedown()
+        self.agent4.start_resource_takedown()
+        self.agent2a.bringup_resource()
         self.eventProcessor.process_events()
         
     def tearDown(self):
@@ -165,25 +153,49 @@ class BasicDowntimeTests(unittest.TestCase):
         "Test: after takedown and bringup, resource2 is available"
         self.assertTrue(self.rsrc2.available)
         
-    def testLastUpResourceIsRsrc2(self):
-        "Test: downtime agent's last RSRC_UP is resource2"
-        self.assertIs(self.agent1.up_rsrc, self.rsrc2)
+    def testResource2DownNotification(self):
+        "Test: other rsrc2 agent notified of takedown"
+        self.assertTrue(self.agent2b.notified_down)
         
-    def testLastUpResourceTime(self):
-        "Test: downtime agent's last RSRC_UP time is 4 minutes"
-        self.assertEqual(self.agent1.up_tm, FOUR_MINS)
+    def testResource2DownNotificationTime(self):
+        "Test: other rsrc2 agent notified of takedown"
+        self.assertEqual(self.agent2b.notified_downtime, TWO_MINS)
         
-    def testLastDownResourceIsRsrc3(self):
-        "Test: downtime agent's last RSRC_DOWN is rsrc3"
-        self.assertIs(self.agent1.takedown_rsrc, self.rsrc3)
+    def testResource2UpNotification(self):
+        "Test: other rsrc2 agent notified of bringup"
+        self.assertTrue(self.agent2b.notified_up)
         
-    def testLastDownResourceTime(self):
-        "Test: downtime agent's last RSRC_DOWN time is 4 mins"
-        self.assertEqual(self.agent1.takedown_tm, FOUR_MINS)
+    def testResource2UpNotificationTime(self):
+        "Test: other rsrc2 agent notified of takedown"
+        self.assertEqual(self.agent2b.notified_uptime, FOUR_MINS)
         
-    def testLastDownResourceSuccess(self):
-        "Test: downtime agent's last RSRC_DOWN was successful"
-        self.assertEqual(self.agent1.takedown_successful, True)
+    def testResource2NotGoingDownNotification(self):
+        "Test: other rsrc2 agent notified of bringup"
+        self.assertFalse(self.agent2b.notified_goingdown)
+        
+    def testResource2AgentANoDownNotification(self):
+        "Test: agent2a gets no notifications"
+        self.assertFalse(self.agent2a.notified_down or self.agent2a.notified_up)
+        
+    def testResource3DownNotification(self):
+        "Test: other rsrc3 agent notified of takedown"
+        self.assertTrue(self.agent3b.notified_down)
+        
+    def testResource3NoUpNotification(self):
+        "Test: other rsrc3 agent notified of takedown time"
+        self.assertFalse(self.agent3b.notified_up)
+        
+    def testResource3NDownNotificationTime(self):
+        "Test: other rsrc3 agent notified of takedown time"
+        self.assertEqual(self.agent3b.notified_downtime, FOUR_MINS)
+        
+    def testMultiCapResourceDown(self):
+        "Test: multicapacity resource is down after takedown"
+        self.assertTrue(self.rsrccap2.down)
+        
+    def testMultiCapResourceNotAvailable(self):
+        "Test: multicapacity resource is not available after takedown"
+        self.assertEqual(self.rsrccap2.available, 0)
         
     def testResource3DownAfterTakedown(self):
         "Test: after takedown, resource3 is down"
@@ -218,192 +230,178 @@ class BasicDowntimeTests(unittest.TestCase):
     def testTwoTakedowns1(self):
         "Test: after second takedown, rsrc3 is down"
         SimClock.advance_to(FIVE_MINS)
-        self.agent2.request_resource_takedown(self.rsrc3)
+        self.agent3b.start_resource_takedown()
         self.eventProcessor.process_events()
         self.assertTrue(self.rsrc3.down)
+    
+    def testTwoTakedowns2(self):
+        "Test: after second takedown, first agent is NOT notified (since resource already down)"
+        SimClock.advance_to(FIVE_MINS)
+        self.agent3b.start_resource_takedown()
+        self.eventProcessor.process_events()
+        self.assertEqual(self.agent3a.notified_downtime, None)
     
     def testTwoTakedownsOneBringup1(self):
         "Test: after two takedowns, one bringup rsrc3 is still down"
         SimClock.advance_to(FIVE_MINS)
-        self.agent2.request_resource_takedown(self.rsrc3)
+        self.agent3b.start_resource_takedown()
         SimClock.advance_to(SIX_MINS)
-        self.agent2.request_resource_bringup(self.rsrc3)
+        self.agent3a.bringup_resource()
         self.eventProcessor.process_events()
         self.assertTrue(self.rsrc3.down)
     
     def testTwoTakedownsOneBringup2(self):
-        "Test: after two takedowns, one bringup by first agent, rsrc3 is still down"
+        "Test: after two takedowns, one bringup rsrc3 is still not available"
         SimClock.advance_to(FIVE_MINS)
-        self.agent2.request_resource_takedown(self.rsrc3)
+        self.agent3b.start_resource_takedown()
         SimClock.advance_to(SIX_MINS)
-        self.agent1.request_resource_bringup(self.rsrc3)
+        self.agent3a.bringup_resource()
         self.eventProcessor.process_events()
-        self.assertTrue(self.rsrc3.down)
+        self.assertFalse(self.rsrc3.available)
     
     def testTwoTakedownsTwoBringups1(self):
-        "Test: after two takedowns, two bringups rsrc3 is still down"
+        "Test: after two takedowns, two bringups rsrc3 is sup"
         SimClock.advance_to(FIVE_MINS)
-        self.agent2.request_resource_takedown(self.rsrc3)
+        self.agent3b.start_resource_takedown()
         SimClock.advance_to(SIX_MINS)
-        self.agent2.request_resource_bringup(self.rsrc3)
+        self.agent3a.bringup_resource()
         SimClock.advance_to(SEVEN_MINS)
-        self.agent1.request_resource_bringup(self.rsrc3)
+        self.agent3b.bringup_resource()
         self.eventProcessor.process_events()
         self.assertTrue(self.rsrc3.up)
     
     def testTwoTakedownsTwoBringups2(self):
         "Test: after two takedowns, two bringups (in opposite order) rsrc3 is still down"
         SimClock.advance_to(FIVE_MINS)
-        self.agent2.request_resource_takedown(self.rsrc3)
+        self.agent3b.start_resource_takedown()
         SimClock.advance_to(SIX_MINS)
-        self.agent1.request_resource_bringup(self.rsrc3)
+        self.agent3b.bringup_resource()
         SimClock.advance_to(SEVEN_MINS)
-        self.agent2.request_resource_bringup(self.rsrc3)
+        self.agent3a.bringup_resource()
         self.eventProcessor.process_events()
         self.assertTrue(self.rsrc3.up)
     
     def testInvalidBringup1(self):
         "Test: requesting a bringup on a resource that was never down raises a SimError"
-        self.assertRaises(SimError, lambda: self.agent1.request_resource_bringup(self.rsrc1))
+        self.assertRaises(SimError, lambda: self.agent1.bringup_resource())
     
     def testInvalidBringup2(self):
         "Test: requesting a second bringup on a resource by the same agent raises a SimError"
-        self.assertRaises(SimError, lambda: self.agent1.request_resource_bringup(self.rsrc2))
+        self.assertRaises(SimError, lambda: self.agent2a.bringup_resource())
     
     def testInvalidBringup3(self):
         "Test: requesting a bringup on a resource taken down by a different agent raises a SimError"
-        self.assertRaises(SimError, lambda: self.agent2.request_resource_bringup(self.rsrc3))
+        self.assertRaises(SimError, lambda: self.agent3b.bringup_resource())
     
     def testInvalidTakedown1(self):
         "Test: requesting a takedown on a resource that this agent has already taken down raises a SimError"
-        self.assertRaises(SimError, lambda: self.agent1.request_resource_takedown(self.rsrc3))
+        self.assertRaises(SimError, lambda: self.agent4.start_resource_takedown())
 
         
-class TakedownRequestFailureTests(unittest.TestCase):
+class BasicGoingDownTests(unittest.TestCase):
     """
-    TestCase for handling scenarios where the resource takedown
-    fails and/or is not immediately handled, as well as scenarios
-    where the bring up is not immediately handled.
+    TestCase for default handling of cases where a downtime agent invokes
+    _set_resource_going_down() in start_resource_takedown()
     """
     def setUp(self):
         SimClock.initialize()
         simevent.initialize()
-        TestResourceTakedownNotHandled.handleBringup = True
         self.eventProcessor = simevent.EventProcessor()
-        self.agent1 = TestDowntimeAgent()
-        self.agent2 = TestDowntimeAgent()
-        self.rsrc1 = TestResourceTakedownFail("TestResource1")
-        self.rsrc2 = TestResourceTakedownNotHandled("TestResource2")
-        self.eventProcessor.process_events(TWO_MINS)
-        self.agent1.request_resource_takedown(self.rsrc1)
-        self.agent2.request_resource_takedown(self.rsrc2)
+        self.rsrc1 = SimSimpleResource("TestResource1")
+        self.agent1a = TestDowntimeAgent(self.rsrc1, setgoingdown=True)
+        self.agent1b = TestDowntimeAgent(self.rsrc1, setgoingdown=False)
+        self.agent1c = TestDowntimeAgent(self.rsrc1, setgoingdown=True,
+                                         goingdowntimeout=TWO_MINS)
+        self.agent1a.start_resource_takedown()
+        SimClock.advance_to(TWO_MINS)
         self.eventProcessor.process_events()
+        
          
     def tearDown(self):
         # Hack to allow recreation of static objects for each test case
         SimModel.model().clear_registry_partial()
-        TestResourceTakedownNotHandled.handleBringup = True
         
     def testResource1UpAfterSetup(self):
-        "Test: after setup, resource1 is up"
+        "Test: after setup, resource is up"
         self.assertTrue(self.rsrc1.up)
+        
+    def testResource1GoingDownAfterSetup(self):
+        "Test: after setup, resource is going down"
+        self.assertTrue(self.rsrc1.going_down)
+        
+    def testResource1NotAvailableAfterSetup(self):
+        "Test: after setup, resource is going down"
+        self.assertFalse(self.rsrc1.available)
     
+    def testInvalidGoingDown1(self):
+        "Test: requesting set going down on a resource that this agent has already set that for raises a SimError"
+        self.assertRaises(SimError, lambda: self.agent1a.start_resource_takedown())
+        
+    def testGoingDownTwiceOK(self):
+        "Test: setting a resource that's already going down (from a different agent) to going down is OK"
+        self.agent1c.start_resource_takedown()
+        self.assertTrue(self.rsrc1.going_down)
+        
+    def testDown1(self):
+        "Test: take down the going down resource - resource is down"
+        self.agent1b.start_resource_takedown()
+        self.assertTrue(self.rsrc1.down)
+    
+    def testInvalidGoingDown2(self):
+        "Test: requesting set going down on a resource that is already down raises a SimError"
+        self.agent1b.start_resource_takedown()
+        self.assertRaises(SimError, lambda: self.agent1c.start_resource_takedown())
+   
     def testInvalidBringup1(self):
-        "Test: requesting a bringup on a resource where takedown failed raises a SimError"
-        self.assertRaises(SimError, lambda: self.agent1.request_resource_bringup(self.rsrc1))
+        "Test: bringing up a resource that is going down (but not down) raises a SimError"
+        self.assertRaises(SimError, lambda: self.agent1a.bringup_resource())
         
-    def testResourceUpAfterSecondTakedown(self):
-        "Test: after second takedown attempt, resource1 is up with no exceptions"
+    def testDown2(self):
+        "Test: take down the going down resource with second agent, then bringup - resource is still down (2 downs/1 up)"
+        self.agent1b.start_resource_takedown()
         self.eventProcessor.process_events(FOUR_MINS)
-        self.agent1.request_resource_takedown(self.rsrc1)
+        self.agent1a.bringup_resource()
+        self.assertTrue(self.rsrc1.down)
+        
+    def testDown3(self):
+        "Test: take down the going down resource with second agent, then bringup with 2nd agent - resource is still down (2 downs/1 up)"
+        self.agent1b.start_resource_takedown()
+        self.eventProcessor.process_events(FOUR_MINS)
+        self.agent1b.bringup_resource()
+        self.assertTrue(self.rsrc1.down)
+        
+    def testDown4(self):
+        "Test: take down the going down resource with second agent, then bringup with both agents (2 downs/2 up) resource is up"
+        self.agent1b.start_resource_takedown()
+        self.eventProcessor.process_events(FOUR_MINS)
+        self.agent1b.bringup_resource()
+        SimClock.advance_to(FIVE_MINS)
+        self.eventProcessor.process_events()
+        self.agent1a.bringup_resource()
         self.assertTrue(self.rsrc1.up)
         
-    def testResource2UpAfterSetup(self):
-        "Test: after setup, resource2 is up"
-        self.assertTrue(self.rsrc2.up)
-    
-    def testInvalidBringup2(self):
-        "Test: requesting a bringup on a resource where takedown was not handled raises a SimError"
-        self.assertRaises(SimError, lambda: self.agent2.request_resource_bringup(self.rsrc2))
-        
-    def testInvalidSecondTakedown2(self):
-        "Test: after second takedown attempt, resource2 is up with no exceptions"
+    def testGoingDownTimeout1(self):
+        "Test: set resource to goingdown with two min timeout; 1 min later, resource is going down"
+        # complete resource takedown with agent1b, then 1a and 1b bring up the resource
+        self.agent1b.start_resource_takedown()
+        self.agent1b.bringup_resource()
+        self.agent1a.bringup_resource()
+        # resource now up; start a goingdown with a two minute timeout
+        self.agent1c.start_resource_takedown()
+        self.eventProcessor.process_events(THREE_MINS)
+        self.assertTrue(self.rsrc1.going_down)
+       
+    def testGoingDownTimeout2(self):
+        "Test: set resource to goingdown with two min timeout; 2 min later, resource is down"
+        # complete resource takedown with agent1b, then 1a and 1b bring up the resource
+        self.agent1b.start_resource_takedown()
+        self.agent1b.bringup_resource()
+        self.agent1a.bringup_resource()
+        # start a goingdown with a two minute timeout
+        self.agent1c.start_resource_takedown()
         self.eventProcessor.process_events(FOUR_MINS)
-        self.assertRaises(SimError, lambda: self.agent2.request_resource_takedown(self.rsrc2))
+        self.assertTrue(self.rsrc1.down)
         
-    def testResource2CompleteTakedown(self):
-        "Test: after assignment agent completes takedown, resource2 is down"
-        self.eventProcessor.process_events(FOUR_MINS)
-        self.rsrc2.complete_takedown()
-        self.eventProcessor.process_events()
-        self.assertTrue(self.rsrc2.down)
-        
-    def testResource2CompleteTakedownThenBringup(self):
-        "Test: after assignment agent completes takedown, bringup succeeds"
-        self.eventProcessor.process_events(FOUR_MINS)
-        self.rsrc2.complete_takedown()
-        self.eventProcessor.process_events(FIVE_MINS)
-        self.agent2.request_resource_bringup(self.rsrc2)
-        self.eventProcessor.process_events()
-        self.assertTrue(self.rsrc2.up)
-        
-    def testResource2CompleteTakedownThenNothandledBringup(self):
-        "Test: after assignment agent completes takedown, bringup fails"
-        TestResourceTakedownNotHandled.handleBringup = False
-        self.eventProcessor.process_events(FOUR_MINS)
-        self.rsrc2.complete_takedown()
-        self.eventProcessor.process_events(FIVE_MINS)
-        self.agent2.request_resource_bringup(self.rsrc2)
-        self.eventProcessor.process_events()
-        self.assertFalse(self.rsrc2.up)
-        
-    def testResource2CompleteTakedownThenNothandledBringup2(self):
-        "Test: after assignment agent completes takedown, bringup fails - after handled, resource is up"
-        TestResourceTakedownNotHandled.handleBringup = False
-        self.eventProcessor.process_events(FOUR_MINS)
-        self.rsrc2.complete_takedown()
-        self.eventProcessor.process_events(FIVE_MINS)
-        self.agent2.request_resource_bringup(self.rsrc2)
-        self.eventProcessor.process_events(SIX_MINS)
-        self.rsrc2.complete_bringup()
-        self.eventProcessor.process_events()
-        self.assertTrue(self.rsrc2.up)
-        
-    def testResource2NothandledBringupThenBringupThenTakedown(self):
-        "Test: bringup fails - after handled, resource can be taken down again"
-        TestResourceTakedownNotHandled.handleBringup = False
-        self.eventProcessor.process_events(FOUR_MINS)
-        self.rsrc2.complete_takedown()
-        self.eventProcessor.process_events(FIVE_MINS)
-        self.agent2.request_resource_bringup(self.rsrc2)
-        self.eventProcessor.process_events(SIX_MINS)
-        self.rsrc2.complete_bringup()
-        self.eventProcessor.process_events(SEVEN_MINS)
-        self.agent2.request_resource_takedown(self.rsrc2)
-        self.rsrc2.complete_takedown()
-        self.eventProcessor.process_events()
-        self.assertTrue(self.rsrc2.down)
-        
-    def testResource2CompleteTakedownThenNothandledBringupTakedownRaises(self):
-        "Test: after assignment agent completes takedown, bringup fails, new takedown raises"
-        TestResourceTakedownNotHandled.handleBringup = False
-        self.eventProcessor.process_events(FOUR_MINS)
-        self.rsrc2.complete_takedown()
-        self.eventProcessor.process_events(FIVE_MINS)
-        self.agent2.request_resource_bringup(self.rsrc2)
-        self.eventProcessor.process_events()
-        self.assertRaises(SimError, lambda: self.agent2.request_resource_takedown(self.rsrc2))
-        
-    def testResource2CompleteTakedownThenNothandledBringup2ndBringupRaises(self):
-        "Test: after assignment agent completes takedown, bringup fails, second bringup raises"
-        TestResourceTakedownNotHandled.handleBringup = False
-        self.eventProcessor.process_events(FOUR_MINS)
-        self.rsrc2.complete_takedown()
-        self.eventProcessor.process_events(FIVE_MINS)
-        self.agent2.request_resource_bringup(self.rsrc2)
-        self.eventProcessor.process_events()
-        self.assertRaises(SimError, lambda: self.agent2.request_resource_bringup(self.rsrc2))
-
         
 class TestProcess1(SimProcess):
     """
@@ -479,15 +477,16 @@ class BasicDowntimeAcquireTests1(unittest.TestCase):
         simevent.initialize()
         self.eventProcessor = simevent.EventProcessor()
         self.source = MockSource()
-        self.agent1 = TestDowntimeAgent()
-        self.agent2 = TestDowntimeAgent()
         self.rsrc1 = SimSimpleResource("TestResource1")
         self.rsrc2 = SimSimpleResource("TestResource2")
         self.rsrc3 = SimSimpleResource("TestResource3", capacity=2)
+        self.agent1 = TestDowntimeAgent(self.rsrc1)
+        self.agent2 = TestDowntimeAgent(self.rsrc2)
+        self.agent3 = TestDowntimeAgent(self.rsrc3)
         self.process1 = TestProcess1(self)
         self.process2 = TestProcess1(self, acquire_rsrc2=True)
         SimClock.advance_to(ONE_MIN)
-        self.agent1.request_resource_takedown(self.rsrc1)
+        self.agent1.start_resource_takedown()
         self.eventProcessor.process_events()
         
     def tearDown(self):
@@ -505,7 +504,7 @@ class BasicDowntimeAcquireTests1(unittest.TestCase):
         self.process1.start()
         self.eventProcessor.process_events()
         SimClock.advance_to(TWO_MINS)
-        self.agent1.request_resource_bringup(self.rsrc1)
+        self.agent1.bringup_resource()
         self.eventProcessor.process_events()
         self.assertEqual(self.process1.acquire_tm, TWO_MINS)
         
@@ -513,88 +512,88 @@ class BasicDowntimeAcquireTests1(unittest.TestCase):
         "Test: acquire request fulfilled when resource comes back up, waits for 2 mins"
         self.process1.start()
         self.eventProcessor.process_events(TWO_MINS)
-        self.agent1.request_resource_bringup(self.rsrc1)
+        self.agent1.bringup_resource()
         self.eventProcessor.process_events()
         self.assertEqual(self.process1.runend_tm, FOUR_MINS)
       
     def testRaisesWhenResourceGoesDownDuringWait1(self):
         "Test: resource down after acquire(), exception raised"
-        self.agent1.request_resource_bringup(self.rsrc1)
+        self.agent1.bringup_resource()
         self.process1.start()
         self.eventProcessor.process_events(TWO_MINS)
-        self.agent1.request_resource_takedown(self.rsrc1)
+        self.agent1.start_resource_takedown()
         self.eventProcessor.process_events()
         self.assertIsNotNone(self.process1.exception)
       
     def testRaisesWhenResourceGoesDownDuringWait2(self):
         "Test: resource down after acquire(), exception raised for that resource"
-        self.agent1.request_resource_bringup(self.rsrc1)
+        self.agent1.bringup_resource()
         self.process1.start()
         self.eventProcessor.process_events(TWO_MINS)
-        self.agent1.request_resource_takedown(self.rsrc1)
+        self.agent1.start_resource_takedown()
         self.eventProcessor.process_events()
         self.assertIs(self.process1.exception.resource, self.rsrc1)
       
     def testRaisesWhenResourceGoesDownDuringWait3(self):
         "Test: resource down after acquire(), exception raised and process run() ends"
-        self.agent1.request_resource_bringup(self.rsrc1)
+        self.agent1.bringup_resource()
         self.process1.start()
         self.eventProcessor.process_events(TWO_MINS)
-        self.agent1.request_resource_takedown(self.rsrc1)
+        self.agent1.start_resource_takedown()
         self.eventProcessor.process_events()
         self.assertEqual(self.process1.runend_tm, TWO_MINS)
       
     def testRaisesWhenResourc1eGoesDownWhileAcquiring2ndResource1(self):
         "Test: process acquires rsrc1, rsrc1 goes down while acquiring rsrc2, exception raised"
-        self.agent1.request_resource_bringup(self.rsrc1)
-        self.agent1.request_resource_takedown(self.rsrc2)
+        self.agent1.bringup_resource()
+        self.agent2.start_resource_takedown()
         self.process2.start()
         self.eventProcessor.process_events(TWO_MINS)
-        self.agent1.request_resource_takedown(self.rsrc1)
+        self.agent1.start_resource_takedown()
         self.eventProcessor.process_events()
         self.assertIsNotNone(self.process2.exception)
       
     def testRaisesWhenResourc1eGoesDownWhileAcquiring2ndResource2(self):
         "Test: process acquires rsrc1, rsrc1 goes down while acquiring rsrc2, exception raised for rsrc1"
-        self.agent1.request_resource_bringup(self.rsrc1)
-        self.agent1.request_resource_takedown(self.rsrc2)
+        self.agent1.bringup_resource()
+        self.agent2.start_resource_takedown()
         self.process2.start()
         self.eventProcessor.process_events(TWO_MINS)
-        self.agent1.request_resource_takedown(self.rsrc1)
+        self.agent1.start_resource_takedown()
         self.eventProcessor.process_events()
         self.assertIs(self.process2.exception.resource, self.rsrc1)
       
     def testRaisesWhenResourc1eGoesDownWhileAcquiring2ndResource3(self):
         "Test: process acquires rsrc1, rsrc1 goes down while acquiring rsrc2, run() ends"
-        self.agent1.request_resource_bringup(self.rsrc1)
-        self.agent1.request_resource_takedown(self.rsrc2)
+        self.agent1.bringup_resource()
+        self.agent2.start_resource_takedown()
         self.process2.start()
         self.eventProcessor.process_events(TWO_MINS)
-        self.agent1.request_resource_takedown(self.rsrc1)
+        self.agent1.start_resource_takedown()
         self.eventProcessor.process_events()
         self.assertEqual(self.process2.runend_tm, TWO_MINS)
       
     def testRaisesWhenResourc1eGoesDownWhileAcquiring2ndResource4(self):
         "Test: process acquires rsrc1, rsrc1 goes down while acquiring rsrc2, no rsrc2 assignment"
-        self.agent1.request_resource_bringup(self.rsrc1)
-        self.agent1.request_resource_takedown(self.rsrc2)
+        self.agent1.bringup_resource()
+        self.agent2.start_resource_takedown()
         self.process2.start()
         self.eventProcessor.process_events(TWO_MINS)
-        self.agent1.request_resource_takedown(self.rsrc1)
+        self.agent1.start_resource_takedown()
         self.eventProcessor.process_events()
         self.assertIsNone(self.process2.assignment2)
       
     def testRaisesWhenResourc1eGoesDownWhileAcquiring2ndResource5(self):
         "Test: process acquires rsrc1, rsrc1 goes down while acquiring rsrc2, rsrc2 request cancelled"
         # Bring up rsrc1 so that process2 will acquire it immediately
-        self.agent1.request_resource_bringup(self.rsrc1)
+        self.agent1.bringup_resource()
         
         # takedown rsrc 2 so that process2 acquire() call on it will block
-        self.agent1.request_resource_takedown(self.rsrc2)
+        self.agent2.start_resource_takedown()
         
         self.process2.start()
         self.eventProcessor.process_events(TWO_MINS)
-        self.agent1.request_resource_takedown(self.rsrc1)
+        self.agent1.start_resource_takedown()
         self.eventProcessor.process_events()
         
         # the request on rsrc2 should be cancelled - i.e., the request is deleted from
@@ -607,7 +606,7 @@ class BasicDowntimeAcquireTests1(unittest.TestCase):
         self.process1 = TestProcess1a(self)
         self.process1.start()
         self.eventProcessor.process_events(ONE_MIN)
-        self.agent1.request_resource_takedown(self.rsrc3)
+        self.agent3.start_resource_takedown()
         self.eventProcessor.process_events()
         self.assertIs(self.process1.exception.resource, self.rsrc3)
 
@@ -930,180 +929,251 @@ class ScheduledDowntimeAgentTests(unittest.TestCase):
         self.assertTrue(self.rsrc1.up)
         
         
-class ScheduledDowntimeAgentTakedownFailTests(unittest.TestCase):
-    """
-    TestCase for testing SimScheduledDowntimeAgent with a
-    resource for whom takedown requests fail.
-    """
-    def setUp(self):
-        SimClock.initialize()
-        simevent.initialize()
-        self.eventProcessor = simevent.EventProcessor()
-        self.rsrc1 = TestResourceTakedownFail("TestResourceTDF")
-        self.baseScheduleLength = EIGHT_HRS
-        self.breaks = [(TWO_HRS, FIFTEEN_MINS), (FOUR_HRS, THIRTY_MINS),
-                       (SIX_HRS, FIFTEEN_MINS)]
+#class ScheduledDowntimeAgentTakedownFailTests(unittest.TestCase):
+    #"""
+    #TestCase for testing SimScheduledDowntimeAgent with a
+    #resource for whom takedown requests fail.
+    #"""
+    #def setUp(self):
+        #SimClock.initialize()
+        #simevent.initialize()
+        #self.eventProcessor = simevent.EventProcessor()
+        #self.rsrc1 = TestResourceTakedownFail("TestResourceTDF")
+        #self.baseScheduleLength = EIGHT_HRS
+        #self.breaks = [(TWO_HRS, FIFTEEN_MINS), (FOUR_HRS, THIRTY_MINS),
+                       #(SIX_HRS, FIFTEEN_MINS)]
         
-        self.sched = DowntimeSchedule(EIGHT_HRS, self.breaks)
-        self.scheduleAgent = SimScheduledDowntimeAgent(self.rsrc1, self.sched)       
-        SimAgent.final_initialize_all()
-        TestResourceTakedownFail.takedown_successful = False
+        #self.sched = DowntimeSchedule(EIGHT_HRS, self.breaks)
+        #self.scheduleAgent = SimScheduledDowntimeAgent(self.rsrc1, self.sched)       
+        #SimAgent.final_initialize_all()
+        #TestResourceTakedownFail.takedown_successful = False
                  
-    def tearDown(self):
-        # Hack to allow recreation of static objects/agents for each test case
-        SimModel.model().clear_registry_partial()
-        TestResourceTakedownFail.takedown_successful = False
+    #def tearDown(self):
+        ## Hack to allow recreation of static objects/agents for each test case
+        #SimModel.model().clear_registry_partial()
+        #TestResourceTakedownFail.takedown_successful = False
         
-    def testResourceNotDownAtFirstBreak1(self):
-        "Test: resource not down at start of first break"
-        self.eventProcessor.process_events(TWO_HRS)
-        self.assertFalse(self.rsrc1.down)
+    #def testResourceNotDownAtFirstBreak1(self):
+        #"Test: resource not down at start of first break"
+        #self.eventProcessor.process_events(TWO_HRS)
+        #self.assertFalse(self.rsrc1.down)
         
-    def testResourceNotDownAtFirstBreak2(self):
-        "Test: resource not down tem minutes first break"
-        self.eventProcessor.process_events(TWO_HRS+TEN_MINS)
-        self.assertFalse(self.rsrc1.down)
+    #def testResourceNotDownAtFirstBreak2(self):
+        #"Test: resource not down tem minutes first break"
+        #self.eventProcessor.process_events(TWO_HRS+TEN_MINS)
+        #self.assertFalse(self.rsrc1.down)
         
-    def testResourceUp15MinutesFirstBreak(self):
-        "Test: resource up at end of first break"
-        self.eventProcessor.process_events(TWO_HRS+FIFTEEN_MINS)
-        self.assertTrue(self.rsrc1.up)
+    #def testResourceUp15MinutesFirstBreak(self):
+        #"Test: resource up at end of first break"
+        #self.eventProcessor.process_events(TWO_HRS+FIFTEEN_MINS)
+        #self.assertTrue(self.rsrc1.up)
                             
-    def testResourceDownAtSecondBreakAfterTakedownSuccess1(self):
-        "Test: after first takedown fails, resource down successfully at start of second break"
-        self.eventProcessor.process_events(THREE_HRS)
-        TestResourceTakedownFail.takedown_successful = True
-        self.eventProcessor.process_events(FOUR_HRS)
-        self.assertTrue(self.rsrc1.down)
+    #def testResourceDownAtSecondBreakAfterTakedownSuccess1(self):
+        #"Test: after first takedown fails, resource down successfully at start of second break"
+        #self.eventProcessor.process_events(THREE_HRS)
+        #TestResourceTakedownFail.takedown_successful = True
+        #self.eventProcessor.process_events(FOUR_HRS)
+        #self.assertTrue(self.rsrc1.down)
 
-    def testResourceDownAtSecondBreakAfterTakedownSuccess2(self):
-        "Test: after first takedown fails, resource down successfully in middle of second break"
-        self.eventProcessor.process_events(THREE_HRS)
-        TestResourceTakedownFail.takedown_successful = True
-        self.eventProcessor.process_events(FOUR_HRS+FIFTEEN_MINS)
-        self.assertTrue(self.rsrc1.down)
+    #def testResourceDownAtSecondBreakAfterTakedownSuccess2(self):
+        #"Test: after first takedown fails, resource down successfully in middle of second break"
+        #self.eventProcessor.process_events(THREE_HRS)
+        #TestResourceTakedownFail.takedown_successful = True
+        #self.eventProcessor.process_events(FOUR_HRS+FIFTEEN_MINS)
+        #self.assertTrue(self.rsrc1.down)
         
-    def testResourceUp30MinutesSecondBreak(self):
-        "Test: after first takedown fails, resource up sat end of second break"
-        self.eventProcessor.process_events(THREE_HRS)
-        TestResourceTakedownFail.takedown_successful = True
-        self.eventProcessor.process_events(FOUR_HRS+THIRTY_MINS)
-        self.assertTrue(self.rsrc1.up)
-        
-        
-class ScheduledDowntimeAgentTakedownDelayed(unittest.TestCase):
+    #def testResourceUp30MinutesSecondBreak(self):
+        #"Test: after first takedown fails, resource up sat end of second break"
+        #self.eventProcessor.process_events(THREE_HRS)
+        #TestResourceTakedownFail.takedown_successful = True
+        #self.eventProcessor.process_events(FOUR_HRS+THIRTY_MINS)
+        #self.assertTrue(self.rsrc1.up)
+
+class TestScheduledDowntimeAgent(SimScheduledDowntimeAgent):
     """
-    TestCase for testing SimScheduledDowntimeAgent with a
-    resource for whom takedown requests fail.
+    """
+    def __init__(self, resource, schedule, goingdowntimeout=None):
+        super().__init__(resource, schedule)
+        self.goingdowntimeout = goingdowntimeout
+        self.notified_down = False
+        self.notified_goingdown = False
+        self.notified_up = False
+        self.notified_downtime = None
+        self.notified_uptime = None
+        self.notified_goingdowntime = None
+        
+    def start_resource_takedown(self):
+        if not self.resource.in_use or self.resource.down:
+            super().start_resource_takedown()
+        else:
+            self._set_resource_going_down(self.goingdowntimeout)
+            
+class TestProcess2(SimProcess):
+    def __init__(self, testcase, *, start_at=None, wait_time=None):
+        super().__init__()
+        self.testcase = testcase
+        self.rsrc = testcase.rsrc1
+        self.start_at_time = start_at
+        self.wait_time = wait_time
+        self.assignment = None
+        self.runstart_tm = None
+        self.acquire_tm = None
+        self.runend_tm = None
+        entity = MockEntity(testcase.source, self)
+        
+    def run(self):
+        initial_wait = self.start_at_time - SimClock.now()
+        self.wait_for(initial_wait)
+        self.runstart_tm = SimClock.now()
+        with self.acquire(self.rsrc) as self.assignment:
+            self.acquire_tm = SimClock.now()
+            self.wait_for(self.wait_time, extend_through_downtime=True)        
+            self.runend_tm = SimClock.now()
+        
+         
+    
+        
+class ScheduledAndFailureDowntimeTests(unittest.TestCase):
+    """
+    TestCase for testing resource with a SimScheduledDowntimeAgent that
+    sets going down when the resource is in-use and up, and a failure agent.
     """
     def setUp(self):
         SimClock.initialize()
         simevent.initialize()
         self.eventProcessor = simevent.EventProcessor()
-        self.rsrc1 = TestResourceTakedownNotHandled("TestResourceTDNH")
-        self.baseScheduleLength = EIGHT_HRS
-        self.breaks = [(TWO_HRS, FIFTEEN_MINS), (FOUR_HRS, THIRTY_MINS),
-                       (SIX_HRS, FIFTEEN_MINS)]
+        self.source = MockSource()
+        self.rsrc1 = SimSimpleResource("TestResource1")
         
+        self.baseScheduleLength = EIGHT_HRS
+        self.breaks = [(TWO_HRS, FIFTEEN_MINS), (SIX_HRS, FIFTEEN_MINS)]
         self.sched = DowntimeSchedule(EIGHT_HRS, self.breaks)
-        self.scheduleAgent = SimScheduledDowntimeAgent(self.rsrc1, self.sched)       
+        self.scheduleAgent = TestScheduledDowntimeAgent(self.rsrc1, self.sched)
+        
+        timeToFailureGenerator1 = SimDistribution.constant(NINE_HRS)
+        timeToRepairGenerator1 = SimDistribution.constant(TWO_HRS)
+        self.failureAgent1 = SimResourceFailureAgent(self.rsrc1,
+                                                     timeToFailureGenerator1,
+                                                     timeToRepairGenerator1)
+        
+        timeToFailureGenerator2 = SimDistribution.constant(FOURTEEN_HRS+ONE_MIN)
+        timeToRepairGenerator2 = SimDistribution.constant(FIVE_MINS)
+        self.failureAgent1 = SimResourceFailureAgent(self.rsrc1,
+                                                     timeToFailureGenerator2,
+                                                     timeToRepairGenerator2)
         SimAgent.final_initialize_all()
-        TestResourceTakedownNotHandled.handleTakedown = False
-        TestResourceTakedownNotHandled.handleBringup = True
-                 
+        
+        # All processes use extend_through_downtime = True
+        # process 1 starts at 1 hour, encounters 15 min scheduled downtime at
+        # 2 hours, completes at 3:15
+        self.process1 = TestProcess2(self, start_at=ONE_HR, wait_time=TWO_HRS)
+        
+        # process 2 starts at 8 hours, waits through 2 hr failure starting at
+        # 9 hrs (which overlaps with scheduled break) and completes at 12 hours
+        self.process2 = TestProcess2(self, start_at=EIGHT_HRS, wait_time=TWO_HRS)
+        
+        # process 3 starts at 13 hours. At 14 hours, break is delayed
+        # (Resource going down) because resource in use.
+        # At 14:01, resource fails (for only 5 mins), so scheduled break starts.
+        # At 14:16, break ends; process completes at 14:30
+        self.process3 = TestProcess2(self, start_at=THIRTEEN_HRS,
+                                     wait_time=ONE_HR+FIFTEEN_MINS)
+        
+        self.process1.start()
+        self.process2.start()
+        self.process3.start()
+                        
     def tearDown(self):
         # Hack to allow recreation of static objects/agents for each test case
         SimModel.model().clear_registry_partial()
-        TestResourceTakedownNotHandled.handleTakedown = False
-        TestResourceTakedownNotHandled.handleBringup = True
         
-    def testResourceDownAtFirstBreak1(self):
-        "Test: takendown complete immediately resource  down at start of first break"
-        self.eventProcessor.process_events(TWO_HRS)
-        self.rsrc1.complete_takedown()
-        self.eventProcessor.process_events(TWO_HRS)
+    def testResourceNotDownAtFirstBreak(self):
+        "Test: Scheduled downtime is going down, not down"
+        self.eventProcessor.process_events(TWO_HRS + ONE_MIN)
+        self.assertTrue(self.rsrc1.going_down and self.rsrc1.up)
+        
+    def testProcess1CompleteOnTime(self):
+        "Test: Process1 completes on time (no break)"
+        self.eventProcessor.process_events(THREE_HRS)
+        self.assertEqual(self.process1.runend_tm, THREE_HRS)
+        
+    def testProcess1CompleteThenResourceDown(self):
+        "Test: Process1 completes on time and break commences"
+        self.eventProcessor.process_events(THREE_HRS)
         self.assertTrue(self.rsrc1.down)
         
-    def testResourceDownAtFirstBreak2(self):
-        "Test: takendown complete after 1 hour delay, resource down for delayed first break"
-        self.eventProcessor.process_events(TWO_HRS)
-        self.eventProcessor.process_events(THREE_HRS)
-        self.rsrc1.complete_takedown()
-        self.eventProcessor.process_events(THREE_HRS + FIVE_MINS)
-        self.assertTrue(self.rsrc1.down)
-        
-    def testResourcUpAtFirstBreak(self):
-        "Test: takendown complete after 1 hour delay, resource up 15 minutes later"
-        self.eventProcessor.process_events(THREE_HRS)
-        self.rsrc1.complete_takedown()
+    def testProcess1CompleteThenResourceUpAfterBreak(self):
+        "Test: Break completes (rsrc up) 15 minutes after Process1 completes"
         self.eventProcessor.process_events(THREE_HRS + FIFTEEN_MINS)
         self.assertTrue(self.rsrc1.up)
         
-    def testResourcDownAtSecondBreak1(self):
-        "Test: takendown complete after 1 hour delay, second break on time"
-        self.eventProcessor.process_events(TWO_HRS)
-        self.eventProcessor.process_events(THREE_HRS)
-        self.rsrc1.complete_takedown()
-        TestResourceTakedownNotHandled.handleTakedown = True
-        self.eventProcessor.process_events(FOUR_HRS)
+    def testProcess2_9HRS_1(self):
+        "Test: At 9 hours, process2 in process"
+        self.eventProcessor.process_events(NINE_HRS)
+        self.assertEqual(self.process2.acquire_tm, EIGHT_HRS)
+       
+    def testProcess2_9HRS_2(self):
+        "Test: At 9 hours, resource is down"
+        self.eventProcessor.process_events(NINE_HRS)
         self.assertTrue(self.rsrc1.down)
-        
-    def testResourceUpDownSecondBreak2(self):
-        "Test: takendown complete after 1 hour delay, on middle of second break on time"
-        self.eventProcessor.process_events(THREE_HRS)
-        self.rsrc1.complete_takedown()
-        TestResourceTakedownNotHandled.handleTakedown = True
-        self.eventProcessor.process_events(FOUR_HRS + FIFTEEN_MINS)
-        self.assertTrue(self.rsrc1.down)
-        
-    def testResourceExtendedTakedownDelay1(self):
-        "Test: takendown complete after 2 hour delay, up after 15 mins (not 30)"
-        self.eventProcessor.process_events(FOUR_HRS)
-        self.rsrc1.complete_takedown()
-        TestResourceTakedownNotHandled.handleTakedown = True
-        self.eventProcessor.process_events(FOUR_HRS + FIFTEEN_MINS)
+       
+    def testProcess2_11HRS(self):
+        "Test: At 11 hours, resource is up (scheduled downtime during failure)"
+        self.eventProcessor.process_events(NINE_HRS+TWO_HRS)
         self.assertTrue(self.rsrc1.up)
         
-    def testResourceExtendedTakedownDelay2(self):
-        "Test: takendown complete after 2 hour delay, downtime at 6 hrs is on time"
-        self.eventProcessor.process_events(FOUR_HRS)
-        self.rsrc1.complete_takedown()
-        TestResourceTakedownNotHandled.handleTakedown = True
-        self.eventProcessor.process_events(SIX_HRS)
-        self.eventProcessor.process_events(SIX_HRS)
-        self.assertTrue(self.rsrc1.down)
+    def testProcess2_12HRS1(self):
+        "Test: At 12 hours, process2 is complete"
+        self.eventProcessor.process_events(NINE_HRS+THREE_HRS)
+        self.assertEqual(self.process2.runend_tm, NINE_HRS+THREE_HRS)
         
-    def testResourceExtendedBringupDelay1(self):
-        "Test: takedown complete on time, 2 hr bringup delay, break at 4+ hrs skipped"
-        TestResourceTakedownNotHandled.handleTakedown = True
-        TestResourceTakedownNotHandled.handleBringup = False
-        self.eventProcessor.process_events(FOUR_HRS + FIFTEEN_MINS)
-        self.rsrc1.complete_bringup()
-        self.eventProcessor.process_events(FOUR_HRS + THIRTY_MINS)
+    def testProcess2_12HRS2(self):
+        "Test: At 12 hours, resource is still up (no delayed break)"
+        self.eventProcessor.process_events(NINE_HRS+THREE_HRS)
         self.assertTrue(self.rsrc1.up)
         
-    def testResourceExtendedBringupDelay2(self):
-        "Test: takedown complete on time, 2 hr bringup delay, break at 6 hrs on time"
-        TestResourceTakedownNotHandled.handleTakedown = True
-        TestResourceTakedownNotHandled.handleBringup = False
-        self.eventProcessor.process_events(FOUR_HRS + FIFTEEN_MINS)
-        self.rsrc1.complete_bringup()
-        self.eventProcessor.process_events(SIX_HRS)
+    def testProcess3_14HRS1(self):
+        "Test: At 14 hours, process3 has started at 13 hrs"
+        self.eventProcessor.process_events(FOURTEEN_HRS)
+        self.assertEqual(self.process3.acquire_tm, THIRTEEN_HRS)
+        
+    def testProcess3_14HRS2(self):
+        "Test: At 14 hours, resource is going down"
+        self.eventProcessor.process_events(FOURTEEN_HRS)
+        self.assertTrue(self.rsrc1.going_down)
+        
+    def testProcess3_14HRS_1MIN(self):
+        "Test: At 14:01 hours, resource fails, is down"
+        self.eventProcessor.process_events(FOURTEEN_HRS+ONE_MIN)
+        self.assertTrue(self.rsrc1.down and not self.rsrc1.going_down)
+        
+    def testProcess3_14HRS_15MINS(self):
+        "Test: At 14:15 hours, resource is still down"
+        self.eventProcessor.process_events(FOURTEEN_HRS+FIFTEEN_MINS)
         self.assertTrue(self.rsrc1.down)
+        
+    def testProcess3_14HRS_16MINS(self):
+        "Test: At 14:16 hours, resource is up"
+        self.eventProcessor.process_events(FOURTEEN_HRS+SIXTEEN_MINS)
+        self.assertTrue(self.rsrc1.up and not self.rsrc1.going_down)
+        
+    def testProcess3_14HRS_31MINS(self):
+        "Test: At 14:30 hours, process3 run has completed"
+        self.eventProcessor.process_events(FOURTEEN_HRS+THIRTY_MINS)
+        self.assertEqual(self.process3.runend_tm, FOURTEEN_HRS+THIRTY_MINS)
         
         
 def makeTestSuite():
     loader = unittest.TestLoader()
     suite = unittest.TestSuite()
     suite.addTest(loader.loadTestsFromTestCase(BasicDowntimeTests))
-    suite.addTest(loader.loadTestsFromTestCase(TakedownRequestFailureTests))
+    suite.addTest(loader.loadTestsFromTestCase(BasicGoingDownTests))
     suite.addTest(loader.loadTestsFromTestCase(BasicDowntimeAcquireTests1))
     suite.addTest(loader.loadTestsFromTestCase(FailureAgentTests))
     suite.addTest(loader.loadTestsFromTestCase(ExtendThroughDowntimeTests))
     suite.addTest(loader.loadTestsFromTestCase(DowntimeScheduleTests))
     suite.addTest(loader.loadTestsFromTestCase(ScheduledDowntimeAgentTests))
-    suite.addTest(loader.loadTestsFromTestCase(ScheduledDowntimeAgentTakedownFailTests))
-    suite.addTest(loader.loadTestsFromTestCase(ScheduledDowntimeAgentTakedownDelayed))
+    suite.addTest(loader.loadTestsFromTestCase(ScheduledAndFailureDowntimeTests))
     return suite
 
 if __name__ == '__main__':

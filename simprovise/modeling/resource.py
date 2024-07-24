@@ -12,10 +12,11 @@ __all__ = ['SimResource', 'SimSimpleResource', 'SimResourcePool',
 
 from itertools import chain
 from inspect import isclass
+from abc import ABCMeta, abstractmethod
 
 from simprovise.core import SimError, simtrace
 from simprovise.core.simclock import SimClock
-from simprovise.core.simexception import SimInterruptException
+#from simprovise.core.simexception import SimInterruptException
 from simprovise.core.datacollector import SimUnweightedDataCollector
 from simprovise.core.simlogging import SimLogging
 from simprovise.core.simtime import SimTime 
@@ -216,7 +217,7 @@ class SimAssignResourcesEvent(SimEvent):
     __slots__ = ('assignmentAgent')
     
     def __init__(self, assignmentAgent):
-        super().__init__(SimClock.now(), priority=4)
+        super().__init__(SimClock.now(), priority=5)
         self.assignmentAgent = assignmentAgent
         
     def process_impl(self):
@@ -244,8 +245,9 @@ class ResourceAssignmentAgentMixin(object):
         self.assignmentEvent = None
         self.register_handler(SimMsgType.RSRC_REQUEST, self._handle_resource_request)
         self.register_handler(SimMsgType.RSRC_RELEASE, self._handle_resource_release)
-        self.register_handler(SimMsgType.RSRC_TAKEDOWN_REQ, self._handle_resource_takedown)
-        self.register_handler(SimMsgType.RSRC_BRINGUP_REQ, self._handle_resource_bringup)
+        self.register_handler(SimMsgType.RSRC_GOING_DOWN, self._handle_resource_going_down)
+        self.register_handler(SimMsgType.RSRC_DOWN, self._handle_resource_takedown)
+        self.register_handler(SimMsgType.RSRC_UP, self._handle_resource_bringup)
 
     @property
     def request_priority_func(self):
@@ -512,15 +514,20 @@ class ResourceAssignmentAgentMixin(object):
         synchronously - there is presently no RSRC_RELEASED response message
         that is/can be sent to the process agent.
 
-        After releasing the resources, this handler will schedule a round
-        of new resource assignments, as one or more request messages in the 
-        queue may now be fulfillable using the newly released resource(s).
+        After releasing the resources, this handler will:
+        
+        - Notify all downtime agents for all released resources of the
+          release via message; the downtime agent might take down the resource
+          after the release.
+        - Schedule a round of new resource assignments, as one or more request
+          messages in the queue may now be fulfillable using the newly
+          released resource(s).
 
-        :param msg: Resource Request message (SimMsgType RSRC_RELEASE)
+        :param msg: Resource Request message (`SimMsgType` `RSRC_RELEASE`)
         :type msg:  :class:`~.agent.SimMessage`
                 
         :return:    ``True`` always, as the message is always handled
-        :rtype:     bool
+        :rtype:     ``bool``
 
         """
         assert msg.msgType == SimMsgType.RSRC_RELEASE, "Invalid message type passed to handleResourceRelease()"
@@ -543,16 +550,38 @@ class ResourceAssignmentAgentMixin(object):
 
         assignment.subtract(resourcesToRelease)
         
+        # Notify downtime agents of resource's that were released
+        # (They may want to now  take that resource down, so do this before
+        # resource request processing.)
+        for rsrc in resourcesToRelease:
+            for downtimeAgent in rsrc.downtime_agents():
+                self.send_message(downtimeAgent, SimMsgType.RSRC_RELEASE, rsrc)                 
+         
         # We now have available resources, but defer scheduling until all
         # other messages for the current simulated time are processed.
         self._schedule_assignment_request_processing()
 
         # Since we handled the release message, return True
         return True
+    
+    def _handle_resource_going_down(self, msg):
+        """
+        The default handler registered to handle resource going-down messages.
+        Does nothing except mark the message as handled by returning ``True``.
+                        
+        :param msg: Resource Request message (SimMsgType RSRC_RELEASE)
+        :type msg:  :class:`~.agent.SimMessage`
+                
+        :return:    ``True`` always, as the message is always handled
+        :rtype:     ``bool``
+
+        """
+        assert msg.msgType == SimMsgType.RSRC_GOING_DOWN, "Invalid message type passed to _handle_resource_going_down()"        
+        return True
 
     def _handle_resource_takedown(self, msg):
         """
-        The defaulthandler registered to handle resource takedown messages.
+        The default handler registered to handle resource takedown messages.
 
         Handles each resource takedown notification as it comes in, returning
         ``True`` to indicate that it was, in fact handled.
@@ -587,31 +616,16 @@ class ResourceAssignmentAgentMixin(object):
         :rtype:     `bool`
 
         """
-        assert msg.msgType == SimMsgType.RSRC_TAKEDOWN_REQ, "Invalid message type passed to _handle_resource_takedown()"
+        # TODO most of this behavior moved to downtime agent.
+        # This handler should take RSRC_DOWN messages instead, and default
+        # to just scheduling resouorece assignments
+        # Also need similar changes to handler for RSRC_GOING_DOWN
+        assert msg.msgType == SimMsgType.RSRC_DOWN, "Invalid message type passed to _handle_resource_takedown()"
+        resource = msg.msgData        
+        assert resource.assignment_agent is self, "RSRC_DOWN sent to wrong assignment agent"
+        assert resource.down, "RSRC_DOWN sent for resource that is not down"
         
-        resource = msg.msgData
-        assert resource.assignment_agent is self, "RSRC_TAKEDOWN_REQ sent to wrong assignment agent"
-        alreadyDown = resource.down
-        
-        resource._takedown()
-        if not alreadyDown:
-            # The resource is newly down. Interrupt any processes using the
-            # resource, and then schedule assignment processing in case new
-            # resource requests are made as a result.
-            
-            # Multiple assignments for this resource might refer to the same process
-            # We only want to interrupt each process once, so create a set first
-            processSet = set(assg.process for assg in resource.current_assignments())
-            for process in processSet:
-                e = SimResourceDownException(resource)
-                process.interrupt(e)
-                
-            self._schedule_assignment_request_processing()
-        
-        takedown_successful = True
-        msgData = resource, takedown_successful
-        self.send_response(msg, SimMsgType.RSRC_DOWN, msgData)
-            
+        self._schedule_assignment_request_processing()            
         return True    
 
     def _handle_resource_bringup(self, msg):
@@ -639,63 +653,46 @@ class ResourceAssignmentAgentMixin(object):
         :rtype:     `bool`
 
         """
-        assert msg.msgType == SimMsgType.RSRC_BRINGUP_REQ, "Invalid message type passed to _handle_resource_bringup()"
+        assert msg.msgType == SimMsgType.RSRC_UP, "Invalid message type passed to _handle_resource_bringup()"
         resource = msg.msgData
-        assert resource.assignment_agent is self, "RSRC_BRINGUP_REQ sent to wrong assignment agent"
-        assert resource.down, "RSRC_BRINGUP_REQ sent for resource that is not down"
-        
-        timedown = resource.time_down
-        resource._bringup()
-        if resource.up:
-            # The resource is now genuinely up, so inform any processes
-            # still holding the resource via an interrupt, and schedule
-            # resource assignment processing in case any new requests
-            # result from that interrupt.
-            
-            # Again handle the case of the same process in multiple assignments
-            # by creating a process set first.
-            processSet = set(assg.process for assg in resource.current_assignments())
-            for process in processSet:
-                e = SimResourceUpException(resource, timedown)
-                process.interrupt(e)
+        assert resource.assignment_agent is self, "RSRC_UP sent to wrong assignment agent"
+        assert resource.up, "RSRC_UP sent for resource that is not up"
                 
-            self._schedule_assignment_request_processing()
-        
-        self.send_response(msg, SimMsgType.RSRC_UP, resource)
+        self._schedule_assignment_request_processing()
         return True
 
-@apidoc
-class SimResourceDownException(SimInterruptException):
-    """
-    Exception raised when a process :meth:`~.transaction.wait_for` is
-    interrupted because a resource the process holds has been taken down.
+#@apidoc
+#class SimResourceDownException(SimInterruptException):
+    #"""
+    #Exception raised when a process :meth:`~.transaction.wait_for` is
+    #interrupted because a resource the process holds has been taken down.
     
-    Exception provides a `resource` attribute that identifies the
-    resource taken down.
-    """
-    def __init__(self, resource):
-        super().__init__("Resource Down")
-        self.resource = resource
+    #Exception provides a `resource` attribute that identifies the
+    #resource taken down.
+    #"""
+    #def __init__(self, resource):
+        #super().__init__("Resource Down")
+        #self.resource = resource
 
-    def __str__(self):
-        return 'SimResourceDownException for resource {0}'.format(self.resource.element_id)
+    #def __str__(self):
+        #return 'SimResourceDownException for resource {0}'.format(self.resource.element_id)
 
-@apidoc
-class SimResourceUpException(SimInterruptException):
-    """
-    Exception raised when a process :meth:`~.transaction.wait_for` is
-    interrupted because a resource the process holds has come back up.
+#@apidoc
+#class SimResourceUpException(SimInterruptException):
+    #"""
+    #Exception raised when a process :meth:`~.transaction.wait_for` is
+    #interrupted because a resource the process holds has come back up.
     
-    Exception provides a `resource` attribute that identifies the
-    resource taken down.
-    """
-    def __init__(self, resource, timedown):
-        super().__init__("Resource Up")
-        self.resource = resource
-        self.timedown = timedown
+    #Exception provides a `resource` attribute that identifies the
+    #resource taken down.
+    #"""
+    #def __init__(self, resource, timedown):
+        #super().__init__("Resource Up")
+        #self.resource = resource
+        #self.timedown = timedown
 
-    def __str__(self):
-        return 'SimResourceUpException for resource {0}'.format(self.resource.element_id)
+    #def __str__(self):
+        #return 'SimResourceUpException for resource {0}'.format(self.resource.element_id)
 
 @apidoc
 class SimResource(SimStaticObject):
@@ -747,7 +744,8 @@ class SimResource(SimStaticObject):
 
     __slots__ = ('__processtimeDataCollector', '_capacity', '_utilCounter',
                  '_currentTxnAssignments', 'assignmentAgent', '_downCount',
-                 '_downPctCounter', '_downtimeStart')
+                 '_downPctCounter', '_downtimeStart', '_goingDown',
+                 '_downtimeAgents')
 
     def __init__(self, name, parentLocation=None, initialLocation=None, 
                  capacity=1, assignmentAgent=None, moveable=True):
@@ -770,6 +768,8 @@ class SimResource(SimStaticObject):
         self._downCount = 0
         self._downPctCounter = SimCounter(self, "DownTime")
         self._downtimeStart = None
+        self._goingDown = False
+        self._downtimeAgents = set()
 
         self._currentTxnAssignments = {}
         if assignmentAgent is not None:
@@ -779,7 +779,7 @@ class SimResource(SimStaticObject):
         else:
             logger.debug("Resource %s initialized with no assignment agent",
                          self.element_id)
-
+            
     @property
     def capacity(self):
         """
@@ -905,6 +905,19 @@ class SimResource(SimStaticObject):
             del self._currentTxnAssignments[txn]
         else:
             txnAssignment[1] = numAssigned
+            
+    def add_downtime_agent(self, agent):
+        """
+        Attach a new downtime agent to the resource
+        """
+        assert agent, "null downtime agent added to resource"
+        self._downtimeAgents.add(agent)
+        
+    def downtime_agents(self):
+        """
+        Return the registered downtime agents as a list
+        """
+        return list(self._downtimeAgents)
 
     @property
     def in_use(self):
@@ -918,6 +931,17 @@ class SimResource(SimStaticObject):
         or other reason)
         """
         return (self._downCount > 0)
+    
+    @property
+    def going_down(self):
+        """
+        Returns True if the resource is "about" to go down, but has not yet.
+        
+        Motivating use case is a person scheduled to go on break, but does
+        not do so until completing some in-progress task.
+        """
+        assert not (self._goingDown and self.down), "a resource that is down cannot be going down"
+        return self._goingDown
 
     @property
     def up(self):
@@ -944,12 +968,27 @@ class SimResource(SimStaticObject):
     def available(self):
         """
         The number of resources currently available - zero if the resource is
-        down, capacity-inUse if the resource is up.
+        down OR going down, capacity - inUse if the resource is up.
         """
-        if self.down:
+        if self.down or self.going_down:
             return 0
         else:
             return self.capacity - self.in_use
+
+    @apidocskip
+    def _start_going_down(self):
+        """
+        Indicate that this resource is about/getting ready to go down.
+        
+        Motivating use case is the human operator who's scheduled to go
+        on break/off shift,  but needs to complete something first - and
+        therefore shouldn't be assigned any new work.
+        """
+        assert not self._goingDown, "Going-down already started"
+        assert not self.down, "resource is already down"
+        self._goingDown = True
+        # TODO new sim_trace action?
+        #simtrace.trace_event(self, simtrace.Action.GOING_DOWN)
 
     @apidocskip
     def _takedown(self):
@@ -981,7 +1020,8 @@ class SimResource(SimStaticObject):
             # The resource is newly down
             self._downtimeStart = SimClock.now()
             assert self._downPctCounter.value == 0, "_downPctCounter.value not zero on first takedown()"
-            self._downPctCounter.increment()            
+            self._downPctCounter.increment()
+            self._goingDown = False
             simtrace.trace_event(self, simtrace.Action.DOWN)
             
     @apidocskip
@@ -999,8 +1039,8 @@ class SimResource(SimStaticObject):
         Should be called only by the resource's assignment agent.
         """
         assert self.down, "_bringup() called on resource that is not down"
-        assert self._downCount > 0, "_takedown() called with non-positive _downCount"
-        assert self._downPctCounter.value == 1, "_takedown() called when _downPctCounter is not 1"
+        assert self._downCount > 0, "_bringup() called with non-positive _downCount"
+        assert self._downPctCounter.value == 1, "_bringup() called when _downPctCounter is not 1"
         
         self._downCount -= 1
         if self._downCount == 0:
@@ -1108,7 +1148,7 @@ class SimResourcePool(SimResourceAssignmentAgent):
         self._resources = []
         for r in resources:
             self.add_resource(r)
-
+    
     def add_resource(self, resource):
         """
         Add a resource to the pool, making the pool it's assignment agent.
@@ -1483,6 +1523,84 @@ class SimResourceRequest(SimMessage):
         the time being.
         """
         self.assignment_agent._process_assignment(self, assignment)
+
+                
+#class TakedownResourceEvent(SimEvent):
+    #"""
+    #An event that initiates a single resource takedown via a passed
+    #SimDownTimeAgent.
+    #"""
+    #__slots__ = ('_downtimeController', '_resource')
+    
+    #def __init__(self, controller, resource, tm):
+        #super().__init__(tm, priority=3)
+        #self._downtimeController = controller
+        #self._resource = resource
         
-     
-            
+    #def process_impl(self):
+        #"""
+        #Tell the downtime agent to request a resource takedown
+        #"""
+        #self._downtimeController.takedown_resource()
+    
+    
+#class BringupResourceEvent(SimEvent):
+    #"""
+    #An event that initiates a single resource bring-up via a passed
+    #SimDownTimeAgent. Should be the same agent that brought the
+    #resource down.
+    #"""
+    #__slots__ = ('_downtimeController', '_resource')
+    
+    #def __init__(self, controller, resource, tm):
+        #super().__init__(tm, priority=3)
+        #self._downtimeController = controller
+        #self._resource = resource
+        
+    #def process_impl(self):
+        #"""
+        #Tell the downtime agent to request a resource bringup
+        #"""
+        #self._downtimeController.bringup_resource()        
+
+#class SimDownTimeController(metaclass=ABCMeta):
+    #"""
+    #"""
+    #__slots__ = ('_resource')
+    #def __init__(self, resource):
+        #"""
+        #"""
+        #assert resource, "Null resource supplied to SimResourceDownTime"
+        #assert isinstance(resource, SimResource), "SimResourceDownTime resource parameter is not a SimResource"
+        #self._resource = resource
+        #resource.add_downtime_controller(self)
+        
+    #def initialize(self):
+        #"""
+        #Create and chedule the initial takedown event.
+        
+        #Invoked by the :meth:`SimResource.final_initialize` after the
+        #event processor/event heap are initialized.
+        #"""
+        #takedown_time = self._next_takedown_time()
+        #takedownEvent = TakedownResourceEvent(self, _resource, takedown_time)
+        #takedownEvent.register()
+                
+    #def takedown_resource(self):
+        #"""
+        #"""
+        #self._resource._takedown()
+                    
+    #def bringup_resource(self):
+        #"""
+        #"""
+        #self._resource._bringup()
+        #takedownEvent = TakedownResourceEvent(self._resource,
+                                              #self._next_takedown_time())
+        #takedownEvent.register()
+        
+    #@abstractmethod
+    #def _next_takedown_time(self):
+        #"""
+        #"""
+        #pass

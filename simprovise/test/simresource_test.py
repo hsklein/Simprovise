@@ -329,6 +329,7 @@ class TestProcessSRP(TestProcess1):
         super().__init__(SimpleResourcePropertyTests)
         self.rsrc = rsrc
         self.numrequested = numrequested
+        self.assignment = None
         
     def run(self):
         self.assignment = self.acquire(self.rsrc, self.numrequested)
@@ -350,6 +351,16 @@ class SimpleResourcePropertyTests(RATestCaseBase):
     def testInUse1a(self):
         "Test:  Resource 1 has initial inUse property value of zero"
         self.assertEqual(self.rsrc1.in_use, 0)
+        
+    def testGoingDownInUse1(self):
+        "Test:  Resource 1 start going down, none in use still zero"
+        self.rsrc1._start_going_down()
+        self.assertEqual(self.rsrc1.in_use, 0)
+        
+    def testGoingDownAvailable1(self):
+        "Test:  Resource 1 start going down, zero available"
+        self.rsrc1._start_going_down()
+        self.assertEqual(self.rsrc1.available, 0)
         
     def testInUse1b(self):
         "Test:  Resource 1 has inUse property value of one after a single acquire() call"
@@ -406,7 +417,23 @@ class SimpleResourcePropertyTests(RATestCaseBase):
         self.process = TestProcessSRP(self.rsrc2, 1)
         self.process.start()
         self.eventProcessor.process_events(SimTime(0))
-        self.assertTrue(self.rsrc2.available, 1)
+        self.assertEqual(self.rsrc2.available, 1)
+
+    def testAvailable2d(self):
+        "Test:  Resource 2 has available property value of zero after an acquire call and then start going down"
+        self.process = TestProcessSRP(self.rsrc2, 1)
+        self.process.start()
+        self.eventProcessor.process_events(SimTime(0))
+        self.rsrc2._start_going_down()
+        self.assertEqual(self.rsrc2.available, 0)
+
+    def testInUse2d(self):
+        "Test:  Resource 2 has 1 in use after an acquire call and then start going down"
+        self.process = TestProcessSRP(self.rsrc2, 1)
+        self.process.start()
+        self.eventProcessor.process_events(SimTime(0))
+        self.rsrc2._start_going_down()
+        self.assertEqual(self.rsrc2.in_use, 1)
 
     def testAvailable2c(self):
         "Test:  Resource 2 has available property value of zero after acquire(2) call"
@@ -474,6 +501,14 @@ class SimpleResourceBasicAcquireTests(RATestCaseBase):
         "Test: acquire(2) returns a resource assignment with correct count"
         ra = self.process2.assignment
         self.assertEqual(ra.count, 2)
+        
+    def testAcquireWhenGoingDown(self):
+        "Test acquiring unused resource after start going down - not acquired"
+        process3 = TestProcessSRP(self.rsrc3, 1)
+        self.rsrc3._start_going_down()
+        process3.start()
+        self.eventProcessor.process_events(SimTime(1))
+        self.assertIsNone(process3.assignment)
         
     def testAcquireGreaterThanCapacity(self):
         "Test: acquire(3) on a resource of capacity two raises an Error"

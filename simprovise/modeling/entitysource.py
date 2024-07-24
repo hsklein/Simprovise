@@ -50,7 +50,6 @@ class SimEntitySource(SimLocation):
         super().__init__(name)
         self.__generatorPairs = []
 
-    @apidocskip
     def final_initialize(self):
         """
         At final initialization, translate entity/interarrival generator
@@ -60,6 +59,11 @@ class SimEntitySource(SimLocation):
         The assumption is that this occurs after the random number streams
         and the simulation event processor for the current run are
         initialized.
+        
+        Called by infrastructure, not by client (model-specific) code -
+        but any subclass that implements :meth:`final_initialize` must
+        invoke `super().final_initialize()` to ensure that this base class
+        implementation is executed.
         """
         self._create_entity_generation_events()
 
