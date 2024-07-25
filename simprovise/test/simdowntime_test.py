@@ -89,20 +89,7 @@ class TestDowntimeAgent(SimDowntimeAgent):
         self.notified_goingdown = True
         self.notified_goingdowntime = SimClock.now()
         return super()._handle_resource_goingdown(msg)
-        
 
-#class TestResourceTakedownFail(SimSimpleResource):
-    #"""
-    #A resource where takedown requests can fail
-    #"""
-    #takedown_successful = False
-    #def _handle_resource_takedown(self, msg):
-        #if  TestResourceTakedownFail.takedown_successful:
-            #return super()._handle_resource_takedown(msg)
-        #else:           
-            #msgData = self, False
-            #self.send_response(msg, SimMsgType.RSRC_DOWN, msgData)
-            #return True    
         
         
 class BasicDowntimeTests(unittest.TestCase):

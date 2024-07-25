@@ -8,6 +8,8 @@
 from simprovise.core.simclock import SimClock
 from simprovise.core import simtime, datacollector
 from simprovise.core.simtime import Unit as tu
+from simprovise.core.model import SimModel
+from simprovise.modeling.location import SimLocation
 import unittest
 
         
@@ -15,8 +17,13 @@ class SimDataCollectorInitialStateTests(unittest.TestCase):
     "Tests initial state for class SimDataCollector (unweighted), SimTimeWeightedDataCollector"
     def setUp(self):
         SimClock.initialize()
-        self.dc1 = datacollector.SimUnweightedDataCollector()
-        self.dcTW = datacollector.SimTimeWeightedDataCollector()
+        loc = SimLocation("Test")
+        self.dc1 = datacollector.SimUnweightedDataCollector(loc, "Test1", int)
+        self.dcTW = datacollector.SimTimeWeightedDataCollector(loc, "Test2", int)
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimModel.model().clear_registry_partial()
 
     def testEntries(self):
         "Test: DataCollector (unweighted) entry count"
@@ -30,8 +37,9 @@ class SimDataCollectorTests(unittest.TestCase):
     "Tests for class SimDataCollector (unweighted), SimTimeWeightedDataCollector"
     def setUp(self):
         SimClock.initialize()
-        self.dc1 = datacollector.SimUnweightedDataCollector()
-        self.dcTW = datacollector.SimTimeWeightedDataCollector()
+        loc = SimLocation("Test")
+        self.dc1 = datacollector.SimUnweightedDataCollector(loc, "Test1", int)
+        self.dcTW = datacollector.SimTimeWeightedDataCollector(loc, "Test2", int)
         self.dc1.add_value(3)
         self.dc1.add_value(1)
         self.dc1.add_value(2)
@@ -40,6 +48,10 @@ class SimDataCollectorTests(unittest.TestCase):
         self.dcTW.add_value(4)
         SimClock.advance_to(simtime.SimTime(3))
         self.dcTW.add_value(100) # won't count without further clock advance
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimModel.model().clear_registry_partial()
 
     def testEntries1(self):
         "Test: DataCollector (unweighted) entry count"
@@ -66,14 +78,21 @@ class SimDataCollectorTests(unittest.TestCase):
 class SimDataCollectionClassMethodTests(unittest.TestCase):
     "Tests for class SimDataCollector (unweighted), where the collected values are SimTimes"
     def setUp(self):
+        loc = SimLocation("Test")
+        # Since SimLocations create their own data collectors, reinitialize
+        # here so that only dcA-C are in the list
         datacollector.SimDataCollector.reinitialize()
-        self.dcA = datacollector.SimUnweightedDataCollector()
-        self.dcB = datacollector.SimUnweightedDataCollector()
-        self.dcC = datacollector.SimTimeWeightedDataCollector()
+        self.dcA = datacollector.SimUnweightedDataCollector(loc, "Test1", int)
+        self.dcB = datacollector.SimUnweightedDataCollector(loc, "Test2", int)
+        self.dcC = datacollector.SimTimeWeightedDataCollector(loc, "Test3", int)
         self.dcA.add_value(5)
         self.dcB.add_value(10)
         self.dcC.add_value(20)
         datacollector.SimDataCollector.reset_all()
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimModel.model().clear_registry_partial()
  
     def testReinitialize1(self):
         "Test: After class reinitialize and creation of three data collectors, the collector list is of length 3"
@@ -102,10 +121,15 @@ class SimDataCollectionClassMethodTests(unittest.TestCase):
 class SimTimeDataCollectionTests(unittest.TestCase):
     "Tests for class SimDataCollector (unweighted), where the collected values are SimTimes"
     def setUp(self):
-        self.dc1 = datacollector.SimUnweightedDataCollector()
+        loc = SimLocation("Test")
+        self.dc1 = datacollector.SimUnweightedDataCollector(loc, "Test1", simtime.SimTime)
         self.dc1.add_value(simtime.SimTime(30, tu.SECONDS))
         self.dc1.add_value(simtime.SimTime(15, tu.SECONDS))
         self.dc1.add_value(simtime.SimTime(2, tu.MINUTES))
+        
+    def tearDown(self):
+        # Hack to allow recreation of static objects for each test case
+        SimModel.model().clear_registry_partial()
  
     def testEntries1(self):
         "Test: DataCollector (unweighted) entry count"

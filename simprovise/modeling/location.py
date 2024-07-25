@@ -50,7 +50,8 @@ class SimStaticObject(SimLocatableObject, SimElement):
     Static objects have an element ID, which reflects the static object
     location hierarchy - e.g. "Parent.Child.GrandChild"
     """
-    __slots__ = ('_name', '_parentlocation', '_datasets')
+    __slots__ = ('_name', '_parentlocation', '_datasets',
+                 '_dataCollectionEnabled')
     
     #elements = {}
 
@@ -74,6 +75,7 @@ class SimStaticObject(SimLocatableObject, SimElement):
         # sublocation of the parent location
         self._name = elementName
         self._parentlocation = parentLocation
+        self._dataCollectionEnabled = True
         
         # Register the new static object with the SimModel
         logger.info("Registering static object %s ...", self.element_id)
@@ -96,6 +98,29 @@ class SimStaticObject(SimLocatableObject, SimElement):
         
         """
         return self._datasets
+    
+    def disable_data_collection(self):
+        """
+        Disable data collection for this static object element.
+        """
+        logger.info("Disabling data collection for static object element %s",
+                    self.element_id)
+        self._dataCollectionEnabled = False
+    
+    @property
+    def data_collection_enabled(self):
+        """
+        :return: ``True`` if data collection is enabled for this element
+        :rtype:  ``bool``
+        """
+        return self._dataCollectionEnabled
+    
+    #@apidocskip
+    #def _set_data_collection_enabled(self, newvalue):
+        #"""
+        #Set data_collection_enabled flag.
+        #"""
+        #self._dataCollectionEnabled = bool(newvalue)
         
     @property
     def element_name(self):

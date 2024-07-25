@@ -28,6 +28,9 @@ class MockProcess(object):
 class MockElement(object):
     def register_dataset(self, dset):
         pass
+    @property
+    def data_collection_enabled(self):
+        return True
 
 
 class SimInfiniteCounterTests(unittest.TestCase):

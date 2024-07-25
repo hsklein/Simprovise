@@ -12,6 +12,7 @@ from simprovise.test import simentity_test
 from simprovise.test import simtransaction_test
 from simprovise.test import simprocess_test
 from simprovise.test import simdowntime_test
+from simprovise.test import simelement_test
 
 # Note that running the system test creates too much state, and
 # effs up itself and other tests - for now, it has to run
@@ -29,12 +30,12 @@ def run_tests():
     #suite.addTest(system_test1.makeTestSuite())
     suite.addTest(simtime_test.makeTestSuite())
     suite.addTest(simclock_test.makeTestSuite())
+    suite.addTest(simelement_test.makeTestSuite())
     suite.addTest(simrandom_test.makeTestSuite())
     suite.addTest(simevent_test.makeTestSuite())
     suite.addTest(simdatacollector_test.makeTestSuite())
     suite.addTest(simcounter_test.makeTestSuite() )
     suite.addTest(simlocation_test.makeTestSuite())
-    #suite.addTest(loader.loadTestsFromTestCase(SimTime_test.SimTimeIntervalTests))
     suite.addTest(simresource_test.makeTestSuite())
     suite.addTest(simentity_test.makeTestSuite())
     suite.addTest(simtransaction_test.makeTestSuite())

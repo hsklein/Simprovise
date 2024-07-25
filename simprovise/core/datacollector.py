@@ -13,7 +13,7 @@ from abc import ABCMeta, abstractmethod
 from simprovise.core import simtime, SimError
 from simprovise.core.simclock import SimClock
 from simprovise.core.simlogging import SimLogging
-from simprovise.core.datasink import NullDataSink
+from simprovise.core.datasink import DataSink, NullDataSink
 from simprovise.core.apidoc import apidoc, apidocskip
 
 logger = SimLogging.get_logger(__name__)
@@ -66,7 +66,8 @@ class Dataset(object):
     :type isTimeWeighted:  `bool`
      
     """
-    __slots__ = ('__element', '__dataCollector', '__name', '__valueType',
+    __slots__ = ('__element', '__dataCollector', '__dataCollectionEnabled',
+                 '__savedDatasink', '__name', '__valueType',
                  '__isTimeWeighted', '__batchNumber', '__timeUnit')
 
     def __init__(self, element, dataCollector, name, valueType, isTimeWeighted):
@@ -87,6 +88,8 @@ class Dataset(object):
         
         self.__element = element
         self.__dataCollector = dataCollector
+        self.__dataCollectionEnabled = True
+        self.__savedDatasink = None
         self.__name = name
         self.__valueType = valueType
         self.__isTimeWeighted = bool(isTimeWeighted)
@@ -146,14 +149,44 @@ class Dataset(object):
             
         assert self.__timeUnit == simtime.base_unit(), "Base Time Unit modified after dataset and owning object created"
         return self.__timeUnit
+    
+    
+    @property
+    def data_collection_enabled(self):
+        """
+        :return: ``True`` if data collection is enabled for this dataset
+                 AND it's parent :class:`~.simelement.SimElement`
+        :rtype:  ``bool``
+        """
+        return self.__dataCollectionEnabled and self.element.data_collection_enabled
+    
+    def disable_data_collection(self):
+        """
+        Disable data collection for this dataset, and make sure the
+        dataset's datasink is appropriately set for that state.
+        """
+        logger.info("Disabling data collection for dataset %s in element %s",
+                    self.name, self.element.element_id)
+        self.__dataCollectionEnabled = False
+
 
     @property
     def datasink(self):
-        """The datasink that drains this dataset"""
+        """      
+        :return: The datasink that drains this dataset
+        :rtype:  :class:`.datasink.DataSink`       
+        """
         return self.__dataCollector.datasink
 
     @datasink.setter
     def datasink(self, newSink):
+        """
+        Sets the datasink. datasink is NOT set if data collection is
+        disabled AND the new sink is not a NullDataSink - but if
+        data collection is disabled, the non-null new sink is saved
+        (to the __savedDatasink attribute) in case data collection is
+        later enabled.
+        """
         oldSink = self.datasink
         self.__dataCollector.datasink = newSink
         if self.__batchNumber is not None:
@@ -262,10 +295,11 @@ class SimDataCollector(metaclass=ABCMeta):
  
     def add_value(self, newValue):
         """
-        Add a new value to the dataset.
+        Add a new value to the dataset if data collection is enabled.
         """
         self.__entries += 1
-        self.datasink.put(newValue)
+        if self.dataset.data_collection_enabled:            
+            self.datasink.put(newValue)
 
     @property
     def name(self):
@@ -322,7 +356,7 @@ class SimUnweightedDataCollector(SimDataCollector):
 
     """
     # TODO should be no default values
-    def __init__(self, element=None, datasetName=None, datasetValueType=None):
+    def __init__(self, element, datasetName, datasetValueType):
         super().__init__(element, datasetName, datasetValueType, False)
 
 
@@ -350,7 +384,7 @@ class SimTimeWeightedDataCollector(SimDataCollector):
                              TODO state values
 
     """
-    def __init__(self, element=None, datasetName=None, datasetValueType=None):
+    def __init__(self, element, datasetName, datasetValueType):
         super().__init__(element, datasetName, datasetValueType, True)
                
 

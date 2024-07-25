@@ -170,6 +170,25 @@ class SimElement(object):
         """
         pass
     
+    def disable_data_collection(self):
+        """
+        Abstract method implemented by subclasses :class:`SimClassElement`
+        and :class:`~.simobject.SimStaticObject` to disable data collection
+        for this element.
+        """
+        pass
+    
+    @property
+    def data_collection_enabled(self):
+        """
+        Abstract property implemented by subclasses :class:`SimClassElement`
+        and :class:`~.simobject.SimStaticObject`.
+        
+        :return: ``True`` if data collection is enabled for this element
+        :rtype:  ``bool``
+        """
+        pass
+    
     def __str__(self):
         return self.element_id
 
@@ -187,7 +206,7 @@ class SimClassElement(SimElement):
     :type simclass:  Class (NOT an instance of the class)
     
     """
-    __slots__ = ('_simclass', '_datasets')
+    __slots__ = ('_simclass', '_datasets', '_dataCollectionEnabled')
     def __init__(self, simclass):
         """
         """
@@ -195,6 +214,7 @@ class SimClassElement(SimElement):
         self._simclass = simclass
         simclass.element = self
         self._datasets = []
+        self._dataCollectionEnabled = True
         
     @property
     def element_id(self):
@@ -229,7 +249,23 @@ class SimClassElement(SimElement):
         
         """
         return self._datasets
-          
+    
+    def disable_data_collection(self):
+        """
+        Disable data collection for this element.
+        """
+        logger.info("Disabling data collection for class element %s",
+                    self.element_id)
+        self._dataCollectionEnabled = False
+    
+    @property
+    def data_collection_enabled(self):
+        """
+        :return: ``True`` if data collection is enabled for this element
+        :rtype:  ``bool``
+        """
+        return self._dataCollectionEnabled    
+                  
     @apidocskip
     def final_initialize(self):
         """
