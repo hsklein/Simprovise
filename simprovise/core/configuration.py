@@ -355,10 +355,10 @@ def get_element_data_collection_disabled(element_id):
     matches = [fnmatchcase(element_id, pattern.strip()) for pattern in patterns]
     return True in matches
 
-def get_dataset_data_collection_disabled(element_id, dataset_id):
+def get_dataset_data_collection_disabled(element_id, dataset_name):
     """
     Returns ``True`` if data collection should be disabled for the dataset
-    identified by the passed element and dataset IDs (based on values for the
+    identified by the passed element ID and dataset name (based on values for the
     Data Collection `Disable Datasets` option).
     
     The option value consists of zero or more comma-delimited entries;
@@ -393,13 +393,13 @@ def get_dataset_data_collection_disabled(element_id, dataset_id):
     # If there is only one pattern in the entry, we match just the dataset ID;
     # we're looking for datasets that match in any element.
     matches1 = [entry for entry in entries
-                if len(entry) == 1 and fnmatchcase(dataset_id, entry[0])]
+                if len(entry) == 1 and fnmatchcase(dataset_name, entry[0])]
     
     # If there are two patterns, the first pattern matches the element ID,
     # the second the dataset ID
     matches2 = [entry for entry in entries
                 if len(entry) == 2 and fnmatchcase(element_id, entry[0])
-                and fnmatchcase(dataset_id, entry[1])]
+                and fnmatchcase(dataset_name, entry[1])]
             
     return bool(matches1 or matches2)
 
