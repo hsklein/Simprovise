@@ -18,6 +18,7 @@ from simprovise.core.datacollector import SimUnweightedDataCollector
 from simprovise.core.simlogging import SimLogging
 from simprovise.core.simelement import SimElement
 from simprovise.core.model import SimModel
+import simprovise.core.configuration as simconfig
 
 from simprovise.modeling import SimEntity, SimCounter
 from simprovise.modeling.simobject import SimLocatableObject
@@ -84,6 +85,10 @@ class SimStaticObject(SimLocatableObject, SimElement):
         # Add the new static object to the parent location's collection of
         # children
         parentLocation._add_child(self)
+        
+        # Check to see if data collection is disabled via configuration
+        if simconfig.get_element_data_collection_disabled(self.element_id):
+            self.disable_data_collection()
         
     @property
     def datasets(self):      

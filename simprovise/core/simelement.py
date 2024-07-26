@@ -7,6 +7,7 @@
 #===============================================================================
 from simprovise.core import SimError
 from simprovise.core.simlogging import SimLogging
+import simprovise.core.configuration as simconfig
 from simprovise.core.apidoc import apidoc, apidocskip
 
 # This constant is accessed by other methods
@@ -215,6 +216,10 @@ class SimClassElement(SimElement):
         simclass.element = self
         self._datasets = []
         self._dataCollectionEnabled = True
+        
+        # Check to see if data collection is disabled via configuration
+        if simconfig.get_element_data_collection_disabled(self.element_id):
+            self.disable_data_collection()
         
     @property
     def element_id(self):

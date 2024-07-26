@@ -8,6 +8,7 @@
 # is created and initialized when this module is loaded.
 #===============================================================================
 import sys, os, configparser, logging
+from fnmatch import fnmatchcase
 from simprovise.core import SimError
 
 _CONFIG_EXTENSION = '.ini'
@@ -19,6 +20,7 @@ _SIM_TIME = 'SimTime'
 _LOGGING = 'Logging'
 _SIM_RANDOM = 'SimRandom'
 SIM_TRACE = 'SimTrace'
+DATA_COLLECTION = 'Data Collection'
 
 _ERROR_NAME = 'SimConfiguration Error'
 
@@ -154,6 +156,16 @@ class SimConfigParser(configparser.ConfigParser):
         else:
             msg = "SimConfiguration {0} {1} setting ({2}) must be one of: {3}"
             raise SimError(_ERROR_NAME, msg, section, option, value, valid_values)
+        
+    def get_unvalidated_string(self, section, option, **kwargs):
+        """
+        """
+        self._initialize()
+        try:            
+            return self.get(section, option, **kwargs)
+        except Exception as e:
+            msg = "Error reading SimConfiguration setting {0} {1}: {2}"
+            raise SimError(_ERROR_NAME, msg, section, option, e)
         
     def read_files(self):
         """
@@ -324,12 +336,77 @@ def get_trace_destination():
     valid_values = ('stdout', 'file')
     return _config.getstring(SIM_TRACE, 'Destination', valid_values, fallback='table')
 
+#===============================================================================
+# Data Collection setting accessors
+#===============================================================================
+def get_element_data_collection_disabled(element_id):
+    """
+    Returns ``True`` if data collection should be disabled for the element
+    identified by the passed element ID (based on values for the
+    Data Collection `Disable Elements` option).
+    """
+    option_value = _config.get_unvalidated_string(DATA_COLLECTION,
+                                                  'Disable Elements').strip()
+    
+    if not option_value:
+        return False
+    
+    patterns = option_value.split(',')
+    matches = [fnmatchcase(element_id, pattern.strip()) for pattern in patterns]
+    return True in matches
 
+def get_dataset_data_collection_disabled(element_id, dataset_id):
+    """
+    Returns ``True`` if data collection should be disabled for the dataset
+    identified by the passed element and dataset IDs (based on values for the
+    Data Collection `Disable Datasets` option).
+    
+    The option value consists of zero or more comma-delimited entries;
+    Each entry should consist of one or two whitespace delimited patterns
+    to be used by :func:`fnmatchcase`.
+    
+    If there are two patterns, we match the first against the element ID
+    and the second against the dataset ID. If there is just one pattern, we
+    match it only against the dataset ID - the element ID does not matter.
+    
+    Entries without a pattern are ignored; entries with more than two
+    patterns are ignored after a warning is issued.
+    """
+    option_value = _config.get_unvalidated_string(DATA_COLLECTION,
+                                                  'Disable Datasets').strip()
+    
+    if not option_value:
+        return False
+    
+    entries = [value.split() for value in option_value.split(',')]
+    
+    # Validate entry length - we'll just ignore empty entries (two commas
+    # in a row with just whitespace). If we get an entry with three or more
+    # tokens, we'll issue a warning and move on, skipping that entry.
+    invalid_entries = [entry for entry in entries if len(entry) > 2]
+    if invalid_entries:
+        msg = "SimConfiguration - Invalid Disable Datasets entry %s; comma-delimited entries must contain two patterns or less"
+        logging.warn(msg, option_value)
+        # Raising an exception here seems a bit extreme.
+        #raise SimError(_ERROR_NAME, msg, option_value)
+    
+    # If there is only one pattern in the entry, we match just the dataset ID;
+    # we're looking for datasets that match in any element.
+    matches1 = [entry for entry in entries
+                if len(entry) == 1 and fnmatchcase(dataset_id, entry[0])]
+    
+    # If there are two patterns, the first pattern matches the element ID,
+    # the second the dataset ID
+    matches2 = [entry for entry in entries
+                if len(entry) == 2 and fnmatchcase(element_id, entry[0])
+                and fnmatchcase(dataset_id, entry[1])]
+            
+    return bool(matches1 or matches2)
 
 
 if __name__ == '__main__':
     try:
-        scriptpath = "..\\models\\mm1.py"
+        scriptpath = "..\\demos\\mm_1.py"
         set_modelscript_path(scriptpath)
         print("base time unit:", get_base_timeunit())
         print("logging enabled:", get_logging_enabled())
@@ -338,6 +415,10 @@ if __name__ == '__main__':
         print("max replications:", get_max_replications())
         print("trace enabled:", get_trace_enabled())
         print("trace type:", get_tracetype())
+        print("data collection element:", get_element_data_collection_disabled('TestLoc3.server'))
+        print("data collection dataset:", get_dataset_data_collection_disabled('TestLoc3.server', 'DownTime'))
+        print("data collection dataset:", get_dataset_data_collection_disabled('TestLoc3.server', 'ProcessTime'))
+        print("data collection dataset:", get_dataset_data_collection_disabled('TestLoc3.server', 'TestProcessTime'))
         
         # This should raise
         set_modelscript_path(scriptpath)

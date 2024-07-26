@@ -11,10 +11,10 @@ __all__ = ['SimDataCollector',
 from abc import ABCMeta, abstractmethod
 
 from simprovise.core import simtime, SimError
-from simprovise.core.simclock import SimClock
 from simprovise.core.simlogging import SimLogging
-from simprovise.core.datasink import DataSink, NullDataSink
+from simprovise.core.datasink import NullDataSink
 from simprovise.core.apidoc import apidoc, apidocskip
+import simprovise.core.configuration as simconfig
 
 logger = SimLogging.get_logger(__name__)
 
@@ -67,8 +67,8 @@ class Dataset(object):
      
     """
     __slots__ = ('__element', '__dataCollector', '__dataCollectionEnabled',
-                 '__savedDatasink', '__name', '__valueType',
-                 '__isTimeWeighted', '__batchNumber', '__timeUnit')
+                 '__name', '__valueType', '__isTimeWeighted', '__batchNumber',
+                 '__timeUnit')
 
     def __init__(self, element, dataCollector, name, valueType, isTimeWeighted):
         assert element is not None, "Dataset element must be non-null"
@@ -89,13 +89,16 @@ class Dataset(object):
         self.__element = element
         self.__dataCollector = dataCollector
         self.__dataCollectionEnabled = True
-        self.__savedDatasink = None
         self.__name = name
         self.__valueType = valueType
         self.__isTimeWeighted = bool(isTimeWeighted)
         self.__timeUnit = None
         self.__batchNumber = None
         self.__element.register_dataset(self)
+        
+        # Check to see if data collection is disabled via configuration
+        if simconfig.get_dataset_data_collection_disabled(self.element_id, self.name):
+            self.disable_data_collection()
 
     @property
     def element(self):
