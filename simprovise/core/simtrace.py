@@ -63,7 +63,7 @@ else: logger.info("Event Tracing disabled")
 
 _trace_type = TraceType.TABLE
 if simconfig.get_tracetype() == 'csv':
-     trace_type = TraceType.CSV
+    trace_type = TraceType.CSV
 if _trace_enabled:
     logger.info("Event Trace Type: %s", _trace_type)
 
