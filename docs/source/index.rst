@@ -11,7 +11,14 @@ intuitive API for developing simulation models; it also provides APIs and tools
 for model execution and output analysis.
 
 .. note::
-	The current release is 0.2.0a. Any and all feedback is welcome at
+	This is the documentation for release 0.2.0a, currently under 
+	development with planned availability through the Python Package Index
+	in Fall 2024. 
+	
+        Also be aware that he documentation itself is also under development. 
+	As a  work-in-progress, there are still gaps and missing sections.
+	
+	Any and all feedback is welcome at
 
 .. toctree::
    :maxdepth: 3
@@ -27,6 +34,7 @@ for model execution and output analysis.
    command_line
    api_reference
    output_database
+   license
 
 
 Indices and tables
