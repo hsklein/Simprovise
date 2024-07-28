@@ -21,7 +21,24 @@ nested methods/functions can be used as well. In
 the case of Simprovise, this allows blocking and process-switching to 
 occur "under the covers" during a method call like ``acquire(resource)``.
 
-Simprovise also uses
+Status
+======
+
+Simprovise is under development, with an initial public release planned for
+fall 2024. (So yes, the current development version should be considered 
+unstable, though it includes almost all the features planned for the initial
+release.)
+
+Documentation
+=============
+
+The current (again mostly, but not entirely complete) documentation can be
+found <here coming soon>
+
+Other Dependencies
+==================
+
+Simprovise uses
 `NumPy <https://numpy.org/doc/stable/index.html>`_ for psuedo-random-number
 generation, probability distribution sampling, and calculation of summary
 statistics.
