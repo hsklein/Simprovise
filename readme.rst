@@ -19,7 +19,9 @@ from the standard CPython distribution, while providing some additional
 flexability. In particular, use of the ``yield`` keyword is not required;
 nested methods/functions can be used as well. In 
 the case of Simprovise, this allows blocking and process-switching to 
-occur "under the covers" during a method call like ``acquire(resource)``.
+occur "under the covers" during a method call like ``acquire(resource)``;
+a model developer using Simprovise should have no need to see, use or even
+understand the ``greenlet`` API.
 
 Status
 ======
