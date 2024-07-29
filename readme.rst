@@ -31,6 +31,9 @@ fall 2024. (So yes, the current development version should be considered
 unstable, though it includes almost all the features planned for the initial
 release.)
 
+Installation
+============
+
 Documentation
 =============
 
@@ -44,3 +47,14 @@ Simprovise uses
 `NumPy <https://numpy.org/doc/stable/index.html>`_ for psuedo-random-number
 generation, probability distribution sampling, and calculation of summary
 statistics.
+
+Compatibility
+=============
+
+Simprovise has been developed using Python 3.12.2. While I would *expect*
+Simprovise to work with relatively recent earlier releases 
+(Python 3.9 and higher), 
+these compatability checks have not yet been performed.
+
+License
+=======
