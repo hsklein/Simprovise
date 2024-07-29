@@ -17,6 +17,13 @@ import simprovise.core.configuration as simconfig
 
 logger = SimLogging.get_logger(__name__)
 
+# NOTE: Checking to see if a variable is a valid Enum using 'in' 
+# (e.g. ``if unit in Unit``) was introduced in Python 3.12. To maintain
+# compatability with some older versions (in particularly, 3.10.12 as
+# tested with Ubuntu), we us the following syntax instead:
+#     ``if unit in set(u.value for u in Unit)``
+# When support is dropped for Python 3.11 and earlier, we can go back to
+# ``unit in Unit``
 @apidoc
 class Unit(IntEnum):
     """
@@ -29,7 +36,6 @@ class Unit(IntEnum):
     
 _UNITNAMES = ('second', 'minute', 'hour')
 
-#_base_unit = Unit.SECONDS
 
 # Initialize the base time unit from the configuration setting
 _base_unit = simconfig.get_base_timeunit()
@@ -93,7 +99,9 @@ class SimTime(object):
             # what we'll set.
             if units is None:
                 units = _base_unit
-            if units in Unit or units is None:
+            #if units is None or units Unit:
+            # Python 3.10 compatability - see NOTE above
+            if units is None or units in set(unit.value for unit in Unit):
                 self._units = units
             else:
                 # TODO Allow units as string
@@ -125,7 +133,9 @@ class SimTime(object):
             else:
                 return
         
-        if not units in Unit:
+        # Python 3.10 compatability - see NOTE above
+        #if not units in Unit:
+        if not units in set(unit.value for unit in Unit):
             msg = "Invalid SimTime units ({0}) specified"
             raise SimError(_ERROR_NAME, msg, units)
  
@@ -140,7 +150,9 @@ class SimTime(object):
         """
         if self._units is None:
             return ''
-        elif self._units not in Unit:
+        # Python 3.10 compatability - see NOTE above
+        #elif self._units not in Unit:
+        elif self._units not in set(unit.value for unit in Unit):
             return 'Invalid Units'
         elif self._value == 1:
             return _UNITNAMES[self._units]
@@ -172,7 +184,9 @@ class SimTime(object):
         if tounits is None:
             assert base_unit() == None, "cannot convert to dimensionless SimTime unless base unit is dimensionless"
             return self.make_copy()
-        elif tounits in Unit:
+        # Python 3.10 compatability - see NOTE above
+        #elif tounits in Unit:
+        elif tounits in set(unit.value for unit in Unit):
             conversionFactor = 60**(self._units - tounits)
             return SimTime(self._value * conversionFactor, tounits)
         else:
