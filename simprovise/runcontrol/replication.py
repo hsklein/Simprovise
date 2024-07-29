@@ -428,13 +428,13 @@ class SimReplicator(QObject):
     ReplicationProgress = Signal(int, int)
 
     def __init__(self, model, warmupLength, batchLength, nBatches):
-        super().__init__()
         """
         Set up the replication sequence based on the model, run control
         parameters, and replication parameters.  Also create the initial
         "template" output database, which will be copied and populated
         by each replication.
         """
+        super().__init__()
         # create a SimRunControlParameters object just to validate
         # those parameters (raising if invalid) before things get going
         testRunControlParameters = \
@@ -446,6 +446,7 @@ class SimReplicator(QObject):
         self.__nBatches = nBatches
         self.__pool = None
         self.__status = _STATUS_NOT_STARTED
+        self.__nRuns = None        
         self.__nRepsStarted = 0
         self.__nRepsFailed = 0
         self.__nRepsFinished = 0
@@ -651,7 +652,15 @@ class SimReplicator(QObject):
         # no need for more processes than we have replications to perform.
         n = min(replicationParameters.max_concurrent_replications, self.__nRuns)
         
-        with multiprocessing.Pool(processes=n, maxtasksperchild=1) as pool:
+        # make sure we use the 'spawn' start method; 'fork' (presumably because
+        # it carries over the SimModel object from the parent process) results
+        # in 'register element with duplicate element id' errors.
+        # As of Python 3.12, explicitly setting 'spawn' is required on Linux
+        # (where the default is 'fork)
+        ctx = multiprocessing.get_context('spawn')
+        
+        with multiprocessing.pool.Pool(processes=n, maxtasksperchild=1,
+                                  context=ctx) as pool:
             self.__pool = pool
             self.__nRepsStarted = 0
             self.__nRepsFailed = 0
