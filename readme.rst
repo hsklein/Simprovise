@@ -1,5 +1,5 @@
 ====================================
-Simprovise
+simprovise
 ====================================
 
 **Simprovise** is a Python library for discrete event simulation. It offers an
@@ -18,9 +18,9 @@ Greenlets are similar to the generator-based coroutines that are available
 from the standard CPython distribution, while providing some additional
 flexability. In particular, use of the ``yield`` keyword is not required,
 and ``greenlet`` switching can occur in nested method calls.
-In the case of Simprovise, this allows blocking and process-switching to 
+In the case of simprovise, this allows blocking and process-switching to 
 occur "under the covers" during a method call like ``acquire(resource)``;
-a model developer using Simprovise should have no need to see, use or even
+a model developer using simprovise should have no need to see, use or even
 understand the ``greenlet`` API.
 
 Status
@@ -33,6 +33,13 @@ release.)
 
 Installation
 ============
+
+For now, simprovise is only available via this repository; your PYTHONPATH
+should be set to include the ``Simprovise.simprovise`` directory.
+``greenlet`` and ``numpy`` can be installed from the Python Package Index 
+(PyPI) via ``py install``. 
+(The public release of simprovise, when ready, will be available via PyPI as 
+well.)
 
 Documentation
 =============
@@ -51,10 +58,10 @@ statistics.
 Compatibility
 =============
 
-Simprovise has been developed using Python 3.12.2. While I would *expect*
-Simprovise to work with relatively recent earlier releases 
-(Python 3.9 and higher), 
-these compatability checks have not yet been performed.
+Simprovise has been developed using Python 3.12.2. 
+It has been tested and runs on Linux (Ubuntu 22.04.4) 
+running Python 3.9.19, 3.10.12, and 3.12.4.
+
 
 License
 =======
