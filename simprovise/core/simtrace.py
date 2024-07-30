@@ -339,16 +339,16 @@ def trace_event(obj, action, arguments=''):
     
     """
     if not _trace_enabled:
-         return
+        return
     
     global _trace_event_count
     
     if _trace_max_events and _trace_event_count >= _trace_max_events:
-         return
+        return
     
     _trace_event_count += 1
     if _trace_event_count == 1:
-         _header_func()
+        _header_func()
      
     evt = Event(SimClock.now().to_scalar(), obj, action, arguments)
     _write_event_func(evt)

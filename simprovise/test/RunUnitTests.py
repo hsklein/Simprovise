@@ -1,5 +1,6 @@
 import unittest
-
+      
+from simprovise.test import configuration_test
 from simprovise.test import simtime_test
 from simprovise.test import simclock_test
 from simprovise.test import simrandom_test
@@ -28,6 +29,7 @@ def run_tests():
     suite = unittest.TestSuite()
 
     #suite.addTest(system_test1.makeTestSuite())
+    suite.addTest(configuration_test.makeTestSuite())
     suite.addTest(simtime_test.makeTestSuite())
     suite.addTest(simclock_test.makeTestSuite())
     suite.addTest(simelement_test.makeTestSuite())

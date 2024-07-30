@@ -19,6 +19,8 @@ from simprovise.core.simrandom import SimDistribution
 from simprovise.modeling.agent import SimAgent
 #from simprovise.modeling.location import SimStaticObject
 
+from simprovise.core.simlogging import SimLogging
+
 class TestEntity(SimEntity):
     ""
 
@@ -110,7 +112,7 @@ class SimEntitySourceTests(unittest.TestCase):
     def setUp(self):
         #SimLogging.set_level(logging.DEBUG, 'simprovise.core.simevent')
         reinitialize()
-        MockProcess.processTime = SimTime(1, tu.MINUTES)
+        MockProcess.processTime = SimTime(10, tu.MINUTES)
         self.eventProcessor = EventProcessor() # also calls simevent.initialize()
         self.source = MockSource()
         
