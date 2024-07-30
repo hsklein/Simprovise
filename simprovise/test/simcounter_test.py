@@ -26,11 +26,15 @@ class MockProcess(object):
         self.waiting = False
 
 class MockElement(object):
+    @property
+    def element_id(self):
+        return 'MockElement'
     def register_dataset(self, dset):
         pass
     @property
     def data_collection_enabled(self):
         return True
+    
 
 
 class SimInfiniteCounterTests(unittest.TestCase):
