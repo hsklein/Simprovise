@@ -229,9 +229,36 @@ _config = _init()
 
 def set_modelscript_path(path):
     """
-    Set the simulation model script path. Raises if called after the
-    configuration is read/initialized, since at that point, it;s too late to
-    modify the configuration.
+    Set the simulation model script path, used to search for the last
+    (and therefore highest priority) configuration .ini file.
+    e.g. if the model script path is::
+    
+        /models/mymodel.py
+    
+    then then the last configuration file loaded is::
+    
+        /models/mymodel.ini
+    
+    By default, the model script path is the top-level script that was
+    invoked - i.e, sys.argv[0]. This function can be used to change that
+    if a different script is used to run the model. **HOWEVER**...
+    
+    if called, it **MUST** be done before any simprovise modules other
+    than this one (``simprovise.core.configuration``) are imported because
+    those other simprovise modules are likely to (directly or indirectly)
+    load and read configuration values, at which point it's too late to
+    modify the configuration. It will raise an exception if called after the
+    configuration is read/initialized.
+    
+    In other words, if :meth:`set_modelscript_path` is to be called, it should
+    be at the very top of the top-level script before other simprovise imports::
+    
+        # First simprovise import
+        import simprovise.core.configuration as simconfig
+        simconfig.set_modelscript_path(__file__)
+        
+        # Other simprovise imports ....
+
     """
     _config.set_modelscript_path(path)
 
@@ -271,20 +298,45 @@ def get_logging_enabled():
     """
     return _config.getboolean(_LOGGING, 'enabled', fallback=True)
   
-def get_logging_level():
+def get_logging_level(module_name=None):
     """
-    Return the the logging level setting, converted from string to a
+    Return a logging level setting, converted from string to a
     logging module flag value.
+    
+    If the passed module_name is None, we want the base/default logging
+    level, found with the 'level' key.
+    
+    If the passed module_name is not None, is is assumed to be a
+    qualified simprovise module (e.g. 'simprovise.modeling.resource');
+    in that case, the module name is the key (and the value should still
+    be a valid level string).
+    
+    The base/default fallback level is WARNING (which probably should
+    not be encountered). For modules, the fallback level is NOTSET,
+    which indicates that the configuration file has not specified a level
+    value for that module.
+    
+    :param module_name: The fully qualified name module/logger whose level
+                        is to be set, or None to set the base logger level
+    :type module_name:  ``str`` or ``None``
+    
     """
     logging_level = {'debug': logging.DEBUG, 
                      'info': logging.INFO,
                      'warning': logging.WARNING,
                      'error': logging.ERROR,
-                     'critical': logging.CRITICAL}
+                     'critical': logging.CRITICAL,
+                     'notset': logging.NOTSET}
+                     
     valid_values = logging_level.keys()
     
-    levelstr = _config.getstring(_LOGGING, 'level', valid_values,
-                                 fallback='warning')
+    if module_name is None:
+        levelstr = _config.getstring(_LOGGING, 'level', valid_values,
+                                     fallback='warning')
+    else:
+        levelstr = _config.getstring(_LOGGING, module_name, valid_values,
+                                     fallback='notset')     
+ 
     return logging_level[levelstr], levelstr
 
 #===============================================================================
