@@ -10,6 +10,7 @@
 # Simulation's execute/replicate methods.
 #===============================================================================
 import os, sys, shutil, types
+from contextlib import redirect_stdout
 import numpy as np
 
 #SCRIPTPATH = "models\\mm1.py"
@@ -23,6 +24,7 @@ from simprovise.database import (SimDatabaseManager, SimDatasetSummaryData)
 from simprovise.core import SimError
 from simprovise.core.simlogging import SimLogging
 from simprovise.core.simtime import SimTime
+import simprovise.core.configuration as simconfig
 from simprovise.core.apidoc import apidoc, apidocskip
 
 _ERROR_NAME = "Simulation Error"
@@ -30,6 +32,8 @@ _RESULT_ERROR = "Simulation Result Error"
 _MIN_IQR_RUNS = 4
 _DEFAULT_OUTPUTDB_EXT = ".simoutput"
 _NAN = float('nan')
+_REPORT_SUFFIX = '_report'
+_REPORT_EXT = '.txt'
 
 logger = SimLogging.get_logger(__name__)
 
@@ -120,7 +124,8 @@ class Simulation(object):
         if outputpath:
             Simulation._save_output(replication.dbPath, outputpath)
             
-        return SimulationResult(replication.dbPath, isTemporary=True)
+        return SimulationResult(model.filename, replication.dbPath,
+                                isTemporary=True)
 
     @staticmethod
     def execute_script(modelpath, warmupLength=None, batchLength=None,
@@ -185,7 +190,7 @@ class Simulation(object):
         if outputpath:
             Simulation._save_output(replication.dbPath, outputpath)
         
-        return SimulationResult(replication.dbPath, isTemporary=True)
+        return SimulationResult(modelpath, replication.dbPath, isTemporary=True)
 
     @staticmethod
     def replicate(modelpath, warmupLength=None, batchLength=None, nBatches=1,
@@ -263,7 +268,8 @@ class Simulation(object):
         replicator.execute_replications(replicationParameters, asynch=False)
         if outputpath:
             Simulation._save_output(replicator.output_dbpath, outputpath)
-        return SimulationResult(replicator.output_dbpath, isTemporary=True)
+        return SimulationResult(model.filename, replicator.output_dbpath,
+                                isTemporary=True)
 
     @staticmethod
     def _valid_outputpath(outputpath, overwrite):
@@ -279,7 +285,10 @@ class Simulation(object):
           that no extension was provided)
         - the path includes a non-existing directory
         """
-        if not isinstance(outputpath, (types.NoneType, str)):
+        #if not isinstance(outputpath, (types.NoneType, str)):
+        # types.NoneType introduced in Python 3.10. This one change appears to
+        # be sufficient to support Python 3.9
+        if not isinstance(outputpath, str) and outputpath is not None:
             msg = "Invalid outputpath parameter value {0}: type must be str or None"
             raise SimError(_ERROR_NAME, msg, outputpath)
         
@@ -346,8 +355,19 @@ class SimulationResult(object):
         :type isTemporary:  bool
         
     """
+    # NOTE on directing output to a file (7/26/24)
+    #
+    # 1. Add a destination parameter to print_summary(), which can be:
+    #    - None, in which case use configuration to determine output
+    #    - a string, which will be assumed to be the report output filepath
+    #    - anything else is assumed to be a file object (possibly stdout)
+    #    The default should be None
+    #
+    # 3. If output is to a file, the default filename should include the
+    #    model name, so SimModel.filename or modelpath should be passed
+    #    to the SimulationResult initializer
     
-    def __init__(self, dbpath, isTemporary=False):
+    def __init__(self, modelpath, dbpath, isTemporary=False):
         """
         Open the database (specified by dbpath) via SimDatabaseManager.
         If a model is specified, we assume the database is temporary; if no
@@ -359,6 +379,7 @@ class SimulationResult(object):
         """
         logger.info("Simulation result created for output DB %s isTemporary: %s",
                     dbpath, isTemporary)
+        self.modelpath = modelpath
         self.dbMgr = SimDatabaseManager()
         self.dbMgr.open_archived_database(dbpath, isTemporary)
         self.datasetStatistics = None
@@ -504,8 +525,69 @@ class SimulationResult(object):
                     print_row(dset, '90th Percentile', dsetstats.pct90s)
                     print_row(dset, '95th Percentile', dsetstats.pct95s)
  
+ 
+    def print_summary(self, *, rangetype=None, destination=None):
+        """
+        Print formatted summary statistics for the simulation output. In the
+        base report, summary statistics for multiple runs/batches are shown as
+        the mean of the statistic values calculated for each run/batch in
+        the result database. (If the database has multiple runs, it is the
+        average of the calculated result for each run; if it is a single run
+        with multiple batches, it is the average of the calculated result for
+        each batch.)
 
-    def print_summary(self, rangetype=None):
+        If the rangetype parameter is specified, a spread indicator is also
+        shown for each summary statistic; the indicators supported are
+        'iqr' (Interquartile range) and 'total' (minimum and maximum). These
+        spread range indicators refer to the calculated statistic, NOT the
+        underlying dataset values. For example, if rangetype is 'total' and
+        the database has 10 replication runs, then the "Median" column for a
+        dataset wll display the mean of the calculated medians for each of
+        those ten replications, plus a range [min-max] that indicate the lowest
+        and highest of those ten calculated medians.
+        
+        If the destination parameter is ``None``, the destination is obtained
+        from the configuration file, which should be either 'stdout' or
+        'file'; if 'file', the destination will be a file in the current
+        working directory named <model name>_report.txt
+        
+        :param rangetype:   '`iqr`', '`total`' or None. 
+        :type  rangetype:   ``str``
+        
+        :param destination: file object (can be stdout), filename or ``None``. 
+        :type destination:  file object, ``str`` or ``None``
+        
+        :raises:            :class:`~.simexception.SimError`
+                            Raised if rangetype is invalid.
+
+        """
+        output_filename = None
+        f = None
+
+        if destination is None:
+            # Get destination from configuration file
+            if simconfig.get_output_report_destination() == 'stdout':
+                f = sys.stdout
+            else:
+                base = os.path.splitext(os.path.basename(self.modelpath))[0]
+                output_filename = base +  _REPORT_SUFFIX + _REPORT_EXT
+        elif isinstance(destination, str):
+            output_filename = destination
+        else:
+            f = destination
+            
+        if f == sys.stdout:
+            self._print_summary_impl(rangetype)
+        elif f:
+            with redirect_stdout(f):
+                self._print_summary_impl(rangetype)                
+        else:
+            with open(output_filename, 'w') as f:
+                with redirect_stdout(f):
+                    self._print_summary_impl(rangetype)                
+                
+            
+    def _print_summary_impl(self, rangetype=None):
         """
         Print formatted summary statistics for the simulation output. In the
         base report, summary statistics for multiple runs/batches are shown as
@@ -920,13 +1002,16 @@ class SimSample(object):
 
 
 if __name__ == '__main__':
-    
     warmupLength = SimTime(1000)
     batchLength = SimTime(10000)
     #batchLength = SimTime(0)
-    scriptpath = "demos\\mm1.py"
-    multi_replication = True
-    nruns = 50
+    scriptpath = "demos/mm_1.py"
+    multi_replication = str
+    nruns = 10
+    
+    thisdir = os.path.dirname(sys.argv[0])
+    scriptpath = os.path.join(thisdir, scriptpath)
+    print("scriptpath:", scriptpath)
     
     #SimLogging.set_level(logging.WARN)
     #SimLogging.set_level(logging.INFO, 'simprovise.core.process')

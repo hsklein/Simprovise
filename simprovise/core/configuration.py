@@ -20,7 +20,8 @@ _SIM_TIME = 'SimTime'
 _LOGGING = 'Logging'
 _SIM_RANDOM = 'SimRandom'
 SIM_TRACE = 'SimTrace'
-DATA_COLLECTION = 'Data Collection'
+_OUTPUT_REPORT = 'Output Report'
+_DATA_COLLECTION = 'Data Collection'
 
 _ERROR_NAME = 'SimConfiguration Error'
 
@@ -334,7 +335,20 @@ def get_trace_destination():
     Raises if the setting is not one of those values (case-insensitive)
     """
     valid_values = ('stdout', 'file')
-    return _config.getstring(SIM_TRACE, 'Destination', valid_values, fallback='table')
+    return _config.getstring(SIM_TRACE, 'Destination', valid_values, fallback='stdout')
+
+#===============================================================================
+# Output Report setting accessors
+#===============================================================================
+def get_output_report_destination():
+    """
+    Return the output summary report destination as a string - either 'stdout'
+    or 'file'.
+    Raises if the setting is not one of those values (case-insensitive)
+    """
+    valid_values = ('stdout', 'file')
+    return _config.getstring(_OUTPUT_REPORT, 'Destination', valid_values, fallback='stdout')
+
 
 #===============================================================================
 # Data Collection setting accessors
@@ -345,7 +359,7 @@ def get_element_data_collection_disabled(element_id):
     identified by the passed element ID (based on values for the
     Data Collection `Disable Elements` option).
     """
-    option_value = _config.get_unvalidated_string(DATA_COLLECTION,
+    option_value = _config.get_unvalidated_string(_DATA_COLLECTION,
                                                   'Disable Elements').strip()
     
     if not option_value:
@@ -372,7 +386,7 @@ def get_dataset_data_collection_disabled(element_id, dataset_name):
     Entries without a pattern are ignored; entries with more than two
     patterns are ignored after a warning is issued.
     """
-    option_value = _config.get_unvalidated_string(DATA_COLLECTION,
+    option_value = _config.get_unvalidated_string(_DATA_COLLECTION,
                                                   'Disable Datasets').strip()
     
     if not option_value:

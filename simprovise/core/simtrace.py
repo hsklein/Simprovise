@@ -20,6 +20,7 @@ _ERROR_NAME = "Trace Error"
 _DEFAULT_FMT_WIDTH = 20
 _ACTION_FMT_WIDTH = 9
 _CLOCKTIME_FMT_WIDTH = 10
+_TRACE_SUFFIX = '_trace'
 
 class TraceType(Enum):
     """
@@ -148,14 +149,14 @@ def initialize(modelscript_filename=None):
         # The tracetype involves writing to a file, and it hasn't already been
         # set (presumably to stdout)
         if modelscript_filename:
-            base, pyext = os.path.splitext(os.path.basename(modelscript_filename))
-            trace_filename = base + trace_ext
+            base = os.path.splitext(os.path.basename(modelscript_filename))[0]
+            trace_filename = base + _TRACE_SUFFIX + trace_ext
             try:
                 _trace_file = open(trace_filename, 'w')
             except Exception as e:
-                logger.fatal("Error opening CSV trace file: %s: %s",
+                logger.fatal("Error opening trace file: %s: %s",
                              trace_filename, e)
-                raise SimError(_ERROR_NAME, "Unable to open trace file")
+                raise SimError(_ERROR_NAME, "Unable to open trace file") from e
         else:
             # No modelscript filename, so write to stdout
             _trace_file = sys.stdout
@@ -167,7 +168,7 @@ def finalize():
     Cleanup the trace if trace is enabled. For csv files, close the file.
     """
     if not _trace_enabled:
-         return
+        return
     
     global _trace_file
     if _trace_file and _trace_file is not sys.stdout and _trace_file is not sys.stderr:
