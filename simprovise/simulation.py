@@ -1006,7 +1006,7 @@ if __name__ == '__main__':
     batchLength = SimTime(10000)
     #batchLength = SimTime(0)
     scriptpath = "demos/mm_1.py"
-    multi_replication = str
+    multi_replication = True
     nruns = 10
     
     thisdir = os.path.dirname(sys.argv[0])
