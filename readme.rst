@@ -2,16 +2,42 @@
 simprovise
 ====================================
 
-**simprovise** is a Python library for discrete event simulation. It offers an
-intuitive API for developing simulation models; it also provides APIs and tools 
-for model execution and output analysis, including:
+**simprovise** is a Python library for process-based discrete event simulation. 
+It offers an object-oriented API for developing simulation models. 
+Simprovise modelers create models by using or customizing (via inheritance)
+classes representing simulation objects such as processes, resources,
+resource pools, and locations (such as queues).
 
-* Execution of multiple replications using independent psuedo-random number
-  streams.
-* Output data collection.
-* Output analysis including summary statistics, through both batch means and
+For example, the following code snippet implements the service process for 
+an M/M/1 queuing model::
+
+    queue = SimQueue("Queue")
+    server = SimSimpleResource("Server")
+    server_location = SimLocation("ServerLocation")
+    customer_source = SimEntitySource("Source")
+    customer_sink = SimEntitySink("Sink")
+
+    mean_service_time = SimTime(8)
+    service_time_generator = SimDistribution.exponential(mean_service_time)
+
+    class mm1Process(SimProcess):
+        def run(self):
+            service_time = next(service_time_generator)
+            customer = self.entity
+            customer.move_to(queue)
+            with self.acquire(server) as resource_assignment:
+                customer.move_to(server_location)
+                self.wait_for(service_time)            
+            customer.move_to(customer_sink)
+
+**simprovise** also provides APIs and tools for model execution, 
+data collection, and output analysis, including:
+
+* Parallel execution of multiple replications, each using  an independent 
+  set of pseudo-random number streams.
+* Output reports including summary statistics, through both batch means and
   replication analysis.
-
+  
 Simprovise implements process-based simulation using lightweight coroutines
 provided by `greenlet. <https://pypi.org/project/greenlet/>`_ 
 Greenlets are similar to the generator-based coroutines that are available
