@@ -8,14 +8,14 @@ simprovise
 =====================
 **simprovise** is a Python library for discrete event simulation. It offers an
 intuitive API for developing simulation models; it also provides APIs and tools 
-for model execution and output analysis.
+for model execution, output data collection and output analysis.
 
 .. note::
 	This is the documentation for release 0.2.0a, currently under 
 	development with planned availability through the Python Package Index
 	in Fall 2024. 
 	
-        Also be aware that he documentation itself is also under development. 
+        Also be aware that he documentation itself is also under construction. 
 	As a  work-in-progress, there are still gaps and missing sections.
 	
 	Any and all feedback is welcome at

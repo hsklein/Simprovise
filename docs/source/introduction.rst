@@ -31,7 +31,7 @@ an M/M/1 queuing model::
             customer.move_to(customer_sink)
 
 **simprovise** also provides APIs and tools for model execution, 
-data collection, and output analysis, including:
+output data collection and output analysis, including:
 
 * Parallel execution of multiple replications, each using  an independent 
   set of pseudo-random number streams.
