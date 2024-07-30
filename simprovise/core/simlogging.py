@@ -117,6 +117,15 @@ class SimLogging(object):
             name = _BASE_LOGGER_NAME + '.' + name
             
         logger = logging.getLogger(name)
+        
+        # If a logging level (other than NOTSET) is specified for this module 
+        # in the configuration file, use it.
+        configLevel, levelstr = simconfig.get_logging_level(name)
+        if configLevel != logging.NOTSET:
+            level = configLevel
+            logger.info("Setting logging level for module %s to %s...",
+                         name, levelstr)
+            
         logger.setLevel(level)
         return logger
 
