@@ -20,7 +20,7 @@ interarrival_time_generator = SimDistribution.exponential(mean_interarrival_time
 
 queue = SimQueue("Queue")
 server = SimSimpleResource("Server")
-serverLocation = SimLocation("ServerLocation")
+server_location = SimLocation("ServerLocation")
 customer_source = SimEntitySource("Source")
 customer_sink = SimEntitySink("Sink")
 
@@ -43,7 +43,7 @@ class mm1Process(SimProcess):
         customer = self.entity
         customer.move_to(queue)
         with self.acquire(server) as resource_assignment:
-            customer.move_to(serverLocation)
+            customer.move_to(server_location)
             self.wait_for(service_time)            
         customer.move_to(customer_sink)
 
@@ -59,4 +59,4 @@ if __name__ == '__main__':
     batch_length = SimTime(10000)
     nbatches = 10
     with Simulation.execute(warmup_length, batch_length, nbatches) as simResult:
-        simResult.print_summary()
+        simResult.print_summary(rangetype='iqr')

@@ -2,9 +2,6 @@
 Introduction
 ============
 
-Overview
-========
-
 **simprovise** is a Python library for process-based discrete event simulation. 
 It offers an object-oriented API for developing simulation models. 
 Simprovise modelers create models by using or customizing (via inheritance)
@@ -16,7 +13,7 @@ an M/M/1 queuing model::
 
     queue = SimQueue("Queue")
     server = SimSimpleResource("Server")
-    serverLocation = SimLocation("ServerLocation")
+    server_location = SimLocation("ServerLocation")
     customer_source = SimEntitySource("Source")
     customer_sink = SimEntitySink("Sink")
 
@@ -29,7 +26,7 @@ an M/M/1 queuing model::
             customer = self.entity
             customer.move_to(queue)
             with self.acquire(server) as resource_assignment:
-                customer.move_to(serverLocation)
+                customer.move_to(server_location)
                 self.wait_for(service_time)            
             customer.move_to(customer_sink)
 
@@ -71,7 +68,7 @@ Users can save the output database itself if they wish to create and use their
 own queries.
 
 Implementation Notes
-====================
+--------------------
 
 Simprovise implements process-based simulation using lightweight coroutines
 provided by `greenlet. <https://pypi.org/project/greenlet/>`_ 
@@ -83,13 +80,3 @@ In the case of simprovise, this allows blocking and process-switching to
 occur "under the covers" during a method call like ``acquire(resource)`` above;
 a model developer using simprovise should have no need to see, use or even
 understand the ``greenlet`` API.
-
-Simprovise also includes replication APIs and infrastructure that allow users
-to execute multiple, independent replications of a simulation model in
-parallel; each replication is executed in its own process (via a Python
-multiprocessing pool), which facilitates true parallel execution.
-Simprovise also provides wrappers for 
-`NumPy <https://numpy.org/doc/stable/index.html>`_ 
-psuedo-random number and probability distribution sampling generators 
-which ensure that independent random number streams are used for each
-replication.

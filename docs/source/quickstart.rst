@@ -41,7 +41,7 @@ Then we'll create the basic objects of the model:
 
     queue = SimQueue("Queue")
     server = SimSimpleResource("Server")
-    serverLocation = SimLocation("ServerLocation")
+    server_location = SimLocation("ServerLocation")
     customer_source = SimEntitySource("Source")
     customer_sink = SimEntitySink("Sink")
 
@@ -72,7 +72,7 @@ behalf of customers by creating a process class and defining its
             customer = self.entity
             customer.move_to(queue)
             with self.acquire(server) as resource_assignment:
-                customer.move_to(serverLocation)
+                customer.move_to(server_location)
                 self.wait_for(service_time)            
             customer.move_to(customer_sink)
 
