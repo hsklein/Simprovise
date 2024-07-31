@@ -43,12 +43,12 @@ class SimConfigParser(configparser.ConfigParser):
     Configuration Files:
     
     :meth:`read_files` reads up to four configuration files (if they exist)
-    in the following order, where <filename>.py is the main model script:
+    in the following order, where <filename>.py is the main (top-level) script:
     
       - simprovise.ini in the simprovise installation directory
-      - simprovise.ini in the caller's working directory
+      - simprovise.ini in the user's working directory
       - <filename>.ini in the same directory as <filename>.py 
-      - <filename>.ini in the caller's working directory 
+      - <filename>.ini in the user's working directory 
     
     Setting values in later-read files supercede those from earlier-read
     files.
@@ -63,7 +63,7 @@ class SimConfigParser(configparser.ConfigParser):
     
     TODO: a more robust approach to obtaining the model script path; the
     one outlined above is admittedly a bit fragile/awkward, since we
-    cannot rely on core infrastructure (which learns to model path to late
+    cannot rely on core infrastructure (which learns the model path too late
     to set it here.)     
     """
     def __init__(self):
@@ -174,9 +174,9 @@ class SimConfigParser(configparser.ConfigParser):
         where <filename>.py is the script being executed (argv[0]):
         
           - simprovise.ini in the simprovise installation directory
-          - simprovise.ini in the caller's working directory
+          - simprovise.ini in the user's working directory
           - <filename>.ini in the same directory as <filename>.py 
-          - <filename>.ini in the caller's working directory 
+          - <filename>.ini in the user's working directory 
         
         Setting values in later-read files supercede those from earlier-read
         files.
@@ -255,7 +255,7 @@ def set_modelscript_path(path):
     
         # First simprovise import
         import simprovise.core.configuration as simconfig
-        simconfig.set_modelscript_path(__file__)
+        simconfig.set_modelscript_path(path)
         
         # Other simprovise imports ....
 
