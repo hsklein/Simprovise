@@ -31,7 +31,6 @@ for model execution, output data collection and output analysis.
    modeling_concepts
    data_collection
    configuration
-   command_line
    api_reference
    output_database
    license
