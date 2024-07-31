@@ -162,13 +162,13 @@ class SimReplication(QObject):
     #connect to any Qt Signals
     def __init__(self, model, runNumber, warmupLength,
                  batchLength, nBatches, dbPath=None, queue=None):
-        super().__init__()
         """
         Initialize a replication with the path to the model, an initialized
         output database, and the run control parameters.  The initializer
         sets up a non-animated run, initializes the random number generators
         for this run, initializes the simulation clock, and loads the model.
         """
+        super().__init__()
         #SimLogging.set_level(logging.WARN)
         self.__databaseManager = SimDatabaseManager()
         self.__dbPath = dbPath
