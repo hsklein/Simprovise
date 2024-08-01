@@ -51,11 +51,11 @@ specified more along the lines of "move to the entity sink." Every model
 requires at least one entity sink.
 
 `Counters` are, as the name implies, objects that can be incremented and
-decremented. A counter may have a finite `capacity`, in which case it can\
+decremented. A counter may have a finite `capacity`, in which case it can
 serve as a modeling construct - when a counter is at capacity and is
 incremented by a `Process`, that `increment` call will block until the
 counter capacity is available.
-()Counter values can serve as measurements taken for simulation 
+(Counter values can serve as measurements taken for simulation 
 output.)
 
 A central feature of the simulator is a `simulation clock` which advances
@@ -97,6 +97,12 @@ with each other by exchanging *messages*:
 For example, an *entity* (which is also an agent) acquires a *resource*
 by sending a message to the resource's *assignment agent* and then waiting 
 for a response.
+
+Simprovise also provides a subscription mechanism that allows one agent
+to subscribe to all messages (of a specified type) sent by a second agent to
+other agents. In effect it provides agents the ability to "listen in"
+on messages of interest sent to third parties. Agents don't "respond" to
+subscription messages, but they may act on them.
 
 It is important to note that much if not all of this message passing
 activity happens behind the scenes; in many cases the Simprovise model 
