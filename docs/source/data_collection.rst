@@ -116,8 +116,66 @@ of time each entity spent in the queue during some period of simulated time
 Implementation Notes
 ====================
 
+A few additional notes on simprovise APIs and architecture for those 
+modelers who wish to create custom datasets and/or output reports.
+
+.. note::
+  The next section describes the process for creating new datasets (in
+  addition to those automatically create by objects in the simprovise
+  library) which in turn write their data to a simprovise output database.  
+  In addition, it is certainly possible for model developers
+  to bypass this existing infrastructure entirely and collect, write and
+  report output data in their own format, using whatever Python API they 
+  would like.
+
+
 Counters and Data Collectors
 ----------------------------
 
+:class:`~simprovise.core.datacollector.Dataset` objects should not be
+instantiated directly by model developers who wish to create a custom
+dataset; rather, the new datasets are created indirectly through the 
+instantiation of other objects, typically
+:class:`counters <simprovise.modeling.conter.SimCounter>` for time-weighted data
+and :class:`unweighted data collectors <simprovise.core.datacollector.SimUnweightedDataCollector>`
+for unweighted data.
+
+Unweighted datasets are created and populated by creating 
+:class:`~simprovise.core.datacollector.SimUnweightedDataCollector` objects,
+making sure to specify non-``None`` `element` and `name` parameters.
+Modeling code adds values to the dataset via 
+:meth:`~simprovise.core.datacollector.SimUnweightedDataCollector.add_value`
+calls.
+
+When a counter is constructed with non-``None`` values for the `element`
+and `name` parameters, it automatically creates a time-weighted dataset for 
+that element where a value is added every time the counter is incremented or
+decremented. (An initial zero value is added at the start.) The `normalize`
+parameter can be set to ``True`` when the modeler would like to report counter
+statistics as a percentage of it's capacity (e.g. for utilization).
+
+If counter objects do not meet the model's needs, time-weighted datasets
+may also be created by creating a
+:class:`~simprovise.core.datacollector.SimTimeWeightedDataCollector` object,
+and calling its
+:meth:`~simprovise.core.datacollector.SimTimeWeightedDataCollector.add_value` 
+method whenever the current value needs to change.
+
+
 Output Database
 ---------------
+
+By default, each value added to a simprovise dataset (time-weighted or 
+unweighted) is written to the ``datasetvalue`` table in a simprovise (SQLite) 
+output database.  The reports generated via class
+:class:`~simprovise.simulation.SimulationResult`
+all obtain their data from this database.
+
+Modelers can choose to save this database
+(via :meth:`~simprovise.simulation.SimulationResult.save_database_as`)
+and then use their own queries to read these data and generate their own
+output. Modelers can also save summary data as a CSV file via
+:meth:`~simprovise.simulation.SimulationResult.save_summary_csv` if they
+wish to analyze/format/report on those data in a spreadsheet.
+
+See :doc:`output_database` for further details.
