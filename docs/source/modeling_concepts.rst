@@ -328,10 +328,77 @@ process behavior for the
 Counters
 ========
 
+:class:`Counters <simprovise.modeling.counter.SimCounter>` can serve as both
+modeling and data collection objects. 
+:ref:`When <counters-datacollectors-label>` constructed with an element
+reference and a name, a 
+:class:`~simprovise.core.datacollector.Dataset` associated with the counter
+value is created; when constructed with a finite capacity, a counter can
+function like a :ref:`resource. <resource-concept-label>`
+
+Counters are always created with a current value of zero. They can be 
+incremented and decremented by any amount (the default is one); the only
+caveat being that a counter cannot be decremented below zero. If it has
+finite capacity, it also cannot be incremented beyond that capacity.
+
+If a counter has finite capacity, it's
+:meth:`~simprovise.modeling.counter.SimCounter.increment`
+will block if the counter's value already equals the counter capacity.
+(or, if the increment amount is > 1, the current value plus the requested
+increment amount is greater than the counter capacity). Blocked
+:meth:increment calls get "unblocked" on a strictly first-in-first-out basis.
+
 .. _simulated-time-concept-label:
 
-Simulated Time
-==============
+The Simulation Clock and Simulated Time
+=======================================
+
+At its most basic, a discrete event simulation consists of a series of 
+events that occur at various points in simulated time, as represented by
+a simulated clock.
+
+In simprovise, the simulated clock is represented by class
+:class:`~simprovise.core.simclock.SimClock`; the current simulated time
+at any point in the simulation is accessible via method
+:meth:`~simprovise.core.simclock.SimClock.now`.
+
+The Base Time Unit
+------------------
+
+Every simulation model has a *base time unit*, which is specified via a
+:doc:`configuration` file. The base time unit must be one of:
+
+* ``SECONDS`` (the default)
+* ``MINUTES``
+* ``HOURS``
+* ``None`` (dimensionless)
+
+The dimensioned units (``SECONDS``/``MINUTES``/``HOURS``) are defined as members of
+the :class:`time unit <simprovise.core.simtime.Unit>` enumeration.
+The `dimensionless` unit (``None``) should be used when the modeler wishes
+to express time as a unitless scalar value rather than one of the other
+provided units.
+
+The ``SimTime`` Class
+---------------------
+
+In simprovise, both the current time and any periods/lengths of time
+are represented by objects of class
+:class:`~simprovise.core.simtime.SimTime`; each instance is constructed
+with a numeric time value and a time unit, again either a member of the 
+class:`~simprovise.core.simtime.Unit` enumeration or ``None``. 
+If ``None``, the :class:`~simprovise.core.simtime.SimTime` defaults to
+the **Base Time Unit** described above.
+
+.. note::
+  If the **Base Time Unit** is dimensioned (SECONDS, MINUTES or HOURS) then
+  new :class:`~simprovise.core.simtime.SimTime` objects can be constructed
+  with any time unit, since it is always possible to convert from one to
+  another. If, on the other hand, the base unit is ``None`` (dimensionless)
+  then all :class:`~simprovise.core.simtime.SimTime` objects must also be
+  dimensionless; attempting to construct one with some other time unit
+  will raise an exception.
+
 
 .. _random-number-generation-concept-label:
 

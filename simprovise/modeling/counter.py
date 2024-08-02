@@ -197,6 +197,9 @@ class SimCounter(object):
                        range (1-counter capacity). Defaults to 1.
         :type amount:  int
 
+        :raises:       :class:`~.simexception.SimError`
+                       Raised if amount is invalid or, for finite capacity
+                       counters, it is called without a transaction/process.
         """
         #print("incrementing ", self, self.__datacollector.dataset.element_id)
         if type(amount) is not int:

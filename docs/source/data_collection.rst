@@ -128,6 +128,7 @@ modelers who wish to create custom datasets and/or output reports.
   report output data in their own format, using whatever Python API they 
   would like.
 
+.. _counters-datacollectors-label:
 
 Counters and Data Collectors
 ----------------------------
