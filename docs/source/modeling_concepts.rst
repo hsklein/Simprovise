@@ -432,10 +432,10 @@ desired; each stream has a numeric identifier. (By default, each
 model may use up to 2000 streams, numbered 1-2000, but that maximum can
 be configured to another amount by the modeler.)
 
-The Simprovise simulation replication infrastructure also ensures that
+The simprovise simulation replication infrastructure also ensures that
 each replication of a simulation uses a different set of psuedo-random streams. 
 If a model uses streams 1 through 100 and the modeler does a 20 replication
-analysis (i.e., re-runs the simulation 20 times using the Simprovise 
+analysis (i.e., re-runs the simulation 20 times using the simprovise 
 replicator), each of those 20 runs will use a
 separate distinct set of 100 pseudo-random number streams - e.g., stream 47 will 
 be a completely different and (sufficiently independent) stream for each 
@@ -499,16 +499,33 @@ These methods all take distribution parameters and an optional
 arguments, and return a generator that yields samples from the specified
 distribution.
 
-Model builders may use the
+These simprovise wrappers provide the following benefits:
+
+1. In many (and probably most) cases, the parameters to a distribution are
+   going to be expressed as time (:class:`~simprovise.core.simtime.SimTime`)
+   values. If any parameter is a time value, the simprovise wrappers convert 
+   all times to scalar values of the same time unit, and converts the sampled 
+   return value to a :class:`~simprovise.core.simtime.SimTime` as well.
+2. The simprovise wrappers allow the modeling code to specify a desired 
+   `stream number` rather than a bit generator. (Keep in mind that the bit
+   generator changes from replication to replication.) This also allows the
+   simprovise generators to be created before the bit generators even exist.
+
+Nonetheless, model builders may use the
 `rest <https://numpy.org/doc/1.18/reference/random/generator.html#distributions>`_
 of NumPy's distributions directly, if so desired, using
-:func:`~simprovise.core.simrandom.get_random_generator`.
+:func:`~simprovise.core.simrandom.get_random_generator`, which provides (2)
+above.
 That 
 `NumPy documentation <https://numpy.org/doc/1.18/reference/random/generator.html#distributions>`_
 also includes a thorough background discussion of those distributions.
 
 :func:`~simprovise.core.simrandom.get_random_generator`
-is also compatible with distributions from the
+is compatible with distributions from the
 `SciPy stats module <https://docs.scipy.org/doc/scipy/reference/stats.html>`_
 as well.
+
+Note that when using NumPy/SciPy distributions directly, the modeler will
+be responsible for doing any conversions to and from 
+:class:`~simprovise.core.simtime.SimTime` values.
 
