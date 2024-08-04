@@ -2,6 +2,8 @@
 Data Collection Concepts
 ========================
 
+.. _simulation-elements-label:
+
 Simulation Elements
 ===================
 
@@ -59,6 +61,9 @@ of the transient entity or process objects associated with them:
 * Process time
 * Total count (generally referred to as "Entries")
 
+
+.. _simulation-datasets-label:
+
 Datasets
 ========
 
@@ -88,6 +93,8 @@ datasets, as described :doc:`here <configuration>`,
 
 The modeler can also add their own custom datasets to elements as
 demonstrated in this :ref:`tutorial. <bank-4-tutorial-label>`
+
+.. _simulation-time-weighted-datasets-label:
 
 Time-Weighted and Unweighted Datasets
 -------------------------------------

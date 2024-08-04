@@ -53,13 +53,11 @@ class SimElement(object):
 
     @property
     def element_id(self):
-        """
-        Basically an abstract property implemented by subclasses.
-        
+        """              
         :return: A globally unique identifier for the element.        
-        :rtype: `str`
-        
+        :rtype: `str`       
         """
+        # Basically an abstract property implemented by subclasses.
         pass
     
     @property
