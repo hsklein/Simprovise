@@ -204,7 +204,7 @@ below::
     Bank.TellerCounter.Teller            ProcessTime          3.00 minutes      0.84 minutes      2.04 minutes      4.19 minutes     23.29 minutes
     Bank.TellerCounter.Teller            Utilization          0.75              0.50              0.93              1.00              1.00        
     Bank.TellerCounter.Teller            DownTime             0.00              0.00              0.00              0.00              0.00        
-    Bank.CustomerQueue                   Population           1.68              0.00              0.00              2.30             16.00        
+    Bank.CustomerQueue                   Size                 1.68              0.00              0.00              2.30             16.00        
     Bank.CustomerQueue                   Entries            997.00            997.00            997.00            997.00            997.00        
     Bank.CustomerQueue                   Time                 1.67 minutes      0.00 minutes      0.26 minutes      2.46 minutes     12.69 minutes
     Closing and removing output database...
@@ -270,7 +270,7 @@ generated summary report::
     Bank.TellerCounter.Teller            ProcessTime          3.03 minutes      0.86 minutes      2.09 minutes      4.24 minutes     21.68 minutes
     Bank.TellerCounter.Teller            Utilization          0.77              0.57              0.95              1.00              1.00        
     Bank.TellerCounter.Teller            DownTime             0.00              0.00              0.00              0.00              0.00        
-    Bank.CustomerQueue                   Population           1.69              0.00              0.10              2.50             14.10        
+    Bank.CustomerQueue                   Size                 1.69              0.00              0.10              2.50             14.10        
     Bank.CustomerQueue                   Entries           1020.80           1020.80           1020.80           1020.80           1020.80        
     Bank.CustomerQueue                   Time                 1.65 minutes      0.00 minutes      0.35 minutes      2.60 minutes     11.65 minutes
 
@@ -639,10 +639,10 @@ Simulation Results/Analysis
     Bank.TellerCounter.MerchantTeller    ProcessTime          2.48 minutes      0.68 minutes      1.64 minutes      3.29 minutes     16.61 minutes
     Bank.TellerCounter.MerchantTeller    Utilization          0.84              1.00              1.00              1.00              1.00        
     Bank.TellerCounter.MerchantTeller    DownTime             0.00              0.00              0.00              0.00              0.00        
-    Bank.RegularQueue                    Population           3.84              0.00              1.30              6.10             22.10        
+    Bank.RegularQueue                    Size                 3.84              0.00              1.30              6.10             22.10        
     Bank.RegularQueue                    Entries            595.80            595.80            595.80            595.80            595.80        
     Bank.RegularQueue                    Time                 3.83 minutes      0.02 minutes      1.74 minutes      6.56 minutes     17.86 minutes
-    Bank.MerchantQueue                   Population           0.82              0.00              0.00              1.20              6.10        
+    Bank.MerchantQueue                   Size                 0.82              0.00              0.00              1.20              6.10        
     Bank.MerchantQueue                   Entries            100.80            100.80            100.80            100.80            100.80        
     Bank.MerchantQueue                   Time                 4.85 minutes      0.52 minutes      2.56 minutes      7.02 minutes     25.20 minutes
 

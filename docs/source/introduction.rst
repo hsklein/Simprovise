@@ -50,7 +50,7 @@ generated for the M/M/1 model::
     __main__.mm1Process                  Process-Time      1010.00     36.17             11.14             26.98             51.28            172.64        
     __main__.Customer                    Work-In-Process   2020.80      3.65              0.90              2.70              5.40             18.80        
     __main__.Customer                    Process-Time      1010.00     36.17             11.14             26.98             51.28            172.64        
-    Queue                                Population        1811.70      2.86              0.00              1.70              4.40             17.80        
+    Queue                                Size              1811.70      2.86              0.00              1.70              4.40             17.80        
     Queue                                Entries           1009.80   1009.80           1009.80           1009.80           1009.80           1009.80        
     Queue                                Time              1010.00     28.29              2.46             17.89             42.52            160.78        
     Server                               ProcessTime       1010.00      7.89              2.27              5.42             10.94             60.81        

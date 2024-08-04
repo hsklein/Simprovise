@@ -256,6 +256,11 @@ class SimLocation(SimStaticObject):
                            serves as the entry point for this location. If
                            None, this location is it's own entry point.
     :type entryPointName:  `str`
+    
+    :param count_datasetname: Name of the dataset associated with the 
+                              location population counter. Defaults to
+                              "Population"
+    :type count_datasetname:  `str`
  
      """
     # TODO locations should be static objects?  Confirm that?
@@ -278,7 +283,8 @@ class SimLocation(SimStaticObject):
         return SimLocation._rootlocation
         
 
-    def __init__(self, name, parentlocation=None, entrypointname=None):
+    def __init__(self, name, parentlocation=None, entrypointname=None,
+                 *, count_datasetname='Population'):
         super().__init__(name, parentlocation, parentlocation, moveable=False)
         """
         SimLocations are fixed static objects, so the initial location and
@@ -289,7 +295,7 @@ class SimLocation(SimStaticObject):
         # _timeDataCollector tracks the time spent in the location - it is not
         # time-weighted
 
-        self._counter = SimCounter(self, "Population")
+        self._counter = SimCounter(self, count_datasetname)
         # We use a data collector to keep track of entries, primarily because it's
         # entries() value will be reset at the end of each warmup/batch
         # Using a SimDataCollector is a bit heavyweight, so we could implement a
@@ -781,8 +787,26 @@ class SimRootLocation(object):
 @apidoc
 class SimQueue(SimLocation):
     """
-    A Location acting as a queue.
+    A Location acting as a queue; the population counter dataset name for a
+    queue is set to 'size'.
+                 
+    :param name:           The name of the location. Must be unique within
+                           its parent location
+    :type name:            `str`
+            
+    :param parentlocation: The location that "owns" this location.
+                           Defaults to :class:`SimRootLocation`
+    :type parentlocation:  :class:`SimLocation` or None
+            
+    :param entryPointName: Relative element ID of descendant location that
+                           serves as the entry point for this location. If
+                           None, this location is it's own entry point.
+    :type entryPointName:  `str`   
+    
     """
+    def __init__(self, name, parentlocation=None, entrypointname=None):
+        super().__init__(name, parentlocation, entrypointname,
+                         count_datasetname='Size')
     
 
     
