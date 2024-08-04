@@ -8,8 +8,7 @@ Simprovise modelers create models by using or customizing (via inheritance)
 classes representing simulation objects such as processes, resources,
 resource pools, and locations (such as queues).
 
-For example, the following code snippet implements the service process for 
-an M/M/1 queuing model::
+For example, the following code snippet implements an M/M/1 queuing model::
 
     queue = SimQueue("Queue")
     server = SimSimpleResource("Server")
@@ -29,6 +28,20 @@ an M/M/1 queuing model::
                 customer.move_to(server_location)
                 self.wait_for(service_time)            
             customer.move_to(customer_sink)
+            
+    mean_interarrival_time = SimTime(10)
+    interarrival_generator = SimDistribution.exponential(mean_interarrival_time)
+    customer_source.add_entity_generator(Customer, mm1Process,
+                                         interarrival_generator)
+
+    if __name__ == '__main__':
+        warmup = SimTime(4000)
+        batch_length = SimTime(10000)
+        nbatches = 10
+        with Simulation.execute(warmup, batch_length, nbatches) as simResult:
+            simResult.print_summary()
+
+
 
 **simprovise** also provides APIs and tools for model execution, 
 output data collection and output analysis, including:
@@ -38,8 +51,8 @@ output data collection and output analysis, including:
 * Output reports including summary statistics, through both batch means and
   replication analysis.
   
-By way of example, below is a portion of one of the standard summary reports
-generated for the M/M/1 model::
+By way of example, below is a portion of the standard summary report
+generated for the M/M/1 model above::
 
     ----------------------------------------------------------------------------------------------------------------------------------------------------------
                                                                 Results: 1 Replication, 10 Batches                                                            
