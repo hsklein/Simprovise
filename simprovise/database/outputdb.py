@@ -574,7 +574,7 @@ class SimOutputDatabase(object):
         TODO We may want to cache this if performance becomes an issue.
         """
         sqlstr = """
-                  select element.id, dataset.name, dataset.valueType,
+                  select element.id, dataset.name, dataset.valuetype,
                   dataset.istimeweighted, dataset.timeunit, elementtype.name
                   from dataset
                   inner join element on dataset.element = element.id
@@ -595,7 +595,7 @@ class SimOutputDatabase(object):
         (as specified by element_id)
         """
         sqlstr = """
-                  select element.id, dataset.name, dataset.valueType,
+                  select element.id, dataset.name, dataset.valuetype,
                   dataset.istimeweighted, dataset.timeunit, elementtype.name
                   from dataset
                   inner join element on dataset.element = element.id
@@ -1324,7 +1324,7 @@ class SimSummaryData(object):
         """
         batchStartTm, batchEndTm = outputDb.batch_time_bounds(run, batch)
         sqlstr = """
-        SELECT dataset.element, dataset.name, dataset.valueType, dataset.timeunit,
+        SELECT dataset.element, dataset.name, dataset.valuetype, dataset.timeunit,
                last(datasetvalue.value),
                COUNT(datasetvalue.value), MIN(datasetvalue.value), MAX(datasetvalue.value),
                CASE WHEN dataset.istimeweighted = 1 THEN

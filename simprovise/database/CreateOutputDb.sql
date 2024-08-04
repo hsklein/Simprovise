@@ -1,9 +1,10 @@
 PRAGMA foreign_keys = ON;
 PRAGMA journal_mode = WAL;
 
-DROP TABLE IF EXISTS simdata;
+DROP TABLE IF EXISTS timeunit;
+DROP TABLE IF EXISTS elementtype;
 DROP TABLE IF EXISTS dataset;
-
+DROP TABLE IF EXISTS datasetvalue;
 
 CREATE TABLE timeunit(
 	  id INTEGER PRIMARY KEY
@@ -46,7 +47,7 @@ CREATE TABLE dataset(
 	  id INTEGER PRIMARY KEY AUTOINCREMENT
 	, element TEXT NOT NULL REFERENCES element(id) ON DELETE CASCADE ON UPDATE CASCADE
 	, name TEXT NOT NULL
-	, valueType TEXT NOT NULL
+	, valuetype TEXT NOT NULL
 	, istimeweighted BOOLEAN 
 	, timeunit INTEGER NOT NULL REFERENCES timeunit(id) ON DELETE RESTRICT ON UPDATE CASCADE
 );
