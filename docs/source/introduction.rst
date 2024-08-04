@@ -18,7 +18,10 @@ For example, the following code snippet implements an M/M/1 queuing model::
 
     mean_service_time = SimTime(8)
     service_time_generator = SimDistribution.exponential(mean_service_time)
-
+    
+    class Customer(SimEntity):
+        "The customer being served by the Server"
+        
     class mm1Process(SimProcess):
         def run(self):
             service_time = next(service_time_generator)
