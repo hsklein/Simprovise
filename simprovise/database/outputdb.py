@@ -454,7 +454,7 @@ class SimDatabaseManager(object):
                 except (OSError, FileNotFoundError) as e:
                     logger.exception("Failure deleting temporary database %s: %s", dbPath, e)
                     raise SimError(_ERROR_NAME, "Failure saving output database to {0}: {1}",
-                                   savePath, e)                   
+                                   savePath, e) from e                  
                     
         self.database = None
 
