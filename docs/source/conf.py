@@ -9,7 +9,7 @@ import os
 import sys
 sys.path.insert(0, '../../simprovise')
 
-project = 'Simprovise'
+project = 'simprovise'
 copyright = '2024, Howard Klein'
 author = 'Howard Klein'
 release = '0.2.0a'
