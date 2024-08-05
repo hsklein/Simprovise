@@ -6,6 +6,9 @@
 # Defines the DataSink abstract base class and the NullDataSink concrete
 # subclass.
 #
+# You should have received a copy of the GNU General Public License along with 
+# this program. If not, see <https://www.gnu.org/licenses/>.
+#
 # Various classes in the datacollector module (SimDataCollector subclasses)
 # direct simulation output data values into datasink objects, which "absorb"
 # output data for a single simulation dataset.  (Each dataset generally
@@ -30,12 +33,14 @@
 # database datasinks implement this interface, and more.  We've decided to
 # rely on duck-typing here rather than an abstract interface.
 #
-# TODO: Currently every datasink in the simulation model is replaced by a
-# non-null datasink prior to the start of a simulation run.  We would eventually
-# like to be able to configure which datasets should collect data (and which
-# should not), in order to optimize execution time and the amount of simulation
-# output.  At that point, we may find that the NullDataSink requires additional
-# stub methods.
+# This program is free software: you can redistribute it and/or modify it under 
+# the terms of the GNU General Public License as published by the Free Software 
+# Foundation, either version 3 of the License, or (at your option) any later 
+# version.
+#
+# This program is distributed in the hope that it will be useful, but WITHOUT 
+# ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
+# FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 #===============================================================================
 from abc import ABCMeta, abstractmethod, abstractproperty
 
