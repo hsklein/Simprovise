@@ -84,12 +84,12 @@ statistics.
 Compatibility
 =============
 
-Simprovise has been developed using Python 3.12.2. 
-It has been tested and runs on Linux (Ubuntu 22.04.4) 
+Simprovise has been developed using Python 3.12.2 (on Windows 11). 
+It has been tested successfully on Linux (Ubuntu 22.04.4) 
 running Python 3.9.19, 3.10.12, and 3.12.4.
 
-Simprovise has **not** yet been tested under any other (non-CPython)
-distributions (such as PyPy).
+Simprovise has **not** yet been tested on any other (non-CPython)
+distributions.
 
 
 License

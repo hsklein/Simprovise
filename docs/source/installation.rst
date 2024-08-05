@@ -1,19 +1,16 @@
 ============
 Installation
 ============
-
-**simprovise** is not yet available through the Python Package Index; once it is,
-it will most easily be installable via ``pip``::
-
-  pip install simprovise
   
-For now the latest development is available from the simprovise GitHub 
-repository:
-<link>
-In this case, the dependencies (greenlet and numpy) will need to be installed
-as well. (See below.)
+At this time, the latest development version is available from the simprovise 
+`GitHub repository. <https://github.com/hsklein/Simprovise>`_
+In this case, the dependencies (**greenlet** and **numpy**) will need to be 
+installed as well. (See below.)
 
-**simprovise** is implemented entirely in Python (i.e. includes
+A more formal release ()installable via ``pip``) should be available through the 
+Python Package Index in Fall 2024.
+
+**simprovise** is implemented entirely in Python (i.e. it includes
 no additional C extensions).
 
 

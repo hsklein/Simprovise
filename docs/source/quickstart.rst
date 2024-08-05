@@ -5,6 +5,7 @@ Quick Start
 To quickly introduce Simprovise, we'll build a simple model of a standard
 M/M/1 queuing system - a single server with a single queue, and 
 exponentially distributed interarrival and service times.
+(The complete source code is :doc:`here. <mm1_py_source>`)
 
 Start with some boilerplate ``import`` statements; we'll see how the 
 imported classes are used further down::
