@@ -34,6 +34,10 @@ For example, the following code snippet implements an M/M/1 queuing model::
             
     mean_interarrival_time = SimTime(10)
     interarrival_generator = SimDistribution.exponential(mean_interarrival_time)
+    
+    # Instruct the entity source to create `customer` entities running
+    # the `mm1Process` at an interarrival rate sampled from an
+    # exponential distribution
     customer_source.add_entity_generator(Customer, mm1Process,
                                          interarrival_generator)
 

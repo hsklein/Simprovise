@@ -1,15 +1,44 @@
 ========================
-Simprovise API Reference
+simprovise API Reference
 ========================
+
+**simprovise** consists of five packages (not including the test and demo
+code packages) Three of them (``simprovise``, ``simprovise.core`` and 
+``simprovise.modeling``) constitute the primary simprovise public API.
+  
+The two other packages (``simprovise.database`` and ``simprovise.runcontrol``) 
+are not intended for use by the typical model developer, so their APIs are 
+considered "less public" (and less stable as well).
+
+  
+The two other packages are not intended for use by the typical model 
+developer, so their APIs are considered "less public" and more subject to
+change:
+
+* **simprovise.runcontrol**: Provides lower-level interfaces for the 
+  execution of simulation models; it is used by the ``simprovise`` package, but
+  generally will not be accessed by most model developers.
+* **simprovise.database**: Defines interfaces to the simulation output
+  database and an implementation in sqlite3. Used by the 
+  ``simprovise.runcontrol`` package, but again not by the typical modeler.
 
 
 Public APIs
 ===========
 
-These ``simprovise``, ``simprovise.core`` and ``simprovise.modeling`` 
-packages provide APIs that are intended for use in regular client  code.
-In other words, these are the APIs that `Simprovise` users are
-most likely to use to build and execute simulation models.
+The public API includes the packages/classes that **simprovise** users are
+most likely to use to build and execute simulation models:
+
+* **simprovise**: Includes the :class:`~simprovise.simulation.Simulation` 
+  and :class:`~simprovise.simulation.SimulationResult` classes which
+  provide high-level interfaces for executing and reporting on simulation
+  runs.
+* **simprovise.modeling**: Includes the modules and classes that implement
+  most of the :doc:`modeling_concepts`; the classes/APIs that the model
+  developer typically uses most often are in this package.
+* **simprovise.core**: Provides the core classes and infrastructure used
+  by all of the other simprovise packages (many of which will be used
+  by model developers as well).
 
 .. toctree::
    :maxdepth: 2
@@ -21,20 +50,22 @@ most likely to use to build and execute simulation models.
 Non- (or Quasi-) Public APIs
 =============================
 
-The base `Simprovise` installation includes two other packages, 
-``simprovise.database`` and ``simprovise.runcontrol``. 
+**simprovise** includes two other packages that provide (generally)
+non-public infrastructure:
 
-The ``runcontrol`` package provides a lower level interface to simulation
-execution; it is used to implement :class:`simprovise.simulation.Simulation`.
-The ``database`` package provides lower-level interfaces to 
-simulation output databases and the model linkages to use them.
+* **simprovise.runcontrol**: Provides lower-level interfaces for the 
+  execution of simulation models; it is used by the ``simprovise`` package, but
+  generally will not be accessed by most model developers.
+* **simprovise.database**: Defines interfaces to the simulation output
+  database and an implementation in sqlite3. Used by the 
+  ``simprovise.runcontrol`` package, but again not by the typical modeler.
 
 Neither of these packages are likely to be accessed directly by the typical 
 model-building user. The documentation may be of interest to 
-maintainers and those building tools on top of the base Simprovise library.
+maintainers and those building tools on top of the base simprovise library.
 
 At this time, these at best quasi-public APIs can be considered less
-stable than the public APIs in the previous section.
+stable than the public APIs documented in the previous section.
 
 .. toctree::
    :maxdepth: 2
