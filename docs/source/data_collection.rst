@@ -1,6 +1,6 @@
-========================
-Data Collection Concepts
-========================
+===================================
+simprovise Data Collection Concepts
+===================================
 
 .. _simulation-elements-label:
 

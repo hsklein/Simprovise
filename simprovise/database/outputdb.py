@@ -24,7 +24,8 @@ from simprovise.core.simlogging import SimLogging
 from simprovise.core.simtime import SimTime
 from simprovise.core.simclock import SimClock
 from simprovise.core.datasink import DataSink
-from simprovise.core import SimError, simrandom, simtime, simelement
+from simprovise.core import SimError, simtime, simelement
+from simprovise.core.apidoc import apidoc, generating_docs
 
 from simprovise.modeling import (SimResource, SimLocation, SimEntitySource,
                                  SimEntitySink)
@@ -479,6 +480,29 @@ DbDataset = namedtuple('DbDataset',
                        ['element_id', 'name', 'valuetype', 'istimeweighted',
                         'timeunit', 'elementtype'])
 
+# Hack to generate documentation for DbDataset - turn it into a regular class.
+# (As we do for SimMessage as well)
+# http://stackoverflow.com/questions/13785150/how-can-i-provide-sphinx-documentation-for-a-namedtuple-with-autodoc
+# We may not want this to happen in actual production, so we'll just define the
+# class while generating documentation.
+if generating_docs:
+    @apidoc
+    class DbDataset(DbDataset):
+        """
+        A ``namedtuple`` constructed from the dataset and element tables in
+        an output database. It has all of the (read) properties provided by
+        the :class:`simprovise.core.datacollector.Dataset` class:
+        
+        * element_id
+        * name
+        * valuetype
+        * istimeweighted
+        * timeunit
+        * elementtype
+        
+        """
+
+
 def dbDatasetRowFactory(cursor, row):
     """
     A row factory for datasets, that converts the dimensionless time unit
@@ -526,7 +550,7 @@ class SimOutputDatabase(object):
     @property
     def is_temporary(self):
         """
-        Returns True if there is a connected database and it is a temporary
+        Returns ``True`` if there is a connected database and it is a temporary
         (or in-memory) file.
         """
         if self.__dbpath:
@@ -548,9 +572,9 @@ class SimOutputDatabase(object):
     @property
     def elements(self):
         """
-        Returns a DbElement for each element row in the database.
-        TODO We may want to cache this if performance becomes an issue.
+        Returns a :class`DbElement` for each element row in the database.
         """
+        # TODO We may want to cache this if performance becomes an issue.
         sqlstr = """
                   select element.id, element.classname, element.type, elementtype.name from element
                   inner join elementtype on element.type = elementtype.id
@@ -570,9 +594,9 @@ class SimOutputDatabase(object):
     @property
     def datasets(self):
         """
-        Returns a DbDataset for each dataset row in the database.
-        TODO We may want to cache this if performance becomes an issue.
+        Returns a :class:`DbDataset` for each dataset row in the database.        
         """
+        # TODO We may want to cache this if performance becomes an issue.
         sqlstr = """
                   select element.id, dataset.name, dataset.valuetype,
                   dataset.istimeweighted, dataset.timeunit, elementtype.name
@@ -636,8 +660,8 @@ class SimOutputDatabase(object):
         Note that this depends on there being at least one time-weighted dataset
         in the model, since totimestamps are only written (at batch boundaries) for
         time-weighted datasets. We check for this first.
-        TODO - implement version that does not require a timeweighted dataset.
         """
+        # TODO - implement version that does not require a timeweighted dataset.
         if not self.has_time_weighted_dataset():
             msg = "batchTimeBounds() requires at least one time-weighted dataset. There are none."
             raise SimError(_ERROR_NAME, msg)
@@ -687,7 +711,7 @@ class SimOutputDatabase(object):
             except sqlite3.Error as e:
                 logger.exception("Failure closing database %s: %s", self.__dbpath, e)
                 raise SimError(_ERROR_NAME, "Failure closing database {0}: {1}",
-                               self.__dbpath, e)                                  
+                               self.__dbpath, e) from e                                 
             self.__connection = None
 
     def get_element_type(self, elementID):
@@ -732,7 +756,7 @@ class SimOutputDatabase(object):
             else:
                 raise SimError("Output Database getDatasetID() Error: Multiple Datasets Found", errstr)
 
-    def getDatasetNames(self, elementID):
+    def get_dataset_names(self, elementID):
         """
         Retrieve names of all datasets for a specified element.
         """
@@ -751,7 +775,7 @@ class SimOutputDatabase(object):
         self.__connection = sqlite3.connect(dbpath)
         self.__isTemporary = isTemporary
 
-    def _runScript(self, scriptName, scriptDir=None):
+    def _run_script(self, scriptName, scriptDir=None):
         """
         Internal method that executes an SQL script on the open database.
         """
@@ -792,18 +816,13 @@ class SimOutputDatabase(object):
 
 class SimLiveOutputDatabase(SimOutputDatabase):
     """
-    Encapsulates a "live" sqlite3 simulation database - that is, a database for a model
-    that is (or is about to be) executed.
+    Encapsulates a "live" sqlite3 simulation database - that is, a database for
+    a model that is (or is about to be) executed.
 
-    SimLiveOutputDatabase creates a new database, populates its static data (simulation
-    elements and dataset definitions) and wires the model object dataset objects to this
-    database in order to capture output data during the simulation run.
-
-    TODO We currently create a new database whenever we switch to animate/run mode, wiping out
-    any previously created database.  Do we want to detect if the model has changed before doing this?
-    We could also consider creating the database as either a temporary or in-memory file, and
-    give the user the option of saving the database (as an archive) before returning to edit mode,
-    opening a new model, or exiting.
+    SimLiveOutputDatabase creates a new database, populates its static data
+    (simulation elements and dataset definitions) and wires the model object
+    dataset objects to this database in order to capture output data during
+    the simulation run.
     """
     def __init__(self):
         """
@@ -868,7 +887,7 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         """
         logger.info("creating in-memory output database...")
         self._connect(":memory:", False)
-        self._runScript('CreateOutputDb.sql')
+        self._run_script('CreateOutputDb.sql')
 
     def _create_database(self):
         """
@@ -881,7 +900,7 @@ class SimLiveOutputDatabase(SimOutputDatabase):
         os.close(f)
         logger.info("creating output database in temporary file %s:", dbpath)
         self._connect(dbpath, True)
-        self._runScript('CreateOutputDb.sql')
+        self._run_script('CreateOutputDb.sql')
 
     def _initialize_database(self, model):
         """
@@ -979,7 +998,8 @@ class SimLiveOutputDatabase(SimOutputDatabase):
 
     def _delete_run(self, runNumber):
         """
-        Delete all data for the specified run.  Deletes datasetvaluye rows for a specified run
+        Delete all data for the specified run.  Deletes datasetvalue rows
+        for a specified run
         """
         sqlstr = "delete from datasetvalue where run = ?;"
         try:
@@ -988,7 +1008,7 @@ class SimLiveOutputDatabase(SimOutputDatabase):
             self.commit()
         except Exception as e:
             raise SimError(_ERROR_NAME, "Failure executing delete for run number: {0}; {1}",
-                           runNumber, str(e))
+                           runNumber, str(e)) from e
 
     def _create_datasinks(self, runNumber):
         """
@@ -1022,7 +1042,7 @@ class SimArchivedOutputDatabase(SimOutputDatabase):
     read-only. If constructed with isTemporary = True, the database will
     be deleted after it is closed. That feature is primarily for the benefit
     of :class:`Simulation` execution methods, which pass the temporary
-    database path to a SimResult object, which in turn opens it as a
+    database path to a SimulationResult object, which in turn opens it as a
     SimArchived database.
     """
     def __init__(self, dbpath, isTemporary=False):
@@ -1034,10 +1054,10 @@ class SimArchivedOutputDatabase(SimOutputDatabase):
 
 class SimOutputHistogramData(object):
     """
-    Class that retrieves, calculates and stores the data required to create a histogram
-    for a single dataset (from a specified output database).
-    TODO - allow a sequence of datasets, perhaps for plotting on a single chart? (or
-    do we do that through multiple SimOutputHistogramData instances?)
+    Class that retrieves, calculates and stores the data required to create a
+    histogram for a single dataset (from a specified output database).
+    TODO - allow a sequence of datasets, perhaps for plotting on a single chart?
+    (or do we do that through multiple SimOutputHistogramData instances?)
     """
     def __init__(self, outputDb, dataset, run, batch=None):
         self.dataset = dataset
@@ -1058,10 +1078,11 @@ class SimOutputHistogramData(object):
 
     def get_time_weighted_data(self, datasetid, run, batch, outputDb):
         """
-        Get the data and weights (weight for each data value is total simulated time for that
-        data value).  Then normalize those weights (total times) as a percentage of the total
-        time of the entire sample.  Time-weighted data are actually plotted as a simple bar
-        chart (not histogram), one bar per value, so no need to calculate the number of bins.
+        Get the data and weights (weight for each data value is total simulated
+        time for that data value).  Then normalize those weights (total times)
+        as a percentage of the total time of the entire sample.  Time-weighted
+        data are actually plotted as a simple bar chart (not histogram),
+        one bar per value, so no need to calculate the number of bins.
         """
         #sqlstr = 'select value, sum(simtime) from timeweighteddata where datasetid = ? and run = ? group by value;'
 
@@ -1090,8 +1111,8 @@ class SimOutputHistogramData(object):
     def get_unweighted_data(self, datasetid, run, batch, outputDb):
         """
         Get data and set nbins for an unweighted dataset histogram.
-        nbins is calculated according to the Freedman-Diaconis rule, but then rounded
-        up to the nearest integer value.
+        nbins is calculated according to the Freedman-Diaconis rule, but then
+        rounded up to the nearest integer value.
         """
         sqlstr = """
                  select value from datasetvalue
@@ -1123,8 +1144,8 @@ class SimOutputHistogramData(object):
 
 class SimTimeSeriesData(object):
     """
-    Class that retrieves, calculates and stores the data required to create a histogram
-    for a single dataset (from a specified output database).
+    Class that retrieves, calculates and stores the data required to create a
+    histogram for a single dataset (from a specified output database).
     TODO - allow a sequence of datasets, perhaps for plotting on a single chart? (or
     do we do that through multiple SimOutputHistogramData instances?)
     """
@@ -1260,198 +1281,195 @@ class LastValue(object):
     def finalize(self):
         return self.last
 
-DatasetSummaryStatsRaw = namedtuple('DatasetSummaryStats',
-         ['element_id', 'datasetname', 'valuetype', 'timeunit',
-          'currentvalue', 'count', 'min', 'max', 'mean'])
+#DatasetSummaryStatsRaw = namedtuple('DatasetSummaryStats',
+         #['element_id', 'datasetname', 'valuetype', 'timeunit',
+          #'currentvalue', 'count', 'min', 'max', 'mean'])
 
-class DatasetSummaryStats(DatasetSummaryStatsRaw):
-    """
-    Wraps the namedtuple, converting values to SimTime objects as required.
-    """
-    # pylint doesn't like super() when the base class is a named tuple
-    # pylint: disable=E1101
-    def _convert_sim_time(self, value):
-        if self.valuetype == 'SimTime' and value is not None:
-            return SimTime(value, self.timeunit)
-        else:
-            return value
+#class DatasetSummaryStats(DatasetSummaryStatsRaw):
+    #"""
+    #Wraps the namedtuple, converting values to SimTime objects as required.
+    #"""
+    ## pylint doesn't like super() when the base class is a named tuple
+    ## pylint: disable=E1101
+    #def _convert_sim_time(self, value):
+        #if self.valuetype == 'SimTime' and value is not None:
+            #return SimTime(value, self.timeunit)
+        #else:
+            #return value
 
-    @property
-    def current_value(self):
-        return self._convert_sim_time(super().currentvalue)
+    #@property
+    #def current_value(self):
+        #return self._convert_sim_time(super().currentvalue)
 
-    @property
-    def min(self):
-        return self._convert_sim_time(super().min)
+    #@property
+    #def min(self):
+        #return self._convert_sim_time(super().min)
 
-    @property
-    def max(self):
-        return self._convert_sim_time(super().max)
+    #@property
+    #def max(self):
+        #return self._convert_sim_time(super().max)
 
-    @property
-    def mean(self):
-        return self._convert_sim_time(super().mean)
+    #@property
+    #def mean(self):
+        #return self._convert_sim_time(super().mean)
 
-class SimSummaryData(object):
-    """
-    Class that retrieves summary statistics from an output database, primarily for display in
-    output table views on the simulation dashboard.
+#class SimSummaryData(object):
+    #"""
+    #Class that retrieves summary statistics from an output database, primarily for display in
+    #output table views on the simulation dashboard.
 
-    07/01/24 - basically deprecated, left in for historical note for the moment.
-    """
-    def __init__(self, outputDb, run, elementID, batch=None):
-        """
-        """
-        assert outputDb, "Null Output DB supplied to SimSummaryData"
-        assert run > 0, "invalid (non-positive) run supplied to SimSummaryData"
+    #07/01/24 - basically deprecated, left in for historical note for the moment.
+    #"""
+    #def __init__(self, outputDb, run, elementID, batch=None):
+        #"""
+        #"""
+        #assert outputDb, "Null Output DB supplied to SimSummaryData"
+        #assert run > 0, "invalid (non-positive) run supplied to SimSummaryData"
         
-        self.__resultDict = {}
-        if batch is None:
-            batch = outputDb.last_batch(run)
-        rows = self._fetch_data(outputDb, run, batch, elementID)
-        for row in rows:
-            rowkey = (row.element_id, row.datasetname)
-            self.__resultDict[rowkey] = row
+        #self.__resultDict = {}
+        #if batch is None:
+            #batch = outputDb.last_batch(run)
+        #rows = self._fetch_data(outputDb, run, batch, elementID)
+        #for row in rows:
+            #rowkey = (row.element_id, row.datasetname)
+            #self.__resultDict[rowkey] = row
 
-    def _fetch_data(self, outputDb, run, batch, elementID):
-        """
-        Assume that dataset was flushed at startTime
-        Note the multiplication by 1.0, to ensure that the result of a time-weighted
-        mean is a float (and not rounded to an integer value if all values and
-        timestamps are ints.)
-        Data are returned as DatasetSummaryStats objects, whose properties
-        convert time values to SimTime objects as required.
-        """
-        batchStartTm, batchEndTm = outputDb.batch_time_bounds(run, batch)
-        sqlstr = """
-        SELECT dataset.element, dataset.name, dataset.valuetype, dataset.timeunit,
-               last(datasetvalue.value),
-               COUNT(datasetvalue.value), MIN(datasetvalue.value), MAX(datasetvalue.value),
-               CASE WHEN dataset.istimeweighted = 1 THEN
-                       SUM(datasetvalue.value * 1.0 *
-                         (CASE WHEN datasetvalue.totimestamp IS NULL THEN ?
-                              ELSE datasetvalue.totimestamp END - datasetvalue.simtimestamp)) / ?
-                    ELSE AVG(datasetvalue.value) END
-             FROM datasetvalue INNER JOIN dataset ON datasetvalue.dataset = dataset.id
-             WHERE datasetvalue.run = ? AND datasetvalue.batch = ? AND dataset.element = ?
-             GROUP BY datasetvalue.dataset;
-            """
+    #def _fetch_data(self, outputDb, run, batch, elementID):
+        #"""
+        #Assume that dataset was flushed at startTime
+        #Note the multiplication by 1.0, to ensure that the result of a time-weighted
+        #mean is a float (and not rounded to an integer value if all values and
+        #timestamps are ints.)
+        #Data are returned as DatasetSummaryStats objects, whose properties
+        #convert time values to SimTime objects as required.
+        #"""
+        #batchStartTm, batchEndTm = outputDb.batch_time_bounds(run, batch)
+        #sqlstr = """
+        #SELECT dataset.element, dataset.name, dataset.valuetype, dataset.timeunit,
+               #last(datasetvalue.value),
+               #COUNT(datasetvalue.value), MIN(datasetvalue.value), MAX(datasetvalue.value),
+               #CASE WHEN dataset.istimeweighted = 1 THEN
+                       #SUM(datasetvalue.value * 1.0 *
+                         #(CASE WHEN datasetvalue.totimestamp IS NULL THEN ?
+                              #ELSE datasetvalue.totimestamp END - datasetvalue.simtimestamp)) / ?
+                    #ELSE AVG(datasetvalue.value) END
+             #FROM datasetvalue INNER JOIN dataset ON datasetvalue.dataset = dataset.id
+             #WHERE datasetvalue.run = ? AND datasetvalue.batch = ? AND dataset.element = ?
+             #GROUP BY datasetvalue.dataset;
+            #"""
 
-        def tupleFactory(cursor, row): # pylint: disable=unused-argument
-            return DatasetSummaryStats(*row)
+        #def tupleFactory(cursor, row): # pylint: disable=unused-argument
+            #return DatasetSummaryStats(*row)
 
-        outputDb.connection.create_aggregate("last", 1, LastValue)
-        savedRowFactory = outputDb.connection.row_factory
-        try:
-            outputDb.connection.row_factory = tupleFactory
-            result = outputDb.runQuery(sqlstr, batchEndTm,
-                                       batchEndTm-batchStartTm,
-                                       run, batch, elementID)
-            return result
-        finally:
-            outputDb.connection.row_factory = savedRowFactory
+        #outputDb.connection.create_aggregate("last", 1, LastValue)
+        #savedRowFactory = outputDb.connection.row_factory
+        #try:
+            #outputDb.connection.row_factory = tupleFactory
+            #result = outputDb.runQuery(sqlstr, batchEndTm,
+                                       #batchEndTm-batchStartTm,
+                                       #run, batch, elementID)
+            #return result
+        #finally:
+            #outputDb.connection.row_factory = savedRowFactory
 
-    def get_data(self, dataset):
-        """
-        Returns the DatasetSummaryStats for a specified dataset
-        (DatasetSummaryStats property values are converted to SimTime values
-        as needed/appropriate)
-        """
-        rowkey = (dataset.element_id, dataset.name)
-        if rowkey in self.__resultDict:
-            return self.__resultDict[rowkey]
-        else:
-            nullStats = DatasetSummaryStats(None, None, None, None, None,
-                                            None, None, None, None)
-            return nullStats
+    #def get_data(self, dataset):
+        #"""
+        #Returns the DatasetSummaryStats for a specified dataset
+        #(DatasetSummaryStats property values are converted to SimTime values
+        #as needed/appropriate)
+        #"""
+        #rowkey = (dataset.element_id, dataset.name)
+        #if rowkey in self.__resultDict:
+            #return self.__resultDict[rowkey]
+        #else:
+            #nullStats = DatasetSummaryStats(None, None, None, None, None,
+                                            #None, None, None, None)
+            #return nullStats
 
-    def get_raw_data(self, dataset):
-        """
-        Returns the DatasetSummaryStatsRaw for a specified dataset -
-        DatasetSummaryStatsRaw property values are straight from the
-        database, and never SimTime objects.
-        """
-        return DatasetSummaryStatsRaw(*self.get_data(dataset))
+    #def get_raw_data(self, dataset):
+        #"""
+        #Returns the DatasetSummaryStatsRaw for a specified dataset -
+        #DatasetSummaryStatsRaw property values are straight from the
+        #database, and never SimTime objects.
+        #"""
+        #return DatasetSummaryStatsRaw(*self.get_data(dataset))
 
 
-class SimPercentileData(object):
-    """
-    Class that retrieves percentile values from an output database for a
-    specified dataset, batch and run.
+#class SimPercentileData(object):
+    #"""
+    #Class that retrieves percentile values from an output database for a
+    #specified dataset, batch and run.
     
-    07/01/24 - basically deprecated, left in for historical note for the moment.
-    """
-    def __init__(self, outputDb):
-        """
-        """
-        self.outputDb = outputDb
+    #07/01/24 - basically deprecated, left in for historical note for the moment.
+    #"""
+    #def __init__(self, outputDb):
+        #"""
+        #"""
+        #self.outputDb = outputDb
 
-    def get_percentiles(self, dataset, run, batch=None):
-        """
-        Get percentile values for a specified dataset, run and batch
-        """
-        if batch is None:
-            batch = self.outputDb.last_batch(run)
+    #def get_percentiles(self, dataset, run, batch=None):
+        #"""
+        #Get percentile values for a specified dataset, run and batch
+        #"""
+        #if batch is None:
+            #batch = self.outputDb.last_batch(run)
 
-        rows = self._fetch_data(self.outputDb, dataset, run, batch)
-        return self._calculate_percentiles(rows)
+        #rows = self._fetch_data(self.outputDb, dataset, run, batch)
+        #return self._calculate_percentiles(rows)
 
-    def _fetch_data(self, outputDb, dataset, run, batch):
-        """
-        Assume that dataset was flushed at startTime.
-        The choice of different queries (time-weighted vs. non-time-weighted
-        datasets) is a performance optimization.  Execution time for
-        non-time-weighted is reduced by better than 80%.
-        """
-        datasetid = self.outputDb.get_dataset_id(dataset)
-        if dataset.istimeweighted:
-            batchStartTm, batchEndTm = outputDb.batch_time_bounds(run, batch)
-            sqlstr = """
-                SELECT value,
-                        SUM(CASE WHEN totimestamp IS NULL THEN ?
-                               ELSE totimestamp END - simtimestamp)
-                     FROM datasetvalue
-                     WHERE dataset = ? AND run = ? AND batch = ?
-                     GROUP BY value;
-                    """
-            result = outputDb.runQuery(sqlstr, batchEndTm, datasetid, run, batch)
-        else:
-            sqlstr = """
-                SELECT value, COUNT(value)
-                     FROM datasetvalue
-                     WHERE dataset = ? AND run = ? AND batch = ?
-                     GROUP BY value;
-                    """
-            result = outputDb.runQuery(sqlstr, datasetid, run, batch)
-        return result
+    #def _fetch_data(self, outputDb, dataset, run, batch):
+        #"""
+        #Assume that dataset was flushed at startTime.
+        #The choice of different queries (time-weighted vs. non-time-weighted
+        #datasets) is a performance optimization.  Execution time for
+        #non-time-weighted is reduced by better than 80%.
+        #"""
+        #datasetid = self.outputDb.get_dataset_id(dataset)
+        #if dataset.istimeweighted:
+            #batchStartTm, batchEndTm = outputDb.batch_time_bounds(run, batch)
+            #sqlstr = """
+                #SELECT value,
+                        #SUM(CASE WHEN totimestamp IS NULL THEN ?
+                               #ELSE totimestamp END - simtimestamp)
+                     #FROM datasetvalue
+                     #WHERE dataset = ? AND run = ? AND batch = ?
+                     #GROUP BY value;
+                    #"""
+            #result = outputDb.runQuery(sqlstr, batchEndTm, datasetid, run, batch)
+        #else:
+            #sqlstr = """
+                #SELECT value, COUNT(value)
+                     #FROM datasetvalue
+                     #WHERE dataset = ? AND run = ? AND batch = ?
+                     #GROUP BY value;
+                    #"""
+            #result = outputDb.runQuery(sqlstr, datasetid, run, batch)
+        #return result
 
-    def _calculate_percentiles(self, rows):
-        """
-        Calculate and return a list of percentile values (0 through 100) based
-        on the data in the passed row collection.
-        """
-        totalweight = sum(row[1] for row in rows)
-        percentile = [None] * 101
-        cumweight = 0
-        currPercentile = 0
-        for row in rows:
-            value, weight = row
-            cumweight += weight
-            while 100.0 * cumweight / totalweight >= currPercentile:
-                percentile[currPercentile] = value
-                currPercentile += 1
+    #def _calculate_percentiles(self, rows):
+        #"""
+        #Calculate and return a list of percentile values (0 through 100) based
+        #on the data in the passed row collection.
+        #"""
+        #totalweight = sum(row[1] for row in rows)
+        #percentile = [None] * 101
+        #cumweight = 0
+        #currPercentile = 0
+        #for row in rows:
+            #value, weight = row
+            #cumweight += weight
+            #while 100.0 * cumweight / totalweight >= currPercentile:
+                #percentile[currPercentile] = value
+                #currPercentile += 1
 
-        return percentile
+        #return percentile
 
 
 class SimDatasetSummaryData(object):
     """
     Class that retrieves all summary statistics - count, mean, min,
     max and percentiles - for a specified dataset, batch and run.
-    
-    Replaces both SimSummaryData and SimPercentileData, improving
-    output reporting performance by a factor of roughly two.
-    
+        
     Database retrieval and statistic calculations are performed lazily,
     when the first client request to a statistic is made.
     
@@ -1468,6 +1486,10 @@ class SimDatasetSummaryData(object):
     :type batch:     `int` or None
     
     """
+    # Note:
+    # Replaces both SimSummaryData and SimPercentileData, improving
+    # output reporting performance by a factor of roughly two.
+    
     def __init__(self, outputDb, dataset, run, batch=None):
         """
         """

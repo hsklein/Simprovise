@@ -1,5 +1,5 @@
 ====================================
-Simprovise Configuration
+simprovise Configuration
 ====================================
 
 A number of Simprovise parameters and settings may be configured via

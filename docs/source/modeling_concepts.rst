@@ -1,5 +1,5 @@
 ============================
-Simprovise Modeling Concepts
+simprovise Modeling Concepts
 ============================
 
 This section describes the conceptual building blocks that can be used to

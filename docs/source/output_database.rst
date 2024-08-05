@@ -2,6 +2,11 @@
 Simulation Output Database Reference
 ====================================
 
+This section documents the current **simprovise** output database schema.
+While users may certainly query these databases directly, they should be
+aware that the schema is certainly subject to change, particularly during
+the time period prior to a version 1 stable release.
+
 Database Schema
 ===============
 
@@ -15,7 +20,7 @@ Table Descriptions
 *elementtype* Table
 ----------------------
 
-A pre-defined reference table with one row for each top-level
+A pre-populated reference table with one row for each top-level
 :ref:`simulation element <simulation-elements-label>`
 type:
 
@@ -30,7 +35,7 @@ type:
 *timeunit* Table
 ----------------------
 
-A pre-defined reference table with one row for each simprovise time unit:
+A pre-populated reference table with one row for each simprovise time unit:
 
 * Seconds 
 * Minutes 
