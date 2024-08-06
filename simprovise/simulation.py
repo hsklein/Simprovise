@@ -271,14 +271,18 @@ class Simulation(object):
         else:           
             model = SimModel.load_model_from_script(modelpath)
 
-        replicator = SimReplicator(model, warmupLength, batchLength, nBatches)
         replicationParameters = SimReplicationParameters()
         replicationParameters.set_replication_range(fromRun, toRun)
-        replicator.execute_replications(replicationParameters, asynch=False)
-        if outputpath:
-            Simulation._save_output(replicator.output_dbpath, outputpath)
-        return SimulationResult(model.filename, replicator.output_dbpath,
-                                isTemporary=True)
+        replicator = SimReplicator(model, warmupLength, batchLength, nBatches)
+        
+        # Use the replicator as a context manager to best ensure temporary
+        # database files are cleaned up.
+        with replicator:            
+            replicator.execute_replications(replicationParameters, asynch=False)
+            if outputpath:
+                Simulation._save_output(replicator.output_dbpath, outputpath)
+            return SimulationResult(model.filename, replicator.output_dbpath,
+                                    isTemporary=True)
 
     @staticmethod
     def _valid_outputpath(outputpath, overwrite):
