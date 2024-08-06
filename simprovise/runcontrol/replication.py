@@ -508,6 +508,9 @@ class SimReplicator(QObject):
         delete the created output database in addition to any other
         temporary files (which are cleaned up regardless of whether or not
         an exception was raised).
+        
+        On normal exit, the output database is the responsibility of the
+        replicator's owner/caller)
         """
         if value is not None:
             logger.error("Replication error %s, cleaning up...", value)
@@ -517,6 +520,8 @@ class SimReplicator(QObject):
                              self.__masterDbPath)
                 os.remove(self.__masterDbPath)
         self.cleanup()
+        self.__tempdir.cleanup()
+        
         return False
 
     @property
@@ -664,8 +669,7 @@ class SimReplicator(QObject):
 
     def cleanup(self):
         """
-        Delete temporary files (except for output database, which is the
-        responsibility of the replicator's owner/caller)
+        Delete the initialized (but no datasetvalues) database
         """
         if self.__initializedDbPath:
             logger.info("removing temporary file: %s", self.__initializedDbPath)
