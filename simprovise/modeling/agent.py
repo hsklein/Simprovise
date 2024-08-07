@@ -309,7 +309,14 @@ class SimAgent(object):
 
         If at the end of all this, the message has still not been handled, add
         it to the message queue for later processing.
-
+        
+        In order for the message to be considered "not handled", the handler
+        must explicitly return False or an equivalent other than None - a
+        return value of None (i.e. forgetting to return a value at all)
+        is assumed to "handled". We could assert/raise if not None, but
+        for now, we'll assume any code that depends on message queueing will
+        remember to return a value.
+        
         TODO consider a handler chain, with multiple interceptors?
         """
         assert msg, "Null msg argument to receive_message()"
@@ -319,7 +326,9 @@ class SimAgent(object):
         if self.interceptHandler and self.interceptHandler(msg):
             handled = True
         else:
-            handled = self._dispatch_message(msg)
+            # If client code forgets to return a bool, assume they meant handled
+            result = self._dispatch_message(msg)
+            handled = result is None or bool(result)
         if not handled:
             self.msg_queue.append(msg)
 
