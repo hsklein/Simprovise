@@ -506,8 +506,8 @@ class SimDowntimeAgent(SimAgent):
     @apidoc   
     def _handle_resource_goingdown(self, msg):
         """
-        The handler registered to process resource up (RSRC_GOING_DOWN) messages
-        sent by other downtime agents for this agent's resource.
+        The handler registered to process resource going-down (RSRC_GOING_DOWN) 
+        messages sent by other downtime agents for this agent's resource.
         
         This default implementation does nothing other than return `True`.
         
