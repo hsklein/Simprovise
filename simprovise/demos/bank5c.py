@@ -111,10 +111,11 @@ class TellerDowntimeAgent(SimScheduledDowntimeAgent):
             # Try again
             self.start_resource_takedown()
         
+        # Return ``True`` to indicate the message was handled
         return True
     
        
-class Bank5b(Bank):
+class Bank5c(Bank):
     """
     A subclass of Bank that adds teller downtime agents for the
     regular tellers and subscribes each of them to the other teller downtime
@@ -167,20 +168,6 @@ class Bank5b(Bank):
         
         return scheduleA, scheduleB
 
-#class BankTransaction5c(BankTransaction):
-    #"""
-    #BankTransaction subclass that adds extend_through_downtime
-    #for teller service wait_for() call.
-    #"""
-    #def run(self):
-        #service_time = self.get_service_time()
-        #customer = self.entity
-        #customer.move_to(self.queue)
-        #with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
-            ##teller = teller_assignment.resource
-            #customer.move_to(bank.teller_counter)
-            #self.wait_for(service_time, extend_through_downtime=False)
-        #customer.move_to(sink)        
 
 # Since we no longer need extend_through_downtime, both RegularTransaction
 # and MerchantTransaction can go back to inheriting from BankTransaction
@@ -214,7 +201,7 @@ class MerchantTransaction(BankTransaction):
 # a bank.
 source = SimEntitySource("Source")
 sink = SimEntitySink("Sink")
-bank = Bank5b(name="Bank", nRegularTellers=2, nMerchantTellers=1)
+bank = Bank5c(name="Bank", nRegularTellers=2, nMerchantTellers=1)
 
 # Define and create the (customer) entity generators for the model's entity
 # source - one generator for regular customer entities, one for merchant customers.

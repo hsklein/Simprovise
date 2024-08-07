@@ -41,8 +41,8 @@ Building the Model
 ------------------
 
 This entire bank model is implemented in a single Python script,
-bank1.py, found in the installed demos directory. The modeling code
-is shown and described below, minus the required import statements. (See the
+:doc:`bank1.py <bank1_py>`, found in the installed demos directory. The modeling 
+code is shown and described below, minus the required import statements. (See the
 source script for those.)
 
 First we define the Teller class as a subclass of `SimSimpleResource`, a
@@ -386,7 +386,8 @@ The output now looks like this::
 Bank Model Round 2: Adding A Merchant Teller
 =============================================
 
-Our second model, bank2.py, will expand on :ref:`bank1 <bank-1-tutorial-label>` 
+Our second model, :doc:`bank2.py <bank2_py>`, will expand on 
+:ref:`bank1 <bank-1-tutorial-label>` 
 by dividing our customers into two types: merchant customers and regular 
 customers, with separate queues for each. We will also include two 
 corresponding types of tellers.
@@ -657,7 +658,8 @@ resource pools and queue prioritization while also leveraging the Python class
 hierarchy for simulation objects. But there is one obvious gap in our teller 
 assignment logic: what happens if there are waiting merchant customers, available
 regular tellers, and no regular customers in the queue? Perhaps in that case, we
-would like regular tellers to handle merchant customers. Our next model (bank3.py) 
+would like regular tellers to handle merchant customers. Our next model 
+(:doc:`bank3.py <bank3_py>`) 
 will address that via a subclassed Resource Pool that implements a custom resource 
 assignment algorithm.
 
@@ -807,9 +809,9 @@ teller counter location could be accessed via element ID 'Bank.TellerCounter')
 Bank Model Round 4: Abandoning the Queue and Adding Custom Data Collection
 ==========================================================================
 
-The next version of our bank model will add some behavior to our regular
-customers; if the queue is taking to long, they will bail out of the line
-and leave the bank.
+The next version of our bank model, :doc:`bank4.py <bank4_py>`, will add some 
+behavior to our regular customers; if the queue is taking to long, they will 
+bail out of the line and leave the bank.
 
 .. _bank-5-tutorial-label:
 
@@ -829,8 +831,9 @@ Round 5, Step (a): Refactoring Bank Model 3
 -------------------------------------------
 
 We're going to base this model on the :ref:`third <bank-3-tutorial-label>`
+(:doc:`bank3.py <bank3_py>`)
 bank tutorial model, skipping the abandonment feature implemented in `bank4`.
-In this first step, we'll refactor ``bank3.py`` in order to:
+In this first step, we'll refactor :doc:`bank3.py <bank3_py>` in order to:
 
 * Reduce duplicated code
 * Demonstrate the creation of model-specific modules
@@ -839,8 +842,8 @@ In this first step, we'll refactor ``bank3.py`` in order to:
   subsequent model versions in this tutorial. The model with separate teller
   resources should behave exactly like it's multi-capacity sibling.
 
-We'll start this iteration by creating `bank5.py`, which will be a module
-defining most of the classes used by our model that we are already
+We'll start this iteration by creating :doc:`bank5.py <bank5_py>`, which will 
+be a module defining most of the classes used by our model that we are already
 familiar with:
 
 * ``Customer``, ``RegularCustomer`` and ``MerchantCustomer``
@@ -906,7 +909,7 @@ The ``Bank`` class is modified, however::
             return self.teller_pool.available(MerchantTeller)
 
 We are now creating individual regular and merchant tellers, each with 
-capacity 1, via metho :meth:`_make_tellers`, which returns them as a list.
+capacity 1, via method :meth:`_make_tellers`, which returns them as a list.
 (The lists are assigned to Bank instance attributes ``regular_tellers`` and
 ``merchant_tellers``, respectively.)
 
@@ -992,15 +995,156 @@ and the "available" simtrace column definitions::
 Round 5, Step (b): Add a Simple Teller Break Schedule
 -----------------------------------------------------
 
-For the next iteration, we will add two scheduled fifteen minute breaks for 
+For the next iteration, :doc:`bank5b.py <bank5b_py>`,
+we will add two scheduled fifteen minute breaks for 
 each of the two regular tellers, using classes
 :class:`~simprovise.modeling.downtime.DowntimeSchedule` and
 :class:`~simprovise.modeling.downtime.SimScheduledDowntimeAgent`.
+Two 
+:class:`downtime agents, <simprovise.modeling.downtime.SimDowntimeAgent>`
+one per regular teller, are responsible for taking
+down tellers for their breaks and bringing them back up when the breaks 
+conclude.
 
 The workday will be defined as nine hours long. The first regular teller
 will get breaks starting two hours and six hours into that day; the 
 second teller will be scheduled for breaks immediately thereafter (2:15
 and 6:15 into the day).
+
+The schedules and downtime agents are defined in a new **Bank** subclass::
+
+    class Bank5b(Bank):
+        """
+        A subclass of Bank that adds scheduled downtime agents for the
+        regular tellers.
+        """
+        __slots__ = ('downtime_agents')
+        
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            
+            # Create downtime agents for the regular tellers
+            self.downtime_agents = self.make_downtime_agents()
+                            
+        def make_downtime_agents(self):
+            """
+            Create two downtime schedules, use them to create two scheduled
+            downtime agents, and assign each of those agents to a regular teller
+            resource. (We'll assume at least two regular tellers.)
+            """
+            downtime_schedules = self.make_schedules()
+            tellers = self.regular_tellers
+            
+            return [SimScheduledDowntimeAgent(tellers[i], sched)
+                    for i, sched in enumerate(downtime_schedules)]
+        
+        def make_schedules(self):
+            """
+            Create a two downtime schedules (A and B), each with two 15 minute
+            breaks, one after the other.
+            """
+            day_length = SimTime(9, tu.HOURS)
+            break_length = SimTime(15, tu.MINUTES)
+            
+            breakA1 = (SimTime(2, tu.HOURS), break_length)
+            breakA2 = (SimTime(6, tu.HOURS), break_length)
+            breakB1 = (SimTime(2.25, tu.HOURS), break_length)
+            breakB2 = (SimTime(6.25, tu.HOURS), break_length)
+            
+            breaksA = [breakA1, breakA2]
+            breaksB = [breakB1, breakB2]
+            
+            scheduleA = DowntimeSchedule(day_length, breaksA)
+            scheduleB = DowntimeSchedule(day_length, breaksB)
+            
+            return scheduleA, scheduleB
+
+We will also create a new **BankTransaction** subclass::
+
+    class BankTransaction5b(BankTransaction):
+        """
+        BankTransaction subclass that adds extend_through_downtime
+        for teller service wait_for() call.
+        """
+        def run(self):
+            service_time = self.get_service_time()
+            customer = self.entity
+            customer.move_to(self.queue)
+            with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
+                #teller = teller_assignment.resource
+                customer.move_to(bank.teller_counter)
+                # In case teller goes down during wait, enxtend wait for
+                # the length of the down time.
+                self.wait_for(service_time, extend_through_downtime=True)
+            customer.move_to(sink)        
+
+Whenever a model implements resource downtime, the model's processes also 
+need to be prepared to handle the situation where a resource goes down while
+the process is holding it. When that happens, an exception is raised, which the
+process must handle one way or another.
+
+This subclass handles it through the ``extend_through_downtime`` parameter of 
+the :meth:`~simprovise.modeling.process.SimProcess.wait_for` method; when
+this parameter is set to ``True``, ``wait_for()`` handles the exception under
+the covers and extends the wait period by the length of the down time.
+
+The rest of our model looks essentially the same as :doc:`bank5a.py <bank5a_py>`;
+the ``RegularTransaction`` and 
+``MerchantTransaction`` classes inherit from ``BankTransaction5b``, but are
+otherwise unchanged. And the bank is of class ``Bank5b`` (as opposed to 
+``Bank``).
+
+The output of a simulation run; notice that the sample mean downtime
+is 6% for the two regular tellers::
+
+    -------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                 Results: 1 Replication, 10 Batches                                                              
+    Element ID                              Dataset         Sample Size    Sample Mean     25th Percentile       Median        75th Percentile         Max       
+    -------------------------------------------------------------------------------------------------------------------------------------------------------------
+    simprovise.demos.bank5.BankTransaction  In-Process           1.00      0.00              0.00              0.00              0.00              0.00        
+    simprovise.demos.bank5.BankTransaction  Entries              1.00      1.00              1.00              1.00              1.00              1.00        
+    simprovise.demos.bank5.BankTransaction  Process-Time         0.00       nan               nan               nan               nan               nan        
+    __main__.BankTransaction5b              In-Process           1.00      0.00              0.00              0.00              0.00              0.00        
+    __main__.BankTransaction5b              Entries              1.00      1.00              1.00              1.00              1.00              1.00        
+    __main__.BankTransaction5b              Process-Time         0.00       nan               nan               nan               nan               nan        
+    __main__.RegularTransaction             In-Process        1234.50     18.80             11.70             17.80             25.70             44.10        
+    __main__.RegularTransaction             Entries            618.90    618.90            618.90            618.90            618.90            618.90        
+    __main__.RegularTransaction             Process-Time       615.60     18.09 minutes     11.05 minutes     17.08 minutes     24.09 minutes     45.68 minutes
+    __main__.MerchantTransaction            In-Process         298.30      2.53              0.80              1.90              4.00             10.20        
+    __main__.MerchantTransaction            Entries            149.60    149.60            149.60            149.60            149.60            149.60        
+    __main__.MerchantTransaction            Process-Time       148.70     10.17 minutes      4.08 minutes      8.17 minutes     14.20 minutes     33.39 minutes
+    simprovise.modeling.entity.SimEntity    Work-In-Process      1.00      0.00              0.00              0.00              0.00              0.00        
+    simprovise.modeling.entity.SimEntity    Process-Time         0.00       nan               nan               nan               nan               nan        
+    simprovise.demos.bank5.Customer         Work-In-Process      1.00      0.00              0.00              0.00              0.00              0.00        
+    simprovise.demos.bank5.Customer         Process-Time         0.00       nan               nan               nan               nan               nan        
+    simprovise.demos.bank5.RegularCustomer  Work-In-Process   1234.50     18.80             11.70             17.80             25.70             44.10        
+    simprovise.demos.bank5.RegularCustomer  Process-Time       615.60     18.09 minutes     11.05 minutes     17.08 minutes     24.09 minutes     45.68 minutes
+    simprovise.demos.bank5.MerchantCustomer Work-In-Process    298.30      2.53              0.80              1.90              4.00             10.20        
+    simprovise.demos.bank5.MerchantCustomer Process-Time       148.70     10.17 minutes      4.08 minutes      8.17 minutes     14.20 minutes     33.39 minutes
+    Source                                  Population         767.50      0.00              0.00              0.00              0.00              0.00        
+    Source                                  Entries            766.50    766.50            766.50            766.50            766.50            766.50        
+    Source                                  Time               766.50      0.00 minutes      0.00 minutes      0.00 minutes      0.00 minutes      0.00 minutes
+    Bank                                    Population        1531.80     21.34             13.60             20.50             28.80             47.90        
+    Bank                                    Entries            766.50    766.50            766.50            766.50            766.50            766.50        
+    Bank                                    Time               764.30     16.58 minutes      8.61 minutes     15.80 minutes     22.92 minutes     45.68 minutes
+    Bank.TellerCounter                      Population         830.60      2.86              2.90              3.00              3.00              3.00        
+    Bank.TellerCounter                      Entries            764.30    764.30            764.30            764.30            764.30            764.30        
+    Bank.TellerCounter                      Time               764.30      2.25 minutes      0.61 minutes      1.49 minutes      3.04 minutes     21.02 minutes
+    Bank.TellerCounter.RegularTeller1       ProcessTime        274.30      2.07 minutes      0.58 minutes      1.38 minutes      2.69 minutes     20.63 minutes
+    Bank.TellerCounter.RegularTeller1       Utilization        295.30      0.95              1.00              1.00              1.00              1.00        
+    Bank.TellerCounter.RegularTeller1       DownTime             5.60      0.06              0.00              0.00              0.00              1.00        
+    Bank.TellerCounter.RegularTeller2       ProcessTime        275.10      2.10 minutes      0.56 minutes      1.40 minutes      2.83 minutes     19.11 minutes
+    Bank.TellerCounter.RegularTeller2       Utilization        301.90      0.96              1.00              1.00              1.00              1.00        
+    Bank.TellerCounter.RegularTeller2       DownTime             5.60      0.06              0.00              0.00              0.00              1.00        
+    Bank.TellerCounter.MerchantTeller1      ProcessTime        214.90      2.68 minutes      0.76 minutes      1.84 minutes      3.78 minutes     16.00 minutes
+    Bank.TellerCounter.MerchantTeller1      Utilization        235.40      0.95              1.00              1.00              1.00              1.00        
+    Bank.TellerCounter.MerchantTeller1      DownTime             1.00      0.00              0.00              0.00              0.00              0.00        
+    Bank.RegularQueue                       Size              1183.80     16.68              9.60             15.70             23.60             41.80        
+    Bank.RegularQueue                       Entries            617.90    617.90            617.90            617.90            617.90            617.90        
+    Bank.RegularQueue                       Time               615.60     16.02 minutes      9.08 minutes     14.96 minutes     21.88 minutes     39.58 minutes
+    Bank.MerchantQueue                      Size               283.90      1.79              0.10              1.10              3.00              9.20        
+    Bank.MerchantQueue                      Entries            148.60    148.60            148.60            148.60            148.60            148.60        
+    Bank.MerchantQueue                      Time               148.70      7.20 minutes      1.69 minutes      4.75 minutes     10.71 minutes     28.37 minutes
 
 
 
@@ -1009,9 +1153,165 @@ and 6:15 into the day).
 Round 5, Step (c): Finish the Job Before Going on Break
 -------------------------------------------------------
 
+Using the ``extend_through_downtime`` parameter is the simplest way to handle
+down time, and it makes sense in some scenarios, e.g. when entities are 
+orders in a manufacturing shop. Our bank is probably not one of those
+situations; expecting customers to wait while their teller is on break is,
+to be gentle, less than realistic.
 
+We will attempt to address that shortcoming in our next iteration,
+:doc:`bank5c.py <bank5c_py>`. In this model, if a regular teller is serving
+a customer when it is time to go on break, they will complete that customer's 
+transaction before starting their break.
 
+In this model, completion of service for a customer delays a break, but does
+not shorten it; if the teller is scheduled for a break at hour 6 but takes three 
+extra minutes to complete a customer transaction, that teller will not
+return to work (be brought up) until 6:18 - which overlaps with the 
+second teller's break.
+
+In order to eliminate the possibility of both tellers being on break at the
+same time, this model will also delay the start of the other teller's break
+when needed to avoid that scenario.
+
+To do this, we will create subclasses of ``Bank`` (``Bank5c``) and 
+:class:`~simprovise.modeling.downtime.SimScheduledDowntimeAgent`,
+(``TellerDowntimeAgent``).
+
+``Bank5c`` looks very much like ``Bank5b``, but with some additional code at the
+end of the ``__init__()`` method::
+
+    # Have each downtime agent subscribe to RSRC_UP messages from all of
+    # the other downtime agents.
+    for agent in self.downtime_agents:
+        otherAgts = [agt for agt in self.downtime_agents if agt is not agent]
+        for otherAgt in otherAgts:
+            otherAgt.add_subscriber(agent, SimMsgType.RSRC_UP)
+
+When a resource comes back up, the           
+:class:`downtime agents <simprovise.modeling.downtime.SimScheduledDowntimeAgent>`
+responsible notifies the other agents associated with that resource -
+its resource assignment agent and its other downtime agents (if any)
+by sending them a ``RSRC_UP`` message. 
+
+In this case, we use the :class:`~simprovise.modeling.agent.SimAgent`
+subscription service to ensure that **all** teller downtime agents are 
+notified whenever *any* teller resource comes back up. 
+Class SimDowntimeAgent provides a stub method,
+:meth:`~simprovise.modeling.downtime.SimDowntimeAgent._handle_resource_up`,
+that handles this message type as a no-op. Our ``TellerDowntimeAgent`` will
+overrrides it, as described below.
+
+The ``TellerDowntimeAgent`` subclass takes advantage of:
+
+* The resource's
+  :attr:`~simprovise.modeling.resource.SimResource.going_down` property,
+  which indicates that while the resource is still up and working, it is about
+  to go down and should not be assigned new work, and
+
+* The downtime agent's 
+  :meth:`~simprovise.modeling.downtime.SimDownTimeAgent._set_resource_going_down`
+  method, which set's that property to ``True`` on the resource it is assigned 
+  to. This method is called by an override implementation of
+   
+* The ``RSRC_UP`` subscription notifications when a different teller comes back
+  up, by impementing 
+  :meth:`~simprovise.modeling.downtime.SimDowntimeAgent._handle_resource_up`,
+ 
+  
+The full implementation of this subclass::
+
+    class TellerDowntimeAgent(SimScheduledDowntimeAgent):
+        """
+        Implements custom algorithms/behavior for regular teller scheduled downtime.
+        The Bank object that creates these agents subscribes them to RSRC_UP
+        messages from the teller pool, which is necessary to fully implement the
+        behavior as described below.
+        
+        When a scheduled break is initiated for the agent's regular teller resource
+        (via :meth:`start_resource_takedown`), this agent:
+        
+        - Checks to see if any of the other regular tellers are on break or in
+          the "going-down" state; if so, the teller remains in the fully-up state.
+          
+        - If the other tellers are fully operating, this agent's teller then
+          checks to see if it is idle (not serving a customer). If so, it goes
+          down/on break immediately via :meth:`_takedown_resource`. If it is
+          in-use/serving a customer, it enters the ``going-down`` state via
+          :meth:`_set_resource_going_down`; in that state, it will not be
+          available to new customer assignments but will stay up until released
+          by the current customer (as implemented by the base SimDowntimeAgent
+          class).
+          
+        - The agent's RSRC_UP handler, through subscription to the other teller
+          downtime agents, should receive a message every time a teller comes
+          back up (off break). That handler refires :meth:`start_resource_takedown`,
+          which will re-run the algorithm.
+     
+        """
+        __slots__ = ('start_delayed', 'bank')
+        
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            self.start_delayed = False
+            self.bank = SimModel.model().get_static_object("Bank")
+                    
+        def start_resource_takedown(self):
+            """
+            Time for a scheduled break. (Or time to try and take a break again.)
+            
+            - If any of the other tellers are down or going down, delay the
+              break until they all are back up and servicing new customers.
+              
+            - Otherwise, take the teller down if it is idle, or set it to
+              going-down (not taking new customers) if it is not idle.
+              
+            """
+            self.start_delayed = False
+            if self._tellers_down_or_goingdown(bank.regular_tellers):
+                self.start_delayed = True
+            elif self.resource.in_use:
+                self._set_resource_going_down()
+            else:
+                self._takedown_resource()
+            
+        def _tellers_down_or_goingdown(self, tellers):
+            """
+            Returns the number of tellers that are down or going down.
+            """
+            return len([t for t in tellers if t.down or t.going_down])
+            
+        def _handle_resource_up(self, msg):
+            """
+            One of the teller resources has come back up/off break. (We should be
+            subscribing to all tellers that can go down.) If we delayed
+            starting a break due to another teller already on break,
+            we'll use this event to trigger another attempt.
+            """
+            if self.start_delayed:
+                # Try again
+                self.start_resource_takedown()
+            
+            # Return ``True`` to indicate the message was handled
+            return True
+        
+Some key points:
+
+* The base class implementation of
+  :meth:`~simprovise.modeling.downtime.SimDowntimeAgent.start_resource_takedown`
+  simply takes down the resource. The override implementation in this subclass
+  delays any action if the other teller is down or going down (and sets a
+  flag to that effect); otherwise, it either:
+  
+  - Sets it's teller to the going-down state if it is in use, or
+  - Takes the teller down if it is not in use
+
+* If takedown action was delayed, 
+  :meth:`~simprovise.modeling.downtime.SimDowntimeAgent._handle_resource_up`
+  reacts to a teller coming back up by essentially trying again to take
+  its own teller down.
+ 
 .. _bank-5-step-d-tutorial-label:
 
-Round 5, Step (c): But Don't Wait Too Long Before Going on Break
+Round 5, Step (d): But Don't Wait Too Long Before Going on Break
 ----------------------------------------------------------------

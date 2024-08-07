@@ -154,9 +154,6 @@ if __name__ == '__main__':
     print("debug:", __debug__)
     warmupLength = SimTime(100, tu.MINUTES)
     batchLength = SimTime(600, tu.MINUTES)
-    #warmupLength = SimTime(10, tu.MINUTES)
-    #batchLength = SimTime(60, tu.MINUTES)
-    #bl = SimTime(10000)
     print("Running single execution...")
     with Simulation.execute(warmupLength, batchLength, 10,
                             outputpath=None, overwrite=False) as simResult:

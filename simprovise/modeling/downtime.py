@@ -52,8 +52,7 @@ class SimDowntimeAgent(SimAgent):
     """
     Base class for agents that control downtime for a single
     :class:`resource <.resource.SimResource>`.
-    
-          
+              
     :param resource: Resource being managed by this agent
     :type resource:  :class:`~.resource.SimResource`
     
@@ -258,6 +257,8 @@ class SimDowntimeAgent(SimAgent):
         notification, but update this agent's status.
         
         The resource must not already be down.
+        
+        :meta public:
         """
         if self._lastAction != DownAction.UP:
             msg = "Downtime agent trying to set resource ({0}) to going down more than once or after taking it down"
