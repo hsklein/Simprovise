@@ -258,7 +258,6 @@ simtrace.add_trace_column(bank, 'available_merchant_tellers',
 
 if __name__ == '__main__':
     print("================ main=================")
-    print("debug:", __debug__)
     warmupLength = SimTime(100, tu.MINUTES)
     batchLength = SimTime(600, tu.MINUTES)
     print("Running single execution...")

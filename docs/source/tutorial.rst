@@ -2,6 +2,39 @@
 Tutorial 
 =====================
 
+All of the **simprovise** tutorials involve modeling a bank with
+customers and tellers who service the customer's transactions; each 
+tutorial builds on the previous models, introducing new *simprovise* 
+features:
+
+* :ref:`The first tutorial <bank-1-tutorial-label>` introduces a simple
+  bank model that for all intents and purposes, is a re-labeled M/M/c
+  queuing model, where the tellers are "servers". It introduces basic 
+  *simprovise* modeling concepts and the
+  mechanisms for executing simulations and reporting their output.  
+* The :ref:`second tutorial <bank-2-tutorial-label>` adds to the model by
+  creating "Regular" and "Merchant" subclasses for both customers and tellers.
+  It demonstrates how queue prioritization, the *simprovise* resource pool,
+  and leveraging of the ``Teller`` class hierarchy can be used to easily implement 
+  a fairly complex algorithm for assigning customers to tellers.  
+* The :ref:`third tutorial <bank-3-tutorial-label>` introduces customized
+  code to a model-defined subclass of the *simprovise* resource pool,
+  using it to further refine the teller assignment algorithm by writing
+  our own assignment code. 
+* The :ref:`fourth tutorial <bank-4-tutorial-label>` demonstrates the
+  use of resource acquisition timeouts by by adding the capability for
+  customers to "bail out" of the waiting-for-a-teller queue if the wait
+  gets too long. It also introduces the use of model-defined custom 
+  datasets, allowing the modeler to collect simulation output data beyond that 
+  which is collected automatically.   
+* The :ref:`fifth tutorial <bank-5-tutorial-label>` is actually a sequence of
+  four sub-tutorials. The first demonstrates a rearrangement and 
+  refactoring of the third model to capture common modeling code in a
+  separate module. The remaining models incorporate teller shift breaks,
+  demonstrating various ways to implement resource downtime into 
+  *simprovise* models.
+  
+
 .. _bank-1-tutorial-label:
 
 Bank Model: Round 1
@@ -811,7 +844,142 @@ Bank Model Round 4: Abandoning the Queue and Adding Custom Data Collection
 
 The next version of our bank model, :doc:`bank4.py <bank4_py>`, will add some 
 behavior to our regular customers; if the queue is taking to long, they will 
-bail out of the line and leave the bank.
+bail out of the line and leave the bank. This model will also demonstrate 
+how to do additional data collection through custom 
+:ref:`simulation-datasets-label`.
+
+Custom Datasets
+---------------
+
+We will add three custom datasets to this model; one 
+:ref:`time-weighted <simulation-time-weighted-datasets-label>` and the other
+:ref:`unweighted <simulation-unweighted-datasets-label>`.
+
+The **time-weighted** dataset will track the total customers - both
+regular and merchant - in line at the bank. (We currently have separate
+queues for each customer type, and track the number of customers by queue.)
+As with most time-weighted data, we will implement this through a
+:ref:`counter. <counters-datacollectors-label>`, defined in the ``__init__()``
+of class ``Bank``::
+
+    self.waiting_customer_counter = SimCounter(self, 'WaitingCustomers')
+    
+This code creates a counter and a time-weighted dataset named "WaitingCustomers"
+that belongs to the ``Bank`` object (which is a 
+:ref:`simulation element. <simulation-elements-label>`). 
+The dataset will track each counter value and the length of simulated time
+that it remains at that value. As we will see below, this counter will be
+incremented and decremented every time a customer enters and leaves one of
+the bank's queues.
+
+.. note::
+  While this model illustrates the use of a 
+  :class:`counter <simprovise.modeling.counter.SimCounter>`, we could
+  also collect these same data by placing both queue objects into a 
+  :class:`~simprovise.modeling.location.SimLocation`.
+  
+The ``RegularTransaction`` class already collects process times through its
+built-in ``ProcessTime`` dataset, but this dataset does not distinguish between
+customers who complete their transactions and those that bail out because
+the wait was too long. We will address that by creating two new 
+unweighted datasets using class
+:class:`~simprovise.core.datacollector.SimUnweightedDataCollector`::
+
+    cpt_datacollector = SimUnweightedDataCollector(RegularTransaction,
+                                                   "CompletedProcessTime",
+                                                   simtime.SimTime)      
+    quit_pt_datacollector = SimUnweightedDataCollector(RegularTransaction,
+                                                       "QuittedProcessTime",
+                                                       simtime.SimTime)      
+
+These data collector objects each create a dataset (named 
+"CompletedProcessTime" and "QuittedProcessTime", respectively) which belong
+to the ``RegularTransaction`` :ref:`class element <class_elements-label>`.
+
+In the next section, we will see the code that adds values to these datasets.
+
+Bailing Out of the Queue
+------------------------
+
+In this model, regular customers bail out of the queue if they have been
+waiting for "too long", which we will define as sometime between five and
+thirty minutes. This "quit time" is determined by sampling from a 
+:meth:`simprovise.core.simrandom.Distribution.uniform` distribution
+defined as ``RegularTransaction`` class attributes::
+
+    min_quit_time =  SimTime(5, tu.MINUTES)
+    max_quit_time =  SimTime(30, tu.MINUTES)
+    quit_time_generator = SimDistribution.uniform(min_quit_time, max_quit_time)
+
+The RegularTransaction run() method  then obtains a quit_time from this
+distribution and uses it as a timeout on the
+:meth:`~simprovise.modeling.process.SimProcess.acquire_from` method.
+If that call times out before a resource is assigned to the process,
+a :class:`~simprovise.core.simexception.SimTimeOutException` is raised,
+which the run() method must handle::
+
+    quit_time = next(RegularTransaction.quit_time_generator)
+    try:
+        teller_assignment = self.acquire_from(bank.teller_pool, Teller,
+                                              timeout=quit_time)
+    except SimTimeOutException:
+        # Abandon the queue and the rest of the process
+        customer.move_to(sink)
+        return
+     
+Here is the complete implementation of the run() method, where we can also
+see how our custom dataset values are collected via the counter and
+data collector objects::
+
+    def run(self):
+        bank = SimModel.model().get_static_object("Bank")
+        sink = SimModel.model().get_static_object("Sink")
+        service_time = next(RegularTransaction.st_generator)
+        customer = self.entity
+        startTime = SimClock.now()
+        bank.waiting_customer_counter.increment()
+        customer.move_to(bank.regular_queue)
+        quit_time = next(RegularTransaction.quit_time_generator)
+        try:
+            teller_assignment = self.acquire_from(bank.teller_pool, Teller,
+                                                  timeout=quit_time)
+        except SimTimeOutException:
+            # Abandon the queue and the rest of the process
+            customer.move_to(sink)
+            quit_pt_datacollector.add_value(SimClock.now() - startTime)
+            bank.waiting_customer_counter.decrement()
+            return
+            
+        with teller_assignment:
+            teller = teller_assignment.resource
+            bank.waiting_customer_counter.decrement()
+            customer.move_to(bank.teller_counter)
+            self.wait_for(service_time)
+            
+        customer.move_to(sink)
+        cpt_datacollector.add_value(SimClock.now() - startTime)
+
+Below is a portion of the standard summary output report, including our
+custom datasets (CompletedProcessTime, QuittedProcessTime and WaitingCustomers)::
+
+    ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+                                                                  Results: 1 Replication, 10 Batches                                                               
+    Element ID                           Dataset              Sample Size    Sample Mean     25th Percentile       Median        75th Percentile         Max       
+    ---------------------------------------------------------------------------------------------------------------------------------------------------------------
+    __main__.RegularTransaction          In-Process             1188.00      4.81              1.90              4.10              7.00             17.60        
+    __main__.RegularTransaction          Entries                 594.60    594.60            594.60            594.60            594.60            594.60        
+    __main__.RegularTransaction          Process-Time            593.40      4.87 minutes      2.09 minutes      4.30 minutes      6.94 minutes     18.08 minutes
+    __main__.RegularTransaction          CompletedProcessTime    577.70      4.81 minutes      2.03 minutes      4.19 minutes      6.89 minutes     18.08 minutes
+    __main__.RegularTransaction          QuittedProcessTime       15.70      7.21 minutes      5.81 minutes      6.66 minutes      8.17 minutes     11.31 minutes
+    Bank                                 Population             1493.40      6.66              2.80              5.50              9.60             22.30        
+    Bank                                 Entries                 746.30    746.30            746.30            746.30            746.30            746.30        
+    Bank                                 Time                    746.10      5.35 minutes      2.16 minutes      4.41 minutes      7.35 minutes     26.79 minutes
+    Bank                                 WaitingCustomers       1314.60      4.02              0.20              2.50              6.60             19.30        
+    Bank.RegularQueue                    Size                   1049.00      2.92              0.10              1.80              4.80             15.50        
+    Bank.RegularQueue                    Entries                 593.60    593.60            593.60            593.60            593.60            593.60        
+    Bank.RegularQueue                    Time                    593.40      2.96 minutes      0.29 minutes      2.12 minutes      4.81 minutes     13.43 minutes
+
+
 
 .. _bank-5-tutorial-label:
 
@@ -1200,7 +1368,7 @@ notified whenever *any* teller resource comes back up.
 Class SimDowntimeAgent provides a stub method,
 :meth:`~simprovise.modeling.downtime.SimDowntimeAgent._handle_resource_up`,
 that handles this message type as a no-op. Our ``TellerDowntimeAgent`` will
-overrrides it, as described below.
+overrride it, as described below.
 
 The ``TellerDowntimeAgent`` subclass takes advantage of:
 
@@ -1215,7 +1383,7 @@ The ``TellerDowntimeAgent`` subclass takes advantage of:
   to. This method is called by an override implementation of
    
 * The ``RSRC_UP`` subscription notifications when a different teller comes back
-  up, by impementing 
+  up, by implementing 
   :meth:`~simprovise.modeling.downtime.SimDowntimeAgent._handle_resource_up`,
  
   
@@ -1310,8 +1478,223 @@ Some key points:
   :meth:`~simprovise.modeling.downtime.SimDowntimeAgent._handle_resource_up`
   reacts to a teller coming back up by essentially trying again to take
   its own teller down.
+  
+To see this in action, let's look at some of the trace from the time that the
+first regular teller is scheduled for a break - at 120 minutes on the 
+simulated clock::
+
+    117.05 RegularCustomer 142    Release   RegularTeller1                                                             
+    117.05 RegularCustomer 142    Move-to   Sink                                                                       
+    117.05 RegularCustomer 144    Acquired  RegularTeller1                                                             
+    117.05 RegularCustomer 144    Move-to   Bank.TellerCounter                                                         
+
+    <lots of skipped events>
+
+    124.27 RegularCustomer 146    Release   RegularTeller2                                                             
+    124.27 RegularCustomer 146    Move-to   Sink                                                                       
+    124.27 RegularCustomer 147    Acquired  RegularTeller2                                                             
+    124.27 RegularCustomer 147    Move-to   Bank.TellerCounter                                                         
+    124.75 RegularCustomer 144    Release   RegularTeller1                                                             
+    124.75 RegularTeller1         Down                                                                                 
+    124.75 RegularCustomer 144    Move-to   Sink                                                                       
+ 
+As we can see, RegularCustomer 144 acquired teller 1 at time 117.05, and
+did not release it until well into the scheduled break at time 124.75.
+RegularTeller1 went down (on break) immediately thereafter.
+
+::
+
+    138.94 RegularCustomer 161    Release   RegularTeller2                                                             
+    138.94 RegularCustomer 161    Move-to   Sink                                                                       
+    138.94 RegularCustomer 162    Acquired  RegularTeller2                                                             
+    138.94 RegularCustomer 162    Move-to   Bank.TellerCounter                                                         
+    139.02 RegularCustomer 178    Move-to   Bank.RegularQueue                                                          
+    139.02 RegularCustomer 178    Acquiring Teller                                                                     
+    139.75 RegularTeller1         Up                                                                                   
+    139.75 RegularCustomer 163    Acquired  RegularTeller1                                                             
+    139.75 RegularCustomer 163    Move-to   Bank.TellerCounter                                                         
+    140.13 RegularCustomer 179    Move-to   Bank.RegularQueue                                                          
+    140.13 RegularCustomer 179    Acquiring Teller                                                                     
+    140.28 RegularCustomer 163    Release   RegularTeller1                                                             
+    140.28 RegularCustomer 163    Move-to   Sink                                                                       
+    140.28 RegularCustomer 164    Acquired  RegularTeller1                                                             
+    140.28 RegularCustomer 164    Move-to   Bank.TellerCounter                                                         
+    140.31 RegularCustomer 180    Move-to   Bank.RegularQueue                                                          
+    140.31 RegularCustomer 180    Acquiring Teller                                                                     
+    140.42 RegularCustomer 164    Release   RegularTeller1                                                             
+    140.42 RegularCustomer 164    Move-to   Sink                                                                       
+    140.42 RegularCustomer 166    Acquired  RegularTeller1                                                             
+    140.42 RegularCustomer 166    Move-to   Bank.TellerCounter                                                         
+    140.61 RegularCustomer 162    Release   RegularTeller2                                                             
+    140.61 RegularTeller2         Down                                                                                 
+
+RegularTeller1 comes back up, off break, 15 minutes later, at time 139.75.
+RegularTeller2 has postponed going on break (or even preparing to go down),
+and had started serving a new customer (162) just under a minute before.
+RegularTeller2 does not start its break until customer 162 releases it at 
+time 140.61
+
  
 .. _bank-5-step-d-tutorial-label:
 
 Round 5, Step (d): But Don't Wait Too Long Before Going on Break
 ----------------------------------------------------------------
+
+The downtime algorithm implemented in the :doc:`bank5c.py <bank5c_py>`
+is probably pretty reasonable, but what if a teller is servicing an
+especially long transaction when it's time for break?
+In our last iteration, :doc:`bank5d.py <bank5d_py>`, we will make sure
+that the teller waits only so long before starting a break.
+
+This strategy has two components:
+
+* Make sure that the teller goes down no more than a specified amount
+  of time (we're choosing four minutes) after the scheduled start of their
+  break
+* If the customer they are serving has **not** completed their transaction
+  at that time, send them to the next available teller to finish up.
+  
+We can implement that first component by using the optional ``timeout`` parameter
+of the
+:meth:`~simprovise.modeling.downtime.SimDownTimeAgent._set_resource_going_down`
+method. Our TellerDowntimeAgent class does so with a slight modification to
+it's ``start_resource_takedown()``::
+
+    def start_resource_takedown(self):
+        """
+        Time for a scheduled break. (Or time to try and take a break again.)
+        
+        - If any of the other tellers are down or going down, delay the
+          break until they all are back up and servicing new customers.
+          
+        - Otherwise, take the teller down if it is idle, or set it to
+          going-down (not taking new customers) if it is not idle.
+          
+        """
+        self.start_delayed = False
+        if self._tellers_down_or_goingdown(bank.regular_tellers):
+            self.start_delayed = True
+        elif self.resource.in_use:
+            # start going-down with a timeout of four minutes
+            self._set_resource_going_down(timeout=SimTime(4, tu.MINUTES))
+        else:
+            self._takedown_resource()
+
+If the ``timeout`` expires while the teller is still in the ``going-down`` state, 
+it is taken down immediately. If a customer is holding that teller at the time,
+a :class:`~simprovise.modeling.downtime.SimResourceDownException` is raised,
+which the transaction process needs to handle::
+
+    class BankTransaction5d(BankTransaction):
+        """
+        Modifies BankTransaction.run() in order to handle
+        ``SimResourceDownException`` exceptions by reacquiring a teller for
+        the remaining service time. Since the wait after that reacquire could
+        also run into a teller going down, we have to account for that via
+        a recursively called ``wait_for_service()`` internal function.
+        """
+        def run(self):
+            # Priority is two initially, will be set to one if forced to
+            # reaquire a teller after the original teller goes down/on break.
+            self.priority = 2
+            
+            def wait_for_service(tm, move=False):
+                # wait for the remaining chunk of service time (or all of it,
+                # initially). The move to the teller counter is only needed on
+                # the initial call to this.
+                with self.acquire_from(bank.teller_pool, Teller) as teller_assignment:
+                    if move:
+                        customer.move_to(bank.teller_counter)
+                    start_tm = SimClock.now()
+                    try:
+                        self.wait_for(tm)
+                        return
+                    except SimResourceDownException:
+                        time_so_far = SimClock.now() - start_tm
+                        remaining_time = tm - time_so_far
+                        self.priority = 1
+                wait_for_service(remaining_time)
+                              
+            service_time = self.get_service_time()
+            customer = self.entity
+            customer.move_to(self.queue)
+            wait_for_service(service_time, move=True)               
+            customer.move_to(sink)        
+
+The transaction ``run()`` implementation handles the resource-down exception by
+calculating the remaining time in the transaction, re-aquiring a teller,
+and attempting to complete the transaction. (Note that this code should handle
+the case where the customer's subsequent teller(s) go down as well.)
+
+Finally, note the ``priority`` attribute that has been added to the transaction
+process. It starts at ``2``, but is changed to ``1`` if the transaction is 
+interrupted by a teller going down. The ``bank`` object and it's ``teller_pool``
+are then modified to use this in a resource request priority function::
+
+    class Bank5d(Bank):
+        """
+        Modifies Bank5c by defining a priority function to be used by the
+        teller pool that will prioritize any customer that gets "kicked out"
+        by it's teller if the teller going-down times out.    
+        """
+        __slots__ = ('downtime_agents')
+        
+        @staticmethod
+        def get_priority(teller_request):
+            """
+            The priority function to be registered with the teller
+            resource pool. It returns the value of the priority attribute
+            set by BankTransaction5d processes
+            """
+            return teller_request.process.priority
+        
+        def __init__(self, *args, **kwargs):
+            super().__init__(*args, **kwargs)
+            
+            self.teller_pool.request_priority_func = Bank5d.get_priority
+            
+            # Create downtime agents for the regular tellers
+            self.downtime_agents = self.make_downtime_agents()
+            
+            # Have each downtime agent subscribe to RSRC_UP messages from all of
+            # the other downtime agents.
+            for agent in self.downtime_agents:
+                otherAgts = [agt for agt in self.downtime_agents if agt is not agent]
+                for otherAgt in otherAgts:
+                    otherAgt.add_subscriber(agent, SimMsgType.RSRC_UP)
+     
+Using this priority function, any customer left hanging when their teller 
+goes on break effectively jumps to the head of the queue for the next
+available teller.
+
+Again, let's look at the trace output::
+
+    117.05 RegularCustomer 144    Acquired  RegularTeller1                                                             
+    117.05 RegularCustomer 144    Move-to   Bank.TellerCounter   
+    
+    <lots of skipped events>
+
+    124.00 RegularTeller1         Down                                                                                 
+    124.00 RegularCustomer 144    Release   RegularTeller1                                                             
+    124.00 RegularCustomer 144    Acquiring Teller                                                                     
+    124.01 RegularCustomer 145    Release   RegularTeller2                                                             
+    124.01 RegularCustomer 145    Move-to   Sink                                                                       
+    124.01 RegularCustomer 144    Acquired  RegularTeller2                                                             
+
+As we can see, RegularCustomer 144 is still holding RegularTeller1 four 
+minutes after it was scheduled to go on break. At that point:
+
+* Teller 1 goes down
+* Customer 144 releases Teller 1
+* Customer 144 requests another teller
+* Customer 144 acquires Teller 2 immediately after it is released by
+  Customer 145
+  
+Further Reading
+===============
+
+:doc:`modeling_concepts`
+
+:doc:`data_collection`
+
+:doc:`api_reference`

@@ -37,6 +37,8 @@ resource and location data such as:
 * Location population size, time-in-location, and the number of entities
   entering and leaving the location. 
 
+.. _class_elements-label:
+
 Process and Entity Elements
 ---------------------------
 
@@ -114,6 +116,8 @@ time spent at each data value; e.g. when we record a work-in-process value of
 When we calculate a summary statistic for time-weighted data, each value is
 weighted by the total time spent at that value.
 
+.. _simulation-unweighted-datasets-label:
+
 **Unweighted** datasets, on the other hand, are collections of point-in-time
 data values or event counts such as entries, queue time and process time. 
 When we calculate  average queue time, for example, we simply average the amount 
@@ -144,7 +148,7 @@ Counters and Data Collectors
 instantiated directly by model developers who wish to create a custom
 dataset; rather, the new datasets are created indirectly through the 
 instantiation of other objects, typically
-:class:`counters <simprovise.modeling.conter.SimCounter>` for time-weighted data
+:class:`counters <simprovise.modeling.counter.SimCounter>` for time-weighted data
 and :class:`unweighted data collectors <simprovise.core.datacollector.SimUnweightedDataCollector>`
 for unweighted data.
 

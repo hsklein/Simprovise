@@ -35,10 +35,11 @@
 #===============================================================================
 from simprovise.core import simtime, simtrace, SimTimeOutException
 from simprovise.core.simtime import SimTime, Unit as tu
+from simprovise.core.simclock import SimClock
 from simprovise.core.simrandom import SimDistribution
 from simprovise.core.model import SimModel
 
-from simprovise.core.datacollector import SimUnweightedDataCollector, SimClock
+from simprovise.core.datacollector import SimUnweightedDataCollector
 
 from simprovise.modeling import (SimEntity, SimEntitySource, SimEntitySink,
                                  SimProcess, SimLocation, SimResourcePool,
@@ -201,11 +202,11 @@ class RegularTransaction(BankTransaction):
         bank = SimModel.model().get_static_object("Bank")
         sink = SimModel.model().get_static_object("Sink")
         service_time = next(RegularTransaction.st_generator)
-        quit_time = next(RegularTransaction.quit_time_generator)
         customer = self.entity
         startTime = SimClock.now()
         bank.waiting_customer_counter.increment()
         customer.move_to(bank.regular_queue)
+        quit_time = next(RegularTransaction.quit_time_generator)
         try:
             teller_assignment = self.acquire_from(bank.teller_pool, Teller,
                                                   timeout=quit_time)
@@ -277,12 +278,8 @@ simtrace.add_trace_column(bank.merchant_teller, 'available', 'MerchantTellers: a
 
 if __name__ == '__main__':
     print("================ main=================")
-    print("debug:", __debug__)
     warmupLength = SimTime(100, tu.MINUTES)
     batchLength = SimTime(600, tu.MINUTES)
-    #warmupLength = SimTime(10, tu.MINUTES)
-    #batchLength = SimTime(60, tu.MINUTES)
-    #bl = SimTime(10000)
     print("Running single execution...")
     with Simulation.execute(warmupLength, batchLength, 10,
                             outputpath=None, overwrite=False) as simResult:
