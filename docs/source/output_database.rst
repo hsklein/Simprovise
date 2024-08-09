@@ -1,5 +1,5 @@
 ====================================
-Simulation Output Database Reference
+simprovise Output Database Reference
 ====================================
 
 This section documents the current **simprovise** output database schema.

@@ -21,8 +21,8 @@ Greenlet
 --------
 
 **greenlet** provides a lightweight coroutines (*greenlets*) that can be
-cooperately scheduled within a single OS thread. The Simprovise methods
-(in class :class:`~simprovise.modeling.simprocess`) that can "block" for
+cooperately scheduled within a single OS thread. The *simprovise* methods
+(in class :class:`~simprovise.modeling.process.SimProcess`) that can "block" for
 some period of simulated time are implemented using greenlets.
 
 Greenlets are similar to the generator-based coroutines that are available
@@ -41,7 +41,7 @@ NumPy
 
 The **NumPy** scientific computing package 
 (https://numpy.org/doc/stable/index.html)
-is currently used to implement the following Simprovise functionality:
+is currently used to implement the following *simprovise* functionality:
 
 * Pseudo-random number generation. See 
   :ref:`this <random-number-streams-concept-label>` for details.
