@@ -3,8 +3,7 @@ simprovise
 ====================================
 
 **simprovise** is a Python library for process-based discrete event simulation. 
-It offers an object-oriented API for developing simulation models. 
-Simprovise modelers create models by using or customizing (via inheritance)
+Simprovise modelers create models by using or inheriting from
 classes representing simulation objects such as processes, resources,
 resource pools, and locations (such as queues).
 
@@ -52,7 +51,7 @@ understand the ``greenlet`` API.
 Status
 ======
 
-Simprovise is under development, with an initial public release planned for
+**simprovise** is under development, with an initial public release planned for
 fall 2024. (So yes, the current development version should be considered 
 unstable, though it includes almost all the features planned for the initial
 release.)
@@ -61,17 +60,15 @@ Installation
 ============
 
 For now, simprovise is only available via this repository; your PYTHONPATH
-should be set to include the ``Simprovise.simprovise`` directory.
+should be set to include the ``simprovise`` directory.
 ``greenlet`` and ``numpy`` can be installed from the Python Package Index 
 (PyPI) via ``py install``. 
-(The public release of simprovise, when ready, will be available via PyPI as 
-well.)
 
 Documentation
 =============
 
-The current (again mostly, but not entirely complete) documentation can be
-found <here coming soon>
+The current documentation can be found in the ``docs`` directory and built
+using Sphinx. (It should be available online as well shortly.)
 
 Other Dependencies
 ==================
@@ -94,3 +91,6 @@ distributions.
 
 License
 =======
+
+**simprovise** is available under the GNU General Public License version 3.
+See the ``LICENSE`` file in this directory for details.
