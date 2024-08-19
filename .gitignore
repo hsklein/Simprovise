@@ -8,7 +8,10 @@ __pycache__/
 
 # ignore sphinx build directory
 /docs/build/
-/docs/build/
+
+#ignore dist directory and .pypirc files
+/dist/
+.pypirc
 
 # ignore zombie code directories
 /simprovise/configuration_old/
