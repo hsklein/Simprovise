@@ -19,8 +19,8 @@ htmlcov/
 .coverage
 
 # ignore old simdefs and pngs model directory for now
-/simprovise/models/*simdef*
-/simprovise/models/*.png
+/simprovise/demos/*simdef*
+/simprovise/demos/*.png
 
 # ignore simulation output databases, txt and csv files
 *.simoutput

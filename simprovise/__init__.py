@@ -1,2 +1,1 @@
-#import matplotlib
-#matplotlib.rcParams['backend.qt4'] = 'PySide'
+__version__ = '0.2.0a0'
