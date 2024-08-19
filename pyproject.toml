@@ -36,17 +36,13 @@ Source = "https://github.com/hsklein/simprovise"
 [tool.hatch.version]
 path = "simprovise/__init__.py"
 
-[tool.hatch.build.targets.sdist]
+[tool.hatch.build]
 exclude = [
   "simprovise/test/",
-  "/docs/"
+  "/docs/",
+  "/.git/",
 ]
 
-[tool.hatch.build.targets.wheel]
-exclude = [
-  "simprovise/test/",
-  "/docs/"
-]
 
 
 #[tool.hatch.envs.types]
