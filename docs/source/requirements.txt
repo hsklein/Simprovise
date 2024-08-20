@@ -1,3 +1,4 @@
 # Must be installed
 sphinx_rtd_theme
+sphinx-toolbox
 enum-tools
