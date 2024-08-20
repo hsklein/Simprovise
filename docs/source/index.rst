@@ -18,7 +18,10 @@ for model execution, output data collection and output analysis.
         Also be aware that he documentation itself is also under construction. 
 	As a  work-in-progress, there are still gaps and missing sections.
 	
-	Any and all feedback is welcome at
+	Any and all feedback is welcome at:
+	
+	* hsk@howardklein.net
+	* https://github.com/hsklein/Simprovise
 
 .. toctree::
    :maxdepth: 3

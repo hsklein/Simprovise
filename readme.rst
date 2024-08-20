@@ -66,8 +66,8 @@ For now, simprovise is only available via the PyPI test repository
 Documentation
 =============
 
-The current documentation can be found in the GitHub repository; it should be 
-available online as shortly.
+The current **simprovise** documentation can be found 
+`here. <https://simprovise.readthedocs.io/en/latest/index.html>`_
 
 Other Dependencies
 ==================

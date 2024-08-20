@@ -31,7 +31,7 @@ dependencies = [
 ]
 
 [project.urls]
-Documentation = "https://github.com/hsklein/simprovise#readme"
+Documentation = "https://simprovise.readthedocs.io/en/latest/index.html"
 Issues = "https://github.com/hsklein/simprovise/issues"
 Source = "https://github.com/hsklein/simprovise"
 
