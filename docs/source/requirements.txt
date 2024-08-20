@@ -1,0 +1,2 @@
+# Must be installed
+sphinx_rtd_theme

@@ -26,7 +26,7 @@ htmlcov/
 /simprovise/demos/*.png
 
 # ignore simulation output databases, txt and csv files
-*.simoutput
-*.txt
-*.csv
+#*.simoutput
+#*.txt
+#*.csv
 
