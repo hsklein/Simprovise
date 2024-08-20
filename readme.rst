@@ -51,29 +51,28 @@ understand the ``greenlet`` API.
 Status
 ======
 
-**simprovise** is under development, with an initial public release planned for
-fall 2024. (So yes, the current development version should be considered 
+**simprovise** is under development, with an initial release planned for
+late summer or fall 2024. (So yes, the current development version should be considered 
 unstable, though it includes almost all the features planned for the initial
 release.)
 
 Installation
 ============
 
-For now, simprovise is only available via this repository; your PYTHONPATH
-should be set to include the ``simprovise`` directory.
-``greenlet`` and ``numpy`` can be installed from the Python Package Index 
-(PyPI) via ``py install``. 
+For now, simprovise is only available via the PyPI test repository
+(test.pypi.org) and GitHub; availability from the Python Package Index 
+(via pip install) is coming soon.
 
 Documentation
 =============
 
-The current documentation can be found in the ``docs`` directory and built
-using Sphinx. (It should be available online as well shortly.)
+The current documentation can be found in the GitHub repository; it should be 
+available online as shortly.
 
 Other Dependencies
 ==================
 
-Simprovise uses
+**simprovise** uses
 `NumPy <https://numpy.org/doc/stable/index.html>`_ for psuedo-random-number
 generation, probability distribution sampling, and calculation of summary
 statistics.
@@ -81,16 +80,9 @@ statistics.
 Compatibility
 =============
 
-Simprovise has been developed using Python 3.12.2 (on Windows 11). 
-It has been tested successfully on Linux (Ubuntu 22.04.4) 
-running Python 3.9.19, 3.10.12, and 3.12.4.
+**simprovise** has been tested on Linux (Ubuntu 22.04.4) 
+running Python 3.9.19, 3.10.12, and 3.12.4. It has been tested on
+Windows 11 running Python 3.12.2.
 
-Simprovise has **not** yet been tested on any other (non-CPython)
+At this time, simprovise has **not** been tested on any other (non-CPython)
 distributions.
-
-
-License
-=======
-
-**simprovise** is available under the GNU General Public License version 3.
-See the ``LICENSE`` file in this directory for details.
