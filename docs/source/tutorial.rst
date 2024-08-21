@@ -207,9 +207,10 @@ simulated minutes (100 minutes warmup, 10 x 1,000 minute batches)::
 
 By default, Simprovise collects a variety of data on the model's processes,
 locations, resources and entities during a simulation run, writes those data
-to a temporary output database, and returns a `SimResult` object that can
+to a temporary output database, and returns a 
+:class:`~simprovise.simulation.SimulationResult` object that can
 generate a tabular report from that database. Via the use of a context manager,
-the database is deleted once the SimResult object goes out of scope. In this
+the database is deleted once ``simResult`` goes out of scope. In this
 case, we generated a summary report, the left-hand side of which is shown 
 below::
 

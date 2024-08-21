@@ -3,7 +3,7 @@ simprovise Modeling Concepts
 ============================
 
 This section describes the conceptual building blocks that can be used to
-construct and represent a model in Simprovise. These building blocks include:
+construct and represent a model in **simprovise**. These building blocks include:
 
 * :ref:`entity-concept-label`
 * :ref:`location-concept-label`
@@ -15,17 +15,17 @@ construct and represent a model in Simprovise. These building blocks include:
 * :ref:`simulated-time-concept-label`
 * :ref:`random-number-generation-concept-label`
 
-'Entities' are transitory objects typically representing units of work in a
+`Entities` are transitory objects typically representing units of work in a
 simulation model. In a simple model simulating a bank lobby, customers would
 almost certainly be represented as entities.
 
-'Locations' typically represent physical or logical locations. They may be
+`Locations` typically represent physical or logical locations. They may be
 nested - i.e., locations can contain other sublocations. Locations can also
 contain resources, entity sources and entity sinks (as described below).
 In our bank example, teller windows and the customer queue can be represented
 as locations.
 
-A 'Process' represents the activity or task(s) that need to be accomplished by
+A `Process` represents the activity or task(s) that need to be accomplished by
 (or on behalf of) an entity. Every entity is associated with its own process 
 object. The process typically reads as a set of instructions. In the case of 
 our bank example, that would look something like "enter the customer queue, 
@@ -34,17 +34,17 @@ transaction, wait for the teller to complete the transaction, and then leave
 the bank." Processes are the Simprovise objects that can "block" for
 simulated time, e.g. during waits.
 
-'Resources' are the physical or logical objects needed to perform a process.
+`Resources` are the physical or logical objects needed to perform a process.
 They are typically a system constraint. In our example, tellers are resources - the
 customer process has to 'acquire' a teller in order to execute their transaction;
 the teller is 'released' when the transaction is completed.
 
-An 'entity source' is an object that creates entities and their associated
+An `entity source` is an object that creates entities and their associated
 processes, and then initiates execution of those processes. Every model requires
 at least one entity source. Our bank model might have a single entity source
 object generating customer entities and processes.
 
-An 'entity sink' is an object that entities must go to when associated process
+An `entity sink` is an object that entities must go to when associated process
 is complete - the process specification must explicitly move the entity to a
 sink. In our bank model, the "leave the bank" portion of the process would be
 specified more along the lines of "move to the entity sink." Every model

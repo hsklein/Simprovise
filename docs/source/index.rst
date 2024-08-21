@@ -31,11 +31,12 @@ for model execution, output data collection and output analysis.
    installation
    quickstart
    tutorial
-   modeling_concepts
-   data_collection
+   Modeling Concepts <modeling_concepts>
+   Data Collection Concepts <data_collection>
+   model_execution
    configuration
-   api_reference
-   output_database
+   API Reference <api_reference>
+   Output Database Reference <output_database>
    license
 
 

@@ -60,13 +60,13 @@ class Simulation(object):
     :meth:`replicate` executes multiple replications of a simulation model,
     again designated by a passed model script path; :meth:`replicate` can
     be used both from within and outside of a model script. All of these
-    methods return a :class:`SimResult` object.
+    methods return a :class:`SimulationResult` object.
     
     These methods all provide the option to save the resulting output
     database to a specified file location. The database may also be saved
-    via the :class:`SimResult` object; the advantage of doing so via
+    via the :class:`SimulationResult` object; the advantage of doing so via
     the execute() methods is that the designated output path will be
-    validated prior to the simulation; when doing so via :class:`SimResult`
+    validated prior to the simulation; when doing so via :class:`SimulationResult`
     the validation won't occur until after the (potentially long running)
     simulation completes; if the output path is invalid, the simulation
     results are likely to be lost.
