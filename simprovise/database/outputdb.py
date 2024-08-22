@@ -30,7 +30,7 @@ import tempfile
 
 from simprovise.core.simevent import SimEvent
 from simprovise.core.simlogging import SimLogging
-from simprovise.core.simtime import SimTime
+from simprovise.core.simtime import SimTime, Unit as tu
 from simprovise.core.simclock import SimClock
 from simprovise.core.datasink import DataSink
 from simprovise.core import SimError, simtime, simelement
@@ -1466,9 +1466,104 @@ class SimDatasetSummaryData(object):
             return None
 
 
+class SimDatasetValues(object):
+    """
+    Class that retrieves datasetvalue rows for a specified dataset and
+    (optionally) a specified run and/or batch.
+    
+    The data are retrieved on initialization, and available via the
+    :attr:`rows` instance attribute. A header row (with column/field names)
+    is available via the :attr:`header_row` attribute.
+    
+    Each data row has the following fields:
+    
+    * dataset number
+    * run number
+    * batch number
+    * simulated timestamp
+    * simulated to timestamp (for time-weighted datasets, empty for
+      unweighted datasets)
+    * dataset value
+    * timeunit (as a string) - blank for non-SimTime dataset values
+    
+    All but timeunit come directly from the datasetvalue table; timeunit
+    is a string representation of the dataset timeunit property.
+    
+    :param outputdb: An open output database
+    :type outputdb:  :class:`SimOutputDatabase`
+    
+    :param dataset:  A dataset in the open database
+    :type dataset:   namedtyple :class:`DbDataset`
+    
+    :param run:      Run number or -1 for all runs
+    :type run:       `int`
+    
+    :param batch:    Batch number or -1 for all batches
+    :type batch:     `int`
+    
+    """    
+    def __init__(self, outputDb, dataset, run, batch):
+        """
+        """
+        assert run == -1 or run > 0
+        assert batch >= -1
+        
+        self.outputDb = outputDb
+        self.dataset = dataset
+        self.run = run
+        self.batch = batch
+        self.rows = None
+        self.header_row = None
+        
+        self._fetch_data()
 
+    def _fetch_data(self):
+        """
+        Fetch and return datasetvalue rows based on dataset, run and batch
+        specification. We have a query variation for each combination of
+        batch/all batches, run/all runs.
+        """
+        outputDb = self.outputDb
+        run = self.run
+        batch = self.batch
+        
+        # Set the time unit string value (blank if the dataset values are not times)
+        tu_str = ""
+        if self.dataset.valuetype == 'SimTime':
+            timeval = SimTime(0, self.dataset.timeunit)
+            tu_str = timeval.units_string()
 
-
+        datasetid = outputDb.get_dataset_id(self.dataset)
+        
+        if run == -1:
+            # get values for all runs
+            if batch == -1:
+                # get values for all batches
+                where_stmt = 'WHERE dataset = ?'
+                parms = ()
+            else:
+                # get values for a specified batch
+                where_stmt = 'WHERE dataset = ? AND batch = ?'
+                parms = (batch, )
+        else:
+            # get values for a specfied run
+            if batch == -1:
+                # get values for all batches
+                where_stmt = 'WHERE dataset = ? AND run = ?'
+                parms = (run, )
+            else:
+                # get values for a specified batch
+                where_stmt = 'WHERE dataset = ? AND run = ? AND batch = ?'
+                parms = (run, batch)
+         
+        select_stmt = 'SELECT dataset, run, batch, simtimestamp, totimestamp, value, "{0}" FROM datasetvalue '.format(tu_str)            
+        sqlstr = select_stmt + where_stmt     
+        
+        self.header_row = ['dataset', 'run', 'batch', 'simtimestamp',
+                           'totimestamp', 'value', 'timeunit']
+        self.rows = outputDb.runQuery(sqlstr, datasetid, *parms)
+                
+        
 
 
 

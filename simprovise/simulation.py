@@ -18,7 +18,7 @@
 # ANY WARRANTY; without even the implied warranty of MERCHANTABILITY or FITNESS 
 # FOR A PARTICULAR PURPOSE. See the GNU General Public License for more details.
 #===============================================================================
-import os, sys, shutil, types
+import os, sys, shutil, types, csv
 from contextlib import redirect_stdout
 import numpy as np
 
@@ -29,10 +29,11 @@ import numpy as np
 from simprovise.core.model import SimModel
 from simprovise.runcontrol.replication import (SimReplication, SimReplicator)
 from simprovise.runcontrol.simruncontrol import (SimReplicationParameters)
-from simprovise.database import (SimDatabaseManager, SimDatasetSummaryData)
+from simprovise.database import (SimDatabaseManager, SimDatasetSummaryData,
+                                 SimDatasetValues)
 from simprovise.core import SimError
 from simprovise.core.simlogging import SimLogging
-from simprovise.core.simtime import SimTime
+from simprovise.core.simtime import SimTime, Unit as tu
 import simprovise.core.configuration as simconfig
 from simprovise.core.apidoc import apidoc, apidocskip
 
@@ -475,7 +476,7 @@ class SimulationResult(object):
         """
         unitName = ('seconds', 'minutes', 'hours')
         def unitstr(dataset):
-            if dataset.valuetype == 'SimTime':
+            if dataset.valuetype == 'SimTime' and dataset.timeunit is not None:
                 return unitName[dataset.timeunit]
             else:
                 return ''
@@ -493,6 +494,7 @@ class SimulationResult(object):
         runs = database.runs()
         assert runs, "No runs in output database"
         nbatches = database.last_batch(runs[0])
+        
         if len(runs) > 1 or nbatches == 0:
             nsamples = len(runs)
             sample_type = 'Run'
@@ -742,6 +744,94 @@ class SimulationResult(object):
         numcolwidth = numberwidth + 8 # add 8 for time unit string
 
         return eidwidth, namewidth, numberwidth, numcolwidth
+    
+    def export_dataset(self, elementid, datasetname, *, run=-1, batch=None, filename):
+        """
+        Export some or all of the raw values for a dataset specified by passed
+        element ID and dataset name. The export can be limited to a single
+        run (specified by run number) and/or a single batch (specified by
+        number or ``None``, for the last batch in the run(s)).
+        
+        The export starts with a header row (column names); each subsequent
+        row corresponds to a row in the output database ``datasetvalue`` table,
+        with the following fields:
+        
+        * dataset number
+        * run number
+        * batch number
+        * simulated timestamp
+        * simulated to timestamp (for time-weighted datasets, empty for
+          unweighted datasets)
+        * dataset value
+        * timeunit (as a string) - blank for non-SimTime dataset values
+    
+        :param elementid:  ID of element exported dataset belongs to
+        :type elementid:   `str`
+        
+        :param datasetname: Name of dataset to export
+        :type datasetname:  `str`
+        
+        :param run:         Run number or -1 for all runs
+        :type run:          `int`
+        
+        :param batch:       Batch number or -1 for all batches, or `None` for 
+                            last batch
+        :type batch:        `int` or `None`
+        
+        :param filename:    Path/filename of CSV file to which exported data is
+                            to be written. (Expected to have extension .csv,
+                            but not required). If the path is not absolute, it
+                            is relative to the current working directory.
+        :type filename:     `str`
+        
+        """
+        # Parameter validation
+        if not elementid:
+            raise SimError(_RESULT_ERROR, "export_dataset elementid parameter is null")
+        if not datasetname:
+            raise SimError(_RESULT_ERROR, "export_dataset datasetname parameter is null")
+        if not isinstance(run, int):
+            raise SimError(_RESULT_ERROR, "export_dataset run parameter is not an int")
+        if batch is not None and not isinstance(batch, int):
+            raise SimError(_RESULT_ERROR, "export_dataset batch parameter is not an int")
+        
+        if run != -1 and run < 1:
+            msg = "export_dataset run parameter ({0}) must be -1 or positive"
+            raise SimError(_RESULT_ERROR, msg, run)
+        if batch is not None and batch < -1:
+            msg = "export_dataset batch parameter ({0}) must be None, -1 or > 0"
+            raise SimError(_RESULT_ERROR, msg, batch)
+            
+        database = self.dbMgr.database
+        assert database, "SimResult database not open"
+        runs = database.runs()
+        
+        # More parameter validation
+        if not runs:
+            raise SimError(_RESULT_ERROR, "Output database has no simulation runs")
+        if run > 0 and not run in runs:
+            msg = "export_dataset run parameter ({0}) not found in output database"
+            raise SimError(_RESULT_ERROR, msg, run)
+        if batch is not None and batch >= 0:
+            maxbatch = database.last_batch(runs[0])
+            if batch > maxbatch:
+                msg = "export_dataset batch parameter ({0}) not found in output database"
+                raise SimError(_RESULT_ERROR, msg, batch)
+            
+        if batch is None:
+            batch = database.last_batch(runs[0])
+        
+        # Get the dataset (we rely on get_dataset to raise if not found)  
+        dataset = database.get_dataset(elementid, datasetname)
+                    
+        # Get the requested datasetvalue rows
+        dsetvalues = SimDatasetValues(database, dataset, run, batch)
+        
+        with open(filename, 'w', newline='') as f:
+            writer = csv.writer(f)
+            writer.writerow(dsetvalues.header_row)
+            writer.writerows(dsetvalues.rows)
+             
 
 def _value_to_string(value, numwidth, showunits=True):
     """
@@ -1019,7 +1109,7 @@ if __name__ == '__main__':
     batchLength = SimTime(10000)
     #batchLength = SimTime(0)
     scriptpath = "demos/mm_1.py"
-    multi_replication = True
+    multi_replication = False
     nruns = 10
     
     thisdir = os.path.dirname(sys.argv[0])
@@ -1033,6 +1123,7 @@ if __name__ == '__main__':
         print("Running a single replication...")
         with Simulation.execute_script(scriptpath, warmupLength, batchLength, 2) as simResult:
             simResult.print_summary(rangetype='total')
+            simResult.export_dataset('Server', 'ProcessTime', filename='mm1.csv')
     else:   
         print("Running", nruns, "replications...")
         with Simulation.replicate(scriptpath, warmupLength, batchLength, 1,
