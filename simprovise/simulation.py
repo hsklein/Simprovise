@@ -134,7 +134,7 @@ class Simulation(object):
         if outputpath:
             Simulation._save_output(replication.dbPath, outputpath)
             
-        return SimulationResult(model.filename, replication.dbPath,
+        return SimulationResult(replication.dbPath, model.filename, 
                                 isTemporary=True)
 
     @staticmethod
@@ -200,7 +200,7 @@ class Simulation(object):
         if outputpath:
             Simulation._save_output(replication.dbPath, outputpath)
         
-        return SimulationResult(modelpath, replication.dbPath, isTemporary=True)
+        return SimulationResult(replication.dbPath, modelpath, isTemporary=True)
 
     @staticmethod
     def replicate(modelpath, warmupLength=None, batchLength=None, nBatches=1,
@@ -282,7 +282,7 @@ class Simulation(object):
             replicator.execute_replications(replicationParameters, asynch=False)
             if outputpath:
                 Simulation._save_output(replicator.output_dbpath, outputpath)
-            return SimulationResult(model.filename, replicator.output_dbpath,
+            return SimulationResult(replicator.output_dbpath, model.filename, 
                                     isTemporary=True)
 
     @staticmethod
@@ -360,13 +360,16 @@ class SimulationResult(object):
     on exit unless explicitly saved.
     
         :param dbpath:      The path of the output database to read
-        :type dbpath:       str
-    
+        :type dbpath:       `str`
+        
+        :param modelpath:   The path of the model script file, if any
+        :type modelpath:    `str` or `None` (if opening a previously saved DB)
+       
         :param isTemporary: Flag indicating whether the database is temporary.
                             If temporary and not explicitly saved via
                             :meth:`save_database_as`, the database is deleted
                             on exit. Defaults to False.
-        :type isTemporary:  bool
+        :type isTemporary:  `bool`
         
     """
     # NOTE on directing output to a file (7/26/24)
@@ -381,7 +384,7 @@ class SimulationResult(object):
     #    model name, so SimModel.filename or modelpath should be passed
     #    to the SimulationResult initializer
     
-    def __init__(self, modelpath, dbpath, isTemporary=False):
+    def __init__(self, dbpath, modelpath=None, isTemporary=False):
         """
         Open the database (specified by dbpath) via SimDatabaseManager.
         If a model is specified, we assume the database is temporary; if no
@@ -576,6 +579,9 @@ class SimulationResult(object):
                             Raised if rangetype is invalid.
 
         """
+        if not self.dbMgr.has_open_database:
+            raise SimError(_RESULT_ERROR, "SimulationResult database is not open")
+        
         output_filename = None
         f = None
 
@@ -583,8 +589,14 @@ class SimulationResult(object):
             # Get destination from configuration file
             if simconfig.get_output_report_destination() == 'stdout':
                 f = sys.stdout
-            else:
+            elif self.modelpath:
                 base = os.path.splitext(os.path.basename(self.modelpath))[0]
+                output_filename = base +  _REPORT_SUFFIX + _REPORT_EXT
+            else:
+                dbpath = self.dbMgr.current_database_path
+                assert not self.dbMgr.database.is_temporary
+                assert dbpath
+                base = os.path.splitext(os.path.basename(dbpath))[0]
                 output_filename = base +  _REPORT_SUFFIX + _REPORT_EXT
         elif isinstance(destination, str):
             output_filename = destination
@@ -630,7 +642,7 @@ class SimulationResult(object):
 
         """
         database = self.dbMgr.database
-        assert database, "SimResult database not open"
+        assert database
         datasets = database.datasets
 
         runs = database.runs()
