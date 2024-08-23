@@ -21,7 +21,6 @@ interarrival_time_generator = SimDistribution.exponential(mean_interarrival_time
 queue = SimQueue("Queue")
 server = SimSimpleResource("Server")
 server_location = SimLocation("ServerLocation")
-customer_source = SimEntitySource("Source")
 customer_sink = SimEntitySink("Sink")
 
 class Customer(SimEntity):
@@ -47,12 +46,10 @@ class mm1Process(SimProcess):
             self.wait_for(service_time)            
         customer.move_to(customer_sink)
 
-# Specify that the entity source should generate Customer entities 
-# at a rate defined by the (exponential) interarrival_time_generator. 
-# The generated customers will run the mm1Process
-customer_source.add_entity_generator(Customer, mm1Process,
-                                     interarrival_time_generator)
-
+# Specify an entity source that generates Customer entities running the
+# mm1Process at a rate defined by the (exponential) interarrival_time_generator. 
+customer_source = SimEntitySource("Source", Customer, mm1Process,
+                                  interarrival_time_generator)
 
 if __name__ == '__main__':
     multi_replication = True
