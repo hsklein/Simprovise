@@ -55,7 +55,7 @@ customer_source.add_entity_generator(Customer, mm1Process,
 
 
 if __name__ == '__main__':
-    multi_replication = False
+    multi_replication = True
     nruns = 15
     warmup_length = SimTime(100)
     batch_length = SimTime(1000)
@@ -63,7 +63,7 @@ if __name__ == '__main__':
     
     if multi_replication:
         print("Running", nruns, "replications...")
-        with Simulation.replicate(scriptpath, warmupLength, batchLength, 1,
+        with Simulation.replicate(None, warmup_length, batch_length, 1,
                                   fromRun=1, toRun=nruns,
                                   outputpath=None, overwrite=False) as simResult:
             simResult.print_summary(rangetype='iqr')
