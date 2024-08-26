@@ -163,7 +163,7 @@ def confidence_interval(ci_type, values, confidence_level=0.95, *, quantile=0.5)
     :rtype:                  `tuple` (numeric, numeric)
 
     :raises:                 :class:`~.simexception.SimError`
-                             Raised if ci_type is indexed.
+                             Raised if ci_type is invalid.
     
     """        
     if not values:
