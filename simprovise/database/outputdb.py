@@ -27,6 +27,7 @@ import sqlite3
 import os
 from collections import namedtuple
 import tempfile
+import numpy as np
 
 from simprovise.core.simevent import SimEvent
 from simprovise.core.simlogging import SimLogging
@@ -34,6 +35,7 @@ from simprovise.core.simtime import SimTime, Unit as tu
 from simprovise.core.simclock import SimClock
 from simprovise.core.datasink import DataSink
 from simprovise.core import SimError, simtime, simelement
+import simprovise.core.stats as simstats
 from simprovise.core.apidoc import apidoc, generating_docs
 
 from simprovise.modeling import (SimResource, SimLocation, SimEntitySource,
@@ -1437,18 +1439,22 @@ class SimDatasetSummaryData(object):
         Calculate and return a list of percentile values (0 through 100) based
         on the data in the passed row collection.
         """
-        totalweight = sum(row[1] for row in rows)
-        percentile = [None] * 101
-        cumweight = 0
-        currPercentile = 0
-        for row in rows:
-            value, weight, count = row
-            cumweight += weight
-            while 100.0 * cumweight / totalweight >= currPercentile:
-                percentile[currPercentile] = value
-                currPercentile += 1
+        values = [row[0] for row in rows]
+        weights = [row[1] for row in rows]
+        return simstats.weighted_percentiles(values, weights)
+        
+        #totalweight = sum(row[1] for row in rows)
+        #percentile = [None] * 101
+        #cumweight = 0
+        #currPercentile = 0
+        #for row in rows:
+            #value, weight, count = row
+            #cumweight += weight
+            #while 100.0 * cumweight / totalweight >= currPercentile:
+                #percentile[currPercentile] = value
+                #currPercentile += 1
 
-        return percentile
+        #return percentile
     
     def _calculate_mean(self, rows):
         """
@@ -1457,12 +1463,14 @@ class SimDatasetSummaryData(object):
         time-weighted datasets. For non-time-weighted datasets,
         the weight has already been set to the count, so this calculation
         works for both types of datasets.
+        
+        Returns None if the weights sum to zero
         """
-        totalweight = sum(row[1] for row in rows)
-        valuesums = sum(row[0] * row[1] for row in rows)
-        if totalweight:
-            return valuesums / totalweight
-        else:
+        values = [row[0] for row in rows]
+        weights = [row[1] for row in rows]
+        try:
+            return np.average(values, weights=weights)
+        except ZeroDivisionError:
             return None
 
 
