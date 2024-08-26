@@ -21,6 +21,7 @@
 import os, sys, shutil, types, csv
 from contextlib import redirect_stdout
 import numpy as np
+import scipy.stats as st
 
 #SCRIPTPATH = "models\\mm1.py"
 #os.environ["SIMPROVISE_MODEL_SCRIPT"] = SCRIPTPATH
@@ -35,6 +36,7 @@ from simprovise.core import SimError
 from simprovise.core.simlogging import SimLogging
 from simprovise.core.simtime import SimTime, Unit as tu
 import simprovise.core.configuration as simconfig
+import simprovise.core.stats as simstats
 from simprovise.core.apidoc import apidoc, apidocskip
 
 _ERROR_NAME = "Simulation Error"
@@ -546,30 +548,55 @@ class SimulationResult(object):
  
     def print_summary(self, *, rangetype=None, destination=None):
         """
-        Print formatted summary statistics for the simulation output. In the
-        base report, summary statistics for multiple runs/batches are shown as
-        the mean of the statistic values calculated for each run/batch in
-        the result database. (If the database has multiple runs, it is the
-        average of the calculated result for each run; if it is a single run
-        with multiple batches, it is the average of the calculated result for
-        each batch.)
-
+        Print a summary report for the simulation output. For each dataset,
+        the report generates an estimate for the following summary statistics,
+        all time-weighted as required:
+        
+        * Mean dataset value
+        * Median dataset value
+        * 25th percentile dataset value
+        * 75th percentile dataset value
+        * Maximum dataset value
+        
+        If multiple runs/replications of the simulation were performed, values
+        for each of the above statistics are calculated for each replication.
+        If only a single simulation run was performed, values are calculated for
+        each batch within that run. For example, if we do 20 replications, we
+        will have a set of 20 values for the mean dataset value, 20 values for
+        the median, etc. The report uses those 20 values to construct a point
+        estimate for each summary statistic. For the mean value, the point
+        estimate is the mean of the sample of 20 means. For the other
+        statistics (where perhaps there is less confidence of normality), we
+        use the median of the sample.
+        
         If the rangetype parameter is specified, a spread indicator is also
-        shown for each summary statistic; the indicators supported are
-        'iqr' (Interquartile range) and 'total' (minimum and maximum). These
-        spread range indicators refer to the calculated statistic, NOT the
+        shown for each summary statistic; the indicators supported are:
+                        
+        * 'iqr' (Interquartile range)
+        * '90ci' (90% confidence interval)
+        * '95ci' (95% confidence interval)
+        * 'total' (minimum and maximum)
+
+        These spread range indicators refer to the calculated statistic, NOT the
         underlying dataset values. For example, if rangetype is 'total' and
-        the database has 10 replication runs, then the "Median" column for a
-        dataset wll display the mean of the calculated medians for each of
-        those ten replications, plus a range [min-max] that indicate the lowest
-        and highest of those ten calculated medians.
+        the database has 20 replication runs, then the "Sample Max" column for a
+        dataset wll display the median of the maximum dataset values for each of
+        those 20 replications, plus a range [min-max] that indicate the lowest
+        and highest of those 20 observed maximums. For IQR, the range is the
+        25th and 75th percentiles of those 20 maximum values. Confidence
+        intervals refer to our estimate of the summary statistic. In the case
+        of the Mean summary statistic, we construct a confidence interval
+        around the mean (of our 20 samples) using a T distribution; for the
+        other summary statistics, we use a non-parametric confidence interval
+        around the median.
+        (See https://statisticalpoint.com/confidence-interval-for-median/ )
         
         If the destination parameter is ``None``, the destination is obtained
         from the configuration file, which should be either 'stdout' or
         'file'; if 'file', the destination will be a file in the current
         working directory named <model name>_report.txt
         
-        :param rangetype:   '`iqr`', '`total`' or None. 
+        :param rangetype:   '`iqr`', '`90ci`', '`95ci`','`total`' or `None`. 
         :type  rangetype:   ``str``
         
         :param destination: file object (can be stdout), filename or ``None``. 
@@ -625,16 +652,21 @@ class SimulationResult(object):
         each batch.)
 
         If the rangetype argument is specified, a spread indicator is also
-        shown for each summary statistic; the indicators supported are
-        'iqr' (Interquartile range) and 'total' (minimum and maximum). These
-        spread range indicators refer to the calculated statistic, NOT the
+        shown for each summary statistic; the indicators supported are:
+        
+        * 'iqr' (Interquartile range)
+        * '90ci' (90% confidence interval)
+        * '95ci' (95% confidence interval)
+        * 'total' (minimum and maximum)
+
+        The spread range indicators refer to the calculated statistic, NOT the
         underlying dataset values. For example, if rangetype is 'total' and
         the database has 10 replication runs, then the "Median" column for a
         dataset wll display the mean of the calculated medians for each of
         those ten replications, plus a range [min-max] that indicate the lowest
         and highest of those ten calculated medians.
         
-        :param rangetype: 'iqr', 'total' or None. 
+        :param rangetype: 'iqr', '90ci', '95ci', 'total' or None. 
         :type rangetype:  `str`
         
         :raises:          :class:`~.simexception.SimError`
@@ -654,6 +686,8 @@ class SimulationResult(object):
         if nruns == 1 and nbatches == 1:
             # If there's only one run and one batch, there's no range to get
             rangetype = None
+            
+        confidence_level = None
 
         if rangetype is None:
             rangeprop = None
@@ -661,6 +695,12 @@ class SimulationResult(object):
         elif rangetype.lower() == 'iqr':
             rangeprop = SimSample.iqr
             rangelabel = '   IQR'
+        elif rangetype.lower() == '90ci':
+            rangeprop = SimSample.confidence_interval90
+            rangelabel = '   90% CI'
+        elif rangetype.lower() == '95ci':
+            rangeprop = SimSample.confidence_interval95
+            rangelabel = '   95% CI'
         elif rangetype.lower() == 'total':
             rangeprop = SimSample.minmaxrange
             rangelabel = '  Range'
@@ -695,7 +735,7 @@ class SimulationResult(object):
                                         wr=wrest)
 
             header2fmt = '{:{en}} {:^{mw}} {:>{mn}} {:{mr}}' + ' {:^{mw}} {:{mr}}' * 4
-            header2items = ['', 'Mean', 'SEM', rangelabel] + ['Mean', rangelabel] * 4
+            header2items = ['', 'Mean', 'SEM', rangelabel] + ['Median', rangelabel] * 4
             header2 = header2fmt.format(*header2items, en=eidwidth+namewidth+1,
                                         mw=meanwidth, mn=sdwidth, mr=iqrwidth)
         else:
@@ -740,10 +780,10 @@ class SimulationResult(object):
             else:
                 print(_value_to_string(dsetstats.counts.mean, numwidth, False),
                       _value_to_string(dsetstats.means.mean, numwidth),
-                      _value_to_string(dsetstats.pct25s.mean, numwidth),
-                      _value_to_string(dsetstats.medians.mean, numwidth),
-                      _value_to_string(dsetstats.pct75s.mean, numwidth),
-                      _value_to_string(dsetstats.maxs.mean, numwidth)
+                      _value_to_string(dsetstats.pct25s.median, numwidth),
+                      _value_to_string(dsetstats.medians.median, numwidth),
+                      _value_to_string(dsetstats.pct75s.median, numwidth),
+                      _value_to_string(dsetstats.maxs.median, numwidth)
                      )
 
     def _getFormatWidths(self):
@@ -922,6 +962,28 @@ class SimDatasetStatistics(object):
     When the passed output database contains a single run with multiple
     batches, summary statistic values are collected for each batch in
     that run.
+    
+    Some notes on the classes involved here (which have similar names,
+    which adds to the confusion):
+    
+    * :class:`SimDatasetStatistics` (this class): the top-level holder for all
+      summary statistic values for a *single* dataset for all relevant batches
+      and runs.
+    * :class:`~simprovise.database.outputdb.SimDatasetSummaryData`: a class in
+      database.outputdb that queries the output database for dataset values
+      for a *single* run/batch and calculates *all* of the summary statistics 
+      for that run/batch (min, max, median, mean and all 100 percentiles).
+    * :class:`SimSample`: Holds the values for a *single* summary statistic
+      (e.g. "median" or "75th percentile") for *all* queried batches/runs.
+      These are the data used to construct point estimates for that summary
+      statistic (either mean or median) and confidence intervals for that
+      estimate.
+      
+    Be aware of the possible level of indirection with SimSamples - e.g.,
+    if the output database includes data for 20 runs, the median of the
+    SimSample for the 75th percentile sample statistic is the median of
+    the set of 20 values, on per run, where each  value is the 75th
+    percentile dataset value for that run.
     """
     def __init__(self, database, dataset):
         """
@@ -930,18 +992,24 @@ class SimDatasetStatistics(object):
         self.dataset = dataset
         self.valuetype = dataset.valuetype
         self.timeunit = dataset.timeunit
-
-        self.counts = SimSample(dataset)
-        self.means = SimSample(dataset)
-        self.mins = SimSample(dataset)
-        self.maxs = SimSample(dataset)
-        self.medians = SimSample(dataset)
-        self.pct05s = SimSample(dataset)
-        self.pct10s = SimSample(dataset)
-        self.pct25s = SimSample(dataset)
-        self.pct75s = SimSample(dataset)
-        self.pct90s = SimSample(dataset)
-        self.pct95s = SimSample(dataset)
+       
+        # Note on ci_type:
+        # Generally SimSamples for order statistics (min/max/median/percentile)
+        # should use QUANTILE for confidence interval calculation (the default
+        # default). Other summary statistics (mean, count) can use T or NORMAL
+        # depending on sample size; lacking other information, we'll be 
+        # conservative and go with T.
+        self.counts = SimSample(dataset, ci_type=simstats.CIType.T)
+        self.means = SimSample(dataset, ci_type=simstats.CIType.T)
+        self.mins = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
+        self.maxs = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
+        self.medians = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
+        self.pct05s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
+        self.pct10s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
+        self.pct25s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
+        self.pct75s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
+        self.pct90s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
+        self.pct95s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
         runs = database.runs()
         self.nruns = len(runs)
 
@@ -1015,13 +1083,23 @@ class SimSample(object):
     return NaN (float('nan')). (Amongst other things, this ensures that
     the return value can be formatted by code above that expects a number.)
     """
-    def __init__(self, dataset):
+    def __init__(self, dataset, *, ci_type=simstats.CIType.QUANTILE,
+                 quantile=0.5):
         """
         """
         self.dataset = dataset
         self.valuetype = dataset.valuetype
         self.timeunit = dataset.timeunit
         self.values = []
+        
+        # The confidence interval calculation type for this SimSample
+        # Generally SimSamples for order statistics (min/max/median/percentile)
+        # should use QUANTILE. Other summary statistics (mean, count) can
+        # use T or NORMAL depending on sample size.
+        self.ci_type = ci_type
+        
+        # The quantile when doing a non-parametric QUANTILE CI calculation
+        self.quantile = quantile
 
     def append(self, value):
         """
@@ -1076,7 +1154,7 @@ class SimSample(object):
         If n <= 1, returns None
         """
         if self.n > 1:
-            se =  np.std(self.values, ddof=1) / np.sqrt(self.n)
+            se = st.sem(self.values)
             return self._convertSimTime(se) 
         else:
             return _NAN
@@ -1103,14 +1181,71 @@ class SimSample(object):
                     self._convertSimTime(max(self.values)))
         else:
             return (_NAN, _NAN)
-
+        
+    def confidence_interval(self, ci_type=None, *, confidence_level=0.95,
+                            quantile=0.5):
+        """
+        Calculate a confidence interval for a passed confidence level using
+        a specified confidence interval type/calculation (T, normal or
+        non-parametric quantile). For a quantile confidence interval, the
+        passed quantile is also used. 
+        
+        :param ci_type:          Confidence interval type - if None, use
+                                 default_ci_type
+        :type ci_type:           :class:`~simprovise.core.stats.CIType`
+        
+        :param confidence_level: Desired confidence level (e.g 95%) for if
+                                 Defaults to 95% (0.95).
+        :type confidence_level:  `float` in range (.0, 1.0)
+        
+        :param quantile:         Quantile to calculate interval for. Defaults to
+                                 0.5 (median). Ignored when the ci_type is not
+                                 QUANTILE.
+        :type quantile:          `float` in range (.0, 1.0)
+        
+        :return:                 Low and high bound of confidence interval, or
+                                 (nan, nan) if there are an insufficient number 
+                                 of values, converted to
+                                 :class:`~simprovise.core.simtime.SimTime` as
+                                 required
+        :rtype:                  `tuple` (numeric, numeric)
+    
+        :raises:                 :class:`~.simexception.SimError`
+                                 Raised if ci_type is invalid.
+                                 
+        """
+        if ci_type is None:
+            ci_type = self.ci_type
+            
+        ci = simstats.confidence_interval(ci_type, self.values,
+                                          confidence_level, quantile=quantile)
+        return (self._convertSimTime(ci[0]), self._convertSimTime(ci[1]))
+    
+    @property
+    def confidence_interval90(self):
+        """
+        Calculate and return a 90% confidence interval using the SimSample's
+        confidence interval calculation type and quantile (if applicable)
+        """
+        return self.confidence_interval(self.ci_type, confidence_level=0.90,
+                                        quantile=self.quantile)
+    
+    @property
+    def confidence_interval95(self):
+        """
+        Calculate and return a 95% confidence interval using the SimSample's
+        confidence interval calculation type and quantile (if applicable)
+        """
+        return self.confidence_interval(self.ci_type, confidence_level=0.95,
+                                        quantile=self.quantile)
+                   
     def __getitem__(self, i):
         """
         """
         return self.values[i]
 
     def _convertSimTime(self, value):
-        if self.valuetype == 'SimTime' and value is not None:
+        if self.valuetype == 'SimTime' and value is not None and value is not _NAN:
             return SimTime(value, self.timeunit)
         else:
             return value
@@ -1121,7 +1256,7 @@ if __name__ == '__main__':
     batchLength = SimTime(10000)
     #batchLength = SimTime(0)
     scriptpath = "demos/mm_1.py"
-    multi_replication = False
+    multi_replication = True
     nruns = 10
     
     thisdir = os.path.dirname(sys.argv[0])
@@ -1141,5 +1276,5 @@ if __name__ == '__main__':
         with Simulation.replicate(scriptpath, warmupLength, batchLength, 1,
                                   fromRun=1, toRun=nruns,
                                   outputpath=None, overwrite=False) as simResult:
-            simResult.print_summary(rangetype='iqr')
+            simResult.print_summary(rangetype='90ci')
                 
