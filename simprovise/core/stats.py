@@ -18,6 +18,7 @@
 import numpy as np
 import scipy.stats
 from enum import Enum
+import warnings
 from simprovise.core.simexception import SimError
 from simprovise.core.simlogging import SimLogging
 
@@ -60,7 +61,12 @@ def t_confidence_interval(values, confidence_level=0.95):
     df = n - 1
     loc = np.mean(values)
     scale = scipy.stats.sem(values)
-    return scipy.stats.t.interval(confidence_level, df, loc, scale)
+    
+    # Some data may all be zero, for which SciPy generates a RuntimeWarning
+    # Suppress it - the ruturned NaNs are just fine
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=RuntimeWarning)
+        return scipy.stats.t.interval(confidence_level, df, loc, scale)
     
 def norm_confidence_interval(values, confidence_level=0.95):
     """
@@ -88,7 +94,12 @@ def norm_confidence_interval(values, confidence_level=0.95):
     
     loc = np.mean(values)
     scale = scipy.stats.sem(values)
-    return scipy.stats.norm.interval(confidence_level, loc, scale)
+    
+    # Some data may all be zero, for which SciPy generates a RuntimeWarning
+    # Suppress it - the ruturned NaNs are just fine
+    with warnings.catch_warnings():
+        warnings.simplefilter('ignore', category=RuntimeWarning)
+        return scipy.stats.norm.interval(confidence_level, loc, scale)
    
    
 def quantile_confidence_interval(values, quantile=0.5, confidence_level=0.95):
@@ -166,7 +177,7 @@ def confidence_interval(ci_type, values, confidence_level=0.95, *, quantile=0.5)
                              Raised if ci_type is invalid.
     
     """        
-    if not values:
+    if len(values) < 2:
         return (_NAN, _NAN)
     
     if ci_type == CIType.T:
@@ -214,6 +225,7 @@ def weighted_percentiles(values, weights):
 
 
 if __name__ == '__main__':
+    print("95% CI of the mean via t distribution:", t_confidence_interval((0, 0, 0, 0), 0.95))
     
     # example from https://statisticalpoint.com/confidence-interval-for-median/
     vals = (8, 11, 12, 13, 15, 17, 19, 20, 21, 21, 22, 23, 25, 26, 28)
