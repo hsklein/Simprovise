@@ -558,16 +558,20 @@ class SimulationResult(object):
         * 75th percentile dataset value
         * Maximum dataset value
         
+        .. note::
+            One assumption here is that this is essentially a steady-state
+            simulation model and we have collected a large number of dataset
+            values for each run/replication. For terminating simulations
+            generating a single value for a measure of interest, different
+            reporting and analysis techniques would apply.
+        
         If multiple runs/replications of the simulation were performed, values
         for each of the above statistics are calculated for each replication.
         If only a single simulation run was performed, values are calculated for
         each batch within that run. For example, if we do 20 replications, we
         will have a set of 20 values for the mean dataset value, 20 values for
-        the median, etc. The report uses those 20 values to construct a point
-        estimate for each summary statistic. For the mean value, the point
-        estimate is the mean of the sample of 20 means. For the other
-        statistics (where perhaps there is less confidence of normality), we
-        use the median of the sample.
+        the median, etc. The report uses those mean of those 20 values to
+        construct a point estimate for each summary statistic. 
         
         If the rangetype parameter is specified, a spread indicator is also
         shown for each summary statistic; the indicators supported are:
@@ -580,17 +584,20 @@ class SimulationResult(object):
         These spread range indicators refer to the calculated statistic, NOT the
         underlying dataset values. For example, if rangetype is 'total' and
         the database has 20 replication runs, then the "Sample Max" column for a
-        dataset wll display the median of the maximum dataset values for each of
+        dataset wll display the average of the maximum dataset values for each of
         those 20 replications, plus a range [min-max] that indicate the lowest
         and highest of those 20 observed maximums. For IQR, the range is the
         25th and 75th percentiles of those 20 maximum values. Confidence
-        intervals refer to our estimate of the summary statistic. In the case
-        of the Mean summary statistic, we construct a confidence interval
-        around the mean (of our 20 samples) using a T distribution; for the
-        other summary statistics, we use a non-parametric confidence interval
-        around the median.
-        (See https://statisticalpoint.com/confidence-interval-for-median/ )
+        intervals are constructed using a T distribution.
         
+        .. note::
+            See Carson and Banks (3rd edition p. 440) re the choice to use
+            the mean of the calculated summary statistic as the point estimate
+            and the T distribution for confidence interval calculation.
+            Use of a normal distribution for the CE  could be appropriate
+            for a "sufficiently large" number of replications/batches, but
+            we defer to the more conservative approach here.
+                 
         If the destination parameter is ``None``, the destination is obtained
         from the configuration file, which should be either 'stdout' or
         'file'; if 'file', the destination will be a file in the current
@@ -735,7 +742,7 @@ class SimulationResult(object):
                                         wr=wrest)
 
             header2fmt = '{:{en}} {:^{mw}} {:>{mn}} {:{mr}}' + ' {:^{mw}} {:{mr}}' * 4
-            header2items = ['', 'Mean', 'SEM', rangelabel] + ['Median', rangelabel] * 4
+            header2items = ['', 'Mean', 'SEM', rangelabel] + ['Mean', rangelabel] * 4
             header2 = header2fmt.format(*header2items, en=eidwidth+namewidth+1,
                                         mw=meanwidth, mn=sdwidth, mr=iqrwidth)
         else:
@@ -780,10 +787,10 @@ class SimulationResult(object):
             else:
                 print(_value_to_string(dsetstats.counts.mean, numwidth, False),
                       _value_to_string(dsetstats.means.mean, numwidth),
-                      _value_to_string(dsetstats.pct25s.median, numwidth),
-                      _value_to_string(dsetstats.medians.median, numwidth),
-                      _value_to_string(dsetstats.pct75s.median, numwidth),
-                      _value_to_string(dsetstats.maxs.median, numwidth)
+                      _value_to_string(dsetstats.pct25s.mean, numwidth),
+                      _value_to_string(dsetstats.medians.mean, numwidth),
+                      _value_to_string(dsetstats.pct75s.mean, numwidth),
+                      _value_to_string(dsetstats.maxs.mean, numwidth)
                      )
 
     def _getFormatWidths(self):
@@ -993,23 +1000,27 @@ class SimDatasetStatistics(object):
         self.valuetype = dataset.valuetype
         self.timeunit = dataset.timeunit
        
-        # Note on ci_type:
-        # Generally SimSamples for order statistics (min/max/median/percentile)
-        # should use QUANTILE for confidence interval calculation (the default
-        # default). Other summary statistics (mean, count) can use T or NORMAL
-        # depending on sample size; lacking other information, we'll be 
-        # conservative and go with T.
+        # Note on ci_type (Confidence Interval Type):
+        # We are assuming here that the SimSample values are summary 
+        # statistics calculated from data collected from independent 
+        # replications or batches of a steady state simulation. As such, the
+        # mean of the replication/batch values is a reasonable point estimate of 
+        # the summary statistic, and we can use a T distribution for
+        # calculating a confidence interval (Carson & Banks, 2001, p. 440)
+        # If the order statistics are single values gathered directly from 
+        # replications of a terminating simulation, the non-parametric
+        # estimate of confidence intervals would be more appropriate (p. 416)
         self.counts = SimSample(dataset, ci_type=simstats.CIType.T)
         self.means = SimSample(dataset, ci_type=simstats.CIType.T)
-        self.mins = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
-        self.maxs = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
-        self.medians = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
-        self.pct05s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
-        self.pct10s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
-        self.pct25s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
-        self.pct75s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
-        self.pct90s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
-        self.pct95s = SimSample(dataset, ci_type=simstats.CIType.QUANTILE)
+        self.mins = SimSample(dataset, ci_type=simstats.CIType.T)
+        self.maxs = SimSample(dataset, ci_type=simstats.CIType.T)
+        self.medians = SimSample(dataset, ci_type=simstats.CIType.T)
+        self.pct05s = SimSample(dataset, ci_type=simstats.CIType.T)
+        self.pct10s = SimSample(dataset, ci_type=simstats.CIType.T)
+        self.pct25s = SimSample(dataset, ci_type=simstats.CIType.T)
+        self.pct75s = SimSample(dataset, ci_type=simstats.CIType.T)
+        self.pct90s = SimSample(dataset, ci_type=simstats.CIType.T)
+        self.pct95s = SimSample(dataset, ci_type=simstats.CIType.T)
         runs = database.runs()
         self.nruns = len(runs)
 
@@ -1083,7 +1094,7 @@ class SimSample(object):
     return NaN (float('nan')). (Amongst other things, this ensures that
     the return value can be formatted by code above that expects a number.)
     """
-    def __init__(self, dataset, *, ci_type=simstats.CIType.QUANTILE,
+    def __init__(self, dataset, *, ci_type=simstats.CIType.T,
                  quantile=0.5):
         """
         """
@@ -1257,7 +1268,7 @@ if __name__ == '__main__':
     #batchLength = SimTime(0)
     scriptpath = "demos/mm_1.py"
     multi_replication = True
-    nruns = 10
+    nruns = 30
     
     thisdir = os.path.dirname(sys.argv[0])
     scriptpath = os.path.join(thisdir, scriptpath)
@@ -1276,5 +1287,5 @@ if __name__ == '__main__':
         with Simulation.replicate(scriptpath, warmupLength, batchLength, 1,
                                   fromRun=1, toRun=nruns,
                                   outputpath=None, overwrite=False) as simResult:
-            simResult.print_summary(rangetype='90ci')
+            simResult.print_summary(rangetype='95ci')
                 
