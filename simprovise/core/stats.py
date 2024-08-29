@@ -219,8 +219,13 @@ def weighted_percentiles(values, weights):
     
     weights = np.array(weights)
     values = np.array(values)
-    cdf = (np.cumsum(weights) - 0.5 * weights) / np.sum(weights)
-    percentiles = [np.interp(i/100., cdf, values) for i in range(0, 101)]
+    #weighted_quantiles = (np.cumsum(weights) - 0.5 * weights) / np.sum(weights)
+    # The code below delivers (within a small margin of error) np.percentile
+    # values when weights are equal
+    weighted_quantiles = np.cumsum(weights) - 0.5 * weights
+    weighted_quantiles -= weighted_quantiles[0]
+    weighted_quantiles /= weighted_quantiles[-1]
+    percentiles = [np.interp(i/100., weighted_quantiles, values) for i in range(0, 101)]
     return percentiles
 
     
@@ -261,8 +266,21 @@ if __name__ == '__main__':
     weights = (1, 2, 1, 2, 3)
     pctiles = weighted_percentiles(values1, weights)
     print("weighted median", pctiles[50])
+    print("weighted 1st percentile", pctiles[1])
     print("weighted 25th percentile", pctiles[25])
     print("weighted 75th percentile", pctiles[75])
+    print("weighted 99th percentile", pctiles[99])
+    print("weighted 100th percentile", pctiles[100])
+    
+    vals2 = list(range(100))
+    weights = [2] * 100
+    pctiles = weighted_percentiles(vals2, weights)
+    print("weighted median", pctiles[50], np.median(vals2))
+    print("weighted 1st percentile", pctiles[1], np.percentile(vals2, 1))
+    print("weighted 25th percentile", pctiles[25], np.percentile(vals2, 25))
+    print("weighted 75th percentile", pctiles[75], np.percentile(vals2, 75))
+    print("weighted 99th percentile", pctiles[99], np.percentile(vals2, 99))
+    
     
     #setup = '''
 #from simprovise.core.stats import weighted_percentiles
