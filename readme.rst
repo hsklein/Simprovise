@@ -73,9 +73,9 @@ Other Dependencies
 ==================
 
 **simprovise** uses
-`NumPy <https://numpy.org/doc/stable/index.html>`_ for psuedo-random-number
-generation, probability distribution sampling, and calculation of summary
-statistics.
+`NumPy <https://numpy.org/>`_  and `SciPy <https://scipy.org/>`_  
+for psuedo-random-number generation, probability distribution sampling, and 
+statistical calculation.
 
 Compatibility
 =============

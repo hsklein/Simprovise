@@ -5,7 +5,8 @@ simprovise Configuration
 A number of Simprovise parameters and settings may be configured via
 `.ini` configuration files. A default `simprovise.ini` is installed
 with simprovise; any or all of it's settings may be overridden with
-user or model-specific `.ini` files.
+user or model-specific `.ini` files. 
+(See :ref:`configuration-file-locations-label` below.)
 
 Configuration Settings
 ===========================
@@ -67,6 +68,8 @@ If the `Destination` setting is 'file', the output will be written to
 ``<model_name>_trace.txt`` in the current directory. The filename itself 
 cannot be specified via configuration.
 
+.. _output_report_settings-label:
+
 `Output Report` Section Settings
 --------------------------------
 
@@ -80,7 +83,7 @@ and does not specify a destination.
    "Destination", "stdout or file", "Simulation output report destination; see below"
    
 * If the `Destination` setting is 'file', the output will be written to 
-  ``<model_name>_trace.txt`` in the current directory. The filename itself 
+  ``<model_name>_report.txt`` in the current directory. The filename itself 
   cannot be specified via configuration.
 * If the `Destination` setting is 'stdout', the output will be written to 
   ``stdout``.
@@ -225,6 +228,7 @@ Configuration .ini File Example
    Disable Elements : *.Server3, MyLocation.Server42
    Disable Datasets : ServerLocation.Server* *Time, Population
 
+.. _configuration-file-locations-label:
 
 Configuration File Locations and Precedence
 ===========================================

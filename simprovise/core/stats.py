@@ -28,7 +28,11 @@ logger = SimLogging.get_logger(__name__)
 
 class CIType(Enum):
     """
-    Enumeration of the currently supported confidence interval calculation types
+    Enumeration of the currently supported confidence interval calculation types:
+    
+    * T: Confidence interval based on the Student's T distribution
+    * NORMAL: Confidence interval based on the Normal distribution
+    * QUANTILE: A non-parametric confidence interval for estimates of quantiles
     """
     T = 'TDistribution'
     NORMAL = 'NormalDistribution'
@@ -41,13 +45,13 @@ def t_confidence_interval(values, confidence_level=0.95):
     confidence interval. See:
     https://www.statology.org/confidence-intervals-python/
     
-    Client code should generally execute this via :function:`confidence_interval`.
+    Client code should generally execute this via :func:`confidence_interval`.
     
     :param values:           Sample values
     :type values:            Iterable of numeric values
     
-    :param confidence_level: Desired confidence level (e.g 95%) for if
-                             Defaults to 95% (0.95).
+    :param confidence_level: Desired confidence level. 
+                             Defaults to 0.95 (95%).
     :type confidence_level:  `float` in range (.0, 1.0)
     
     :return:                 Low and high bound of confidence interval
@@ -76,13 +80,13 @@ def norm_confidence_interval(values, confidence_level=0.95):
     
     (While it isn't checked, n should be relatively large, > 30)
     
-    Client code should generally execute this via :function:`confidence_interval`.
+    Client code should generally execute this via :func:`confidence_interval`.
     
     :param values:           Sample values
     :type values:            Iterable of numeric values
     
-    :param confidence_level: Desired confidence level (e.g 95%) for if
-                             Defaults to 95% (0.95).
+    :param confidence_level: Desired confidence level.
+                             Defaults to 0.95 (95%).
     :type confidence_level:  `float` in range (.0, 1.0)
     
     :return:                 Low and high bound of confidence interval
@@ -108,7 +112,7 @@ def quantile_confidence_interval(values, quantile=0.5, confidence_level=0.95):
     value obtained via ScyPi stats.norm.ppf() function. See:
     https://statisticalpoint.com/confidence-interval-for-median/.
     
-    Client code should generally execute this via :function:`confidence_interval`.
+    Client code should generally execute this via :func:`confidence_interval`.
     
     Underlying source of algorithm is:
     https://www.wiley.com/en-us/Practical+Nonparametric+Statistics%2C+3rd+Edition-p-9780471160687
@@ -120,8 +124,8 @@ def quantile_confidence_interval(values, quantile=0.5, confidence_level=0.95):
                              0.5 (median)
     :type quantile:          `float` in range (.0, 1.0)
     
-    :param confidence_level: Desired confidence level (e.g 95%) for if
-                             Defaults to 95% (0.95).
+    :param confidence_level: Desired confidence level.
+                             Defaults to 0.95 (95%).
     :type confidence_level:  `float` in range (.0, 1.0)
     
     :return:                 Low and high bound of confidence interval
@@ -159,22 +163,22 @@ def confidence_interval(ci_type, values, confidence_level=0.95, *, quantile=0.5)
     :param values:           Sample values
     :type values:            Iterable of numeric values
     
-    :param confidence_level: Desired confidence level (e.g 95%) for if
-                             Defaults to 95% (0.95).
+    :param confidence_level: Desired confidence level.
+                             Defaults to 0.95 (95%).
     :type confidence_level:  `float` in range (.0, 1.0)
     
     :param quantile:         Quantile to calculate interval for. Defaults to
-                             0.5 (median). Ignored when the ci_type is not
+                             0.5 (median). Ignored when the ``ci_type`` is not
                              QUANTILE.
     :type quantile:          `float` in range (.0, 1.0)
     
     :return:                 Low and high bound of confidence interval, or
-                             (nan, nan) if there are an insufficient number of
+                             ``(nan, nan)`` if there are an insufficient number of
                              values.
     :rtype:                  `tuple` (numeric, numeric)
 
     :raises:                 :class:`~.simexception.SimError`
-                             Raised if ci_type is invalid.
+                             Raised if ``ci_type`` is invalid.
     
     """        
     if len(values) < 2:

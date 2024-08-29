@@ -37,16 +37,17 @@ For more information, see:
 
 https://pypi.org/project/greenlet/
 
-NumPy
------
+NumPy and SciPy
+----------------
 
-The **NumPy** scientific computing package 
-(https://numpy.org/doc/stable/index.html)
-is currently used to implement the following *simprovise* functionality:
+The `NumPy <https://numpy.org/>`_  and `SciPy <https://scipy.org/>`_
+scientific computing packages are used to provide the following 
+**simprovise** functionality:
 
 * Pseudo-random number generation. See 
   :ref:`this <random-number-streams-concept-label>` for details.
 * Probability distributions for modeling. See
   :ref:`this <random-number-distribution-concept-label>` for more information.
-* Calculation of summary statistics (e.g. mean, standard error/deviation) for
-  simulation output analysis.
+* Calculation of summary statistics 
+  (e.g. mean, standard error/deviation, order statistics, confidence
+  intervals) for simulation output analysis.

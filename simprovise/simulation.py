@@ -144,9 +144,8 @@ class Simulation(object):
                        nBatches=1, *, runNumber=1,
                        outputpath=None, overwrite=False):
         """
-        Start a single in-process simulation run from a script other
-        than the model script - in particular, the simprovise command line
-        interface.
+        Start a single in-process simulation run from a somewhere other
+        than the model script.
 
         :param modelpath:    The full path of the model script file.
                              in simulated time. Defaults to zero
@@ -212,10 +211,11 @@ class Simulation(object):
         number streams), each in their own process. Replications can run in
         parallel, depending on system configuration.
         
-        Can be invoked from any script, as well as the simprovise command line
-        interface. If invoked from a script, the top of the call stack should
-        be within that top-level script's __main__ guard, since this call
-        will ultimately involve use of a multiprocessing Pool.
+        Can be invoked from any script, including the model script. In either
+        case,the top of the call stack should be within that top-level script's
+        __main__ guard, since this call will ultimately involve use of a
+        multiprocessing Pool.
+        (See https://docs.python.org/3/library/multiprocessing.html#multiprocessing-programming)
         
         If the top-level invoking script is the model script itself, the
         modelpath parameter should be set to None, which will ensure  that

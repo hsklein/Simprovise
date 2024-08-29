@@ -190,8 +190,8 @@ The SimModel Singleton
 
 .. _utility-classes-label:
 
-Utility Classes
-===============
+Utility Classes and Functions
+=============================
 
 
 .. _simexception-module-label:
@@ -231,3 +231,30 @@ example.
 
 .. autofunction:: simprovise.core.simtrace.add_trace_column
 
+.. _simprovise-core-stats-label:
+
+Statistical Calculation Functions (stats module)
+------------------------------------------------
+
+The functions in this module implement some of the statistical algorithms
+required for :doc:`simulation output analysis. <output_analysis>` Most of the
+work is delegated to The `NumPy <https://numpy.org/>`_  and/or
+`SciPy. <https://scipy.org/>`_ The primary public API consists of two
+functions, :func:`~simprovise.core.stats.confidence_interval` and
+:func:`simprovise.core.stats.weighted_percentiles`.
+
+.. autofunction:: simprovise.core.stats.weighted_percentiles
+
+.. autoclass:: simprovise.core.stats.CIType
+    :members:
+
+.. autofunction:: simprovise.core.stats.confidence_interval
+
+:func:`~simprovise.core.stats.confidence_interval` delegates to the following
+functions, which may be used directly:
+
+.. autofunction:: simprovise.core.stats.t_confidence_interval
+
+.. autofunction:: simprovise.core.stats.norm_confidence_interval
+
+.. autofunction:: simprovise.core.stats.quantile_confidence_interval
