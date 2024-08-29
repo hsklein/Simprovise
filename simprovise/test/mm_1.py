@@ -53,9 +53,9 @@ customer_source = SimEntitySource("Source", Customer, mm1Process,
 
 if __name__ == '__main__':
     multi_replication = True
-    nruns = 20
+    nruns = 25
     warmup_length = SimTime(100)
-    batch_length = SimTime(1000)
+    batch_length = SimTime(500)
     nbatches = 20
     
     if multi_replication:
@@ -63,10 +63,15 @@ if __name__ == '__main__':
         with Simulation.replicate(None, warmup_length, batch_length, 1,
                                   fromRun=1, toRun=nruns,
                                   outputpath=None, overwrite=False) as simResult:
-            simResult.print_summary(rangetype='iqr')
+            simResult.print_summary(rangetype='iqr',
+                                    destination='mm1output/summary.txt')
+            simResult.save_summary_csv('mm1output/summary.csv')
+            simResult.export_dataset('Queue', 'Size', run=5, batch=None,
+                                     filename='mm1output/queue_size_run5.csv')
     else:
         with Simulation.execute(warmup_length, batch_length, nbatches) as simResult:
             simResult.print_summary(rangetype='iqr')
-            simResult.export_dataset('Server', 'ProcessTime', filename='mm1_server_processtime.csv')
+            simResult.export_dataset('Server', 'ProcessTime', 
+                                     filename='mm1_server_processtime.csv')
             simResult.save_summary_csv('mm1_summary.csv')
             simResult.save_database_as('mm_1.simoutput')
