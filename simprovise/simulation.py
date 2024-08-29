@@ -332,16 +332,20 @@ class Simulation(object):
         return outputpath
     
     @staticmethod
-    def _save_output(dbpath, outputhpath):
+    def _save_output(dbpath, outputpath):
         """
         Copies dbpath to outputpath, catching and re-raising any exceptions
         """
         try:        
-            shutil.copy(dbpath, outputhpath)
-            print("copy of output database saved to:", outputhpath)
+            # Create the directory as required
+            if os.path.dirname(outputpath):
+                os.makedirs(os.path.dirname(outputpath), exist_ok=True)
+            
+            shutil.copy(dbpath, outputpath)
+            print("copy of output database saved to:", outputpath)
         except Exception as e:
             msg = "Failure saving output database: failure copying {0} to {1}: {2}"
-            raise SimError(_ERROR_NAME, msg, dbpath, outputhpath, e)
+            raise SimError(_ERROR_NAME, msg, dbpath, outputpath, e)
             
 
 
@@ -452,8 +456,17 @@ class SimulationResult(object):
 
     def save_database_as(self, filename):
         """
-        Save the temporary output database to a caller-specified location -
-        otherwise, the database is deleted on exit.
+        Close the temporary output database and save it to a caller-specified
+        location - otherwise, the database is deleted on exit.
+        
+        .. note::
+        
+            The "close database" side-effect means that:
+            
+            * Report/export methods **cannot be called after save_database_as()**
+            * This method can only be called once - i.e., multiple saves to
+              different locations cannot be invoked without re-opening the
+              database.
 
         :param filename: The path/filename to which the output database is
                          saved. Extension would typically be '.simoutput', but
@@ -517,6 +530,10 @@ class SimulationResult(object):
                 print(',', value, end='', file=f)
             print('', file=f) 
                                 
+        # Create the directory as required
+        if os.path.dirname(filename):
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
+        
         with open(filename, 'w') as f:
             print('ElementID', 'Dataset', 'Unit', 'Statistic', sep=',', end='', file=f)
             for i in range(nsamples):
@@ -643,6 +660,9 @@ class SimulationResult(object):
             with redirect_stdout(f):
                 self._print_summary_impl(rangetype)                
         else:
+            # Create the directory as required
+            if os.path.dirname(output_filename):
+                os.makedirs(os.path.dirname(output_filename), exist_ok=True)
             with open(output_filename, 'w') as f:
                 with redirect_stdout(f):
                     self._print_summary_impl(rangetype)                
@@ -885,6 +905,10 @@ class SimulationResult(object):
                     
         # Get the requested datasetvalue rows
         dsetvalues = SimDatasetValues(database, dataset, run, batch)
+        
+        # Create the directory as required
+        if os.path.dirname(filename):
+            os.makedirs(os.path.dirname(filename), exist_ok=True)
         
         with open(filename, 'w', newline='') as f:
             writer = csv.writer(f)

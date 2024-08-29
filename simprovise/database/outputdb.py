@@ -454,12 +454,16 @@ class SimDatabaseManager(object):
         if isTemporary:
             if savePath:
                 try:
+                    # Create the directory as required
+                    if os.path.dirname(savePath):
+                        os.makedirs(os.path.dirname(savePath), exist_ok=True)
+                    
                     # os.replace() will overwrite an existing file - os.rename() will not
                     os.replace(dbPath, savePath)
                 except OSError as e:
                     logger.exception("Failure saving temporary database %s to: %s: %s",
                                      dbPath, savePath, e)
-                    raise SimError(_ERROR_NAME, "Failure saving output database to {0}", savePath)                   
+                    raise SimError(_ERROR_NAME, "Failure saving output database to {0}", savePath) from e                  
             elif delete:
                 try:
                     os.remove(dbPath)
