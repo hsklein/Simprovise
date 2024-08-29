@@ -53,10 +53,10 @@ customer_source = SimEntitySource("Source", Customer, mm1Process,
 
 if __name__ == '__main__':
     multi_replication = True
-    nruns = 15
+    nruns = 20
     warmup_length = SimTime(100)
     batch_length = SimTime(1000)
-    nbatches = 15
+    nbatches = 20
     
     if multi_replication:
         print("Running", nruns, "replications...")
