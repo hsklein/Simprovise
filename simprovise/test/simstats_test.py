@@ -49,7 +49,7 @@ class ConfidenceIntervalTests(unittest.TestCase):
         "Test: quantile_confidence_interval() returns expected values"
         ci = simstats.quantile_confidence_interval(self.vals, 0.5, 0.95)
         for i in range(1):
-            with self.subTest():
+            with self.subTest(i=i):
                 self.assertAlmostEqual(ci[i], self.expected_quantile50_95ci[i], 2)
 
     def testQuantile_CI2(self):
