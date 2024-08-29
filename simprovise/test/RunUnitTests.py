@@ -14,6 +14,7 @@ from simprovise.test import simtransaction_test
 from simprovise.test import simprocess_test
 from simprovise.test import simdowntime_test
 from simprovise.test import simelement_test
+from simprovise.test import simstats_test
 
 # Note that running the system test creates too much state, and
 # effs up itself and other tests - for now, it has to run
@@ -43,6 +44,7 @@ def run_tests():
     suite.addTest(simtransaction_test.makeTestSuite())
     suite.addTest(simprocess_test.makeTestSuite())
     suite.addTest(simdowntime_test.makeTestSuite())
+    suite.addTest(simstats_test.makeTestSuite())
 
     unittest.TextTestRunner(verbosity=1).run(suite)
 
