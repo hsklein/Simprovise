@@ -11,6 +11,8 @@ from simprovise.core.stats import CIType
 import unittest
 import numpy as np
 
+_NAN = float('nan')
+
 class ConfidenceIntervalTests(unittest.TestCase):
     "Tests for confidence interval functions"
     def setUp(self):
@@ -98,7 +100,7 @@ class WeightedPercentileTests(unittest.TestCase):
                 self.assertAlmostEqual(pcts[i], np.percentile(vals, i))
                 
     def test_weighted(self):
-        "Test weighted percentile"
+        "Test weighted percentile with weights"
         vals = (2, 3, 7, 8, 11)
         weights = (1, 2, 1, 2, 3)
         test_percentiles = [1, 25, 50, 75, 99, 100]
@@ -107,6 +109,62 @@ class WeightedPercentileTests(unittest.TestCase):
         for i, p in enumerate(test_percentiles):
             with self.subTest(percentile = p):
                 self.assertAlmostEqual(pcts[p], expected_values[i], 2)
+                
+    def test_weighted_onevalue1(self):
+        "Test: weighted_percentiles() with only one value returns that value for all percentiles"
+        vals = (42, )
+        weights = (2, )
+        pcts = simstats.weighted_percentiles(vals, weights)
+        test_percentiles = [1, 25, 50, 75, 99, 100]
+        for p in test_percentiles:
+            with self.subTest(percentile = p):
+                self.assertEqual(pcts[p], vals[0])
+                
+    def test_weighted_onevalue2(self):
+        "Test: weighted_percentiles() with only one value with a non-zero weight returns that value for all percentiles"
+        vals = (27, 42, 3)
+        weights = (0, 2, 0)
+        pcts = simstats.weighted_percentiles(vals, weights)
+        test_percentiles = [1, 25, 50, 75, 99, 100]
+        for p in test_percentiles:
+            with self.subTest(percentile = p):
+                self.assertEqual(pcts[p], 42)
+                
+    def test_weighted_zerovalues1(self):
+        "Test: weighted_percentiles() with no values returns NaN for all percentiles"
+        vals = []
+        weights = []
+        pcts = simstats.weighted_percentiles(vals, weights)
+        test_percentiles = [1, 25, 50, 75, 99, 100]
+        for p in test_percentiles:
+            with self.subTest(percentile = p):
+                self.assertTrue(np.isnan(pcts[p]))
+                
+    def test_weighted_zerovalues2(self):
+        "Test: weighted_percentiles() with no values with a non-zero weight returns NaN for all percentiles"
+        vals = (27, 42, 3)
+        weights = (0, 0, 0)
+        pcts = simstats.weighted_percentiles(vals, weights)
+        test_percentiles = [1, 25, 50, 75, 99, 100]
+        for p in test_percentiles:
+            with self.subTest(percentile = p):
+                self.assertTrue(np.isnan(pcts[p]))
+            
+    def test_negative_weight_raises(self):
+        "Test: weighted_percentiles() raises a SimError if any weight < 0"
+        vals = (27, 42, 3)
+        weights = (2, 1, -.02)
+        with self.assertRaises(SimError):
+            simstats.weighted_percentiles(vals, weights)
+            
+    def test_different_lengths_raises(self):
+        "Test: weighted_percentiles() raises a SimError if the number of values does not match the number of weights"
+        vals = (27, 42, 3)
+        weights = (2, 1)
+        with self.assertRaises(SimError):
+            simstats.weighted_percentiles(vals, weights)
+        
+        
     
     
         

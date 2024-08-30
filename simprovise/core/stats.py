@@ -213,6 +213,31 @@ def weighted_percentiles(values, weights):
     :rtype:         `list`
     
     """
+    # Must be a weight for every value
+    if len(values) != len(weights):
+        msg = 'weighted_percentiles: number of values ({0}) != number of weights ({1}))'
+        raise SimError(_ERROR_NAME, msg, len(values), len(weights))
+    
+    # Negative weights not allowed
+    if any(w < 0 for w in weights):
+        neg_weights = [w for w in weights if w < 0]
+        msg = "{0} negative weight(s) passed to weighted_percentiles(), first one is {1}"
+        raise SimError(_ERROR_NAME, msg, len(neg_weights), neg_weights[0])
+    
+    # eliminate zero-weighted values/weights to avoid zero-divide below
+    if 0 in weights:
+        values = [v for i, v in enumerate(values) if weights[i] > 0]
+        weights = [w for w in weights if w != 0]
+    
+    # If there are no weighted values, return NaN for everythin
+    if len(values) == 0:
+        return [_NAN] * 101
+    
+    # if there's only one, that's the value for every percentile
+    # (this also avoids a zero-divide below)
+    if len(values) == 1:
+        return [values[0]] * 101
+    
     # Once we move to NumPy 2.x, we can use np.percentile() (Starting with v2.0,
     # it has an optional weights parameter.) For now, use this solution from
     # https://stackoverflow.com/questions/21844024/weighted-percentile-using-numpy
@@ -220,12 +245,14 @@ def weighted_percentiles(values, weights):
     weights = np.array(weights)
     values = np.array(values)
     #weighted_quantiles = (np.cumsum(weights) - 0.5 * weights) / np.sum(weights)
+    
     # The code below delivers (within a small margin of error) np.percentile
-    # values when weights are equal
+    # values when weights are equal    
     weighted_quantiles = np.cumsum(weights) - 0.5 * weights
     weighted_quantiles -= weighted_quantiles[0]
     weighted_quantiles /= weighted_quantiles[-1]
     percentiles = [np.interp(i/100., weighted_quantiles, values) for i in range(0, 101)]
+    
     return percentiles
 
     
@@ -272,8 +299,8 @@ if __name__ == '__main__':
     print("weighted 99th percentile", pctiles[99])
     print("weighted 100th percentile", pctiles[100])
     
-    vals2 = list(range(100))
-    weights = [2] * 100
+    vals2 = (1, )
+    weights = (1, )
     pctiles = weighted_percentiles(vals2, weights)
     print("weighted median", pctiles[50], np.median(vals2))
     print("weighted 1st percentile", pctiles[1], np.percentile(vals2, 1))
@@ -281,16 +308,19 @@ if __name__ == '__main__':
     print("weighted 75th percentile", pctiles[75], np.percentile(vals2, 75))
     print("weighted 99th percentile", pctiles[99], np.percentile(vals2, 99))
     
+    vals2 = []
+    weights = []
+    pctiles = weighted_percentiles(vals2, weights)
+    print("weighted median", pctiles[50])
+    print("weighted 1st percentile", pctiles[1])
+    print("weighted 99th percentile", pctiles[99])
     
-    #setup = '''
-#from simprovise.core.stats import weighted_percentiles
-
-#values1 = (2, 3, 7, 8, 11)
-#weights = (1, 2, 1, 2, 3)    
-    #'''
+    vals2 = (1, 2)
+    weights = (1, 0)
+    pctiles = weighted_percentiles(vals2, weights)
+    print("weighted median", pctiles[50], np.median(vals2))
+    print("weighted 1st percentile", pctiles[1])
+    print("weighted 99th percentile", pctiles[99])
     
-    #n = 10000
-    #t1 = timeit.timeit('weighted_percentiles(values1, weights)', setup=setup, number=n)
-    #print(t1/n)
     
     
