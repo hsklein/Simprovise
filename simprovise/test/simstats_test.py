@@ -46,7 +46,6 @@ class ConfidenceIntervalTests(unittest.TestCase):
         self.assertEqual(simstats.norm_confidence_interval(self.vals, 0.95),
                          simstats.confidence_interval(CIType.NORMAL, self.vals, 0.95))
 
-
     def testQuantile_CI1(self):
         "Test: quantile_confidence_interval() returns expected values"
         ci = simstats.quantile_confidence_interval(self.vals, 0.5, 0.95)
@@ -161,6 +160,13 @@ class WeightedPercentileTests(unittest.TestCase):
         "Test: weighted_percentiles() raises a SimError if the number of values does not match the number of weights"
         vals = (27, 42, 3)
         weights = (2, 1)
+        with self.assertRaises(SimError):
+            simstats.weighted_percentiles(vals, weights)
+            
+    def test_not_sorted_raises(self):
+        "Test: weighted_percentiles() raises a SimError if the values are not sorted"
+        vals = (12, 42, 41, 88)
+        weights = (2, 1, 4, 7)
         with self.assertRaises(SimError):
             simstats.weighted_percentiles(vals, weights)
         

@@ -23,7 +23,7 @@ from simprovise.core.simexception import SimError
 from simprovise.core.simlogging import SimLogging
 
 _NAN = float('nan')
-_ERROR_NAME = "Stats (CI) Error"
+_ERROR_NAME = "simstats Error"
 logger = SimLogging.get_logger(__name__)
 
 class CIType(Enum):
@@ -237,6 +237,11 @@ def weighted_percentiles(values, weights):
     # (this also avoids a zero-divide below)
     if len(values) == 1:
         return [values[0]] * 101
+    
+    # Must be sorted (check after we handle values of len zero or one)
+    if any(values[i] > values[i+1] for i in range(len(values) - 1)):
+        msg = "weighted_percentiles(): values not in ascending sort order"
+        raise SimError(_ERROR_NAME, msg)
     
     # Once we move to NumPy 2.x, we can use np.percentile() (Starting with v2.0,
     # it has an optional weights parameter.) For now, use this solution from
